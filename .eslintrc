@@ -1,0 +1,40 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2023": true,
+    "node": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended",
+    "plugin:jsx-a11y/recommended",
+    "plugin:tailwindcss/recommended",
+    "prettier"
+  ],
+  "settings": {
+    "react": {
+      "version": "detect"
+    },
+    "tailwindcss": {
+      "callees": ["clsx", "classnames", "ctl"],
+      "config": "frontend/tailwind.config.js"
+    }
+  },
+  "parserOptions": {
+    "ecmaVersion": 2023,
+    "sourceType": "module"
+  },
+  "overrides": [
+    {
+      "files": ["backend/**/*.js"],
+      "env": {
+        "browser": false,
+        "node": true
+      },
+      "extends": ["eslint:recommended", "prettier"],
+      "plugins": []
+    }
+  ]
+}
