@@ -9,7 +9,6 @@
 1. Login: `firebase login`
 2. Initialize from repo root (already configured): `firebase use <project-id>`
 3. Update `frontend/.env` with Firebase web credentials.
-4. Set up a service account with `firebaseauth.configs.update` permissions for role-claim assignment (used by GitHub Actions).
 
 ## 2. Local Verification
 ```bash
@@ -45,12 +44,10 @@ npm run build
 firebase deploy --only hosting
 
 cd ../backend
-npm run deploy -- --only functions
-firebase deploy --only firestore:rules
+npm run deploy
 ```
 
 ## 5. Post-Deployment Checklist
 - Verify Google SSO domain restrictions in Firebase Console.
-- Confirm Firestore security rules incorporate roles from `roles.json` and deploy via `firebase deploy --only firestore:rules`.
+- Confirm Firestore security rules incorporate roles from `roles.json`.
 - Test certificate generation, QR verification, and sample attendance check-in.
-- Verify a newly created user receives the default `student` claim and that admin-triggered role changes propagate after invoking `assignRole`.

@@ -83,18 +83,17 @@ npm run serve        # optional local preview of the production build
 
 cd ../backend
 npm run deploy       # deploys Firebase Functions & hosting via GitHub Actions
-firebase deploy --only firestore:rules
 ```
 
 ## 🔐 Role-Based Access
 | Role | Capabilities |
 | --- | --- |
 | Student | View joined clubs, RSVP to events, download certificates |
-| Manager (Boy-in-Charge) | Create posts/events, take attendance for assigned clubs |
-| Master-in-Charge | Manage resources, certify participation for assigned clubs |
-| Admin | Global oversight, assign roles, manage analytics |
+| Manager (Boy-in-Charge) | Create posts/events, take attendance, issue certificates |
+| Master-in-Charge | Oversee club activity, approve reports, manage resources |
+| Admin | Global oversight, assign managers, access analytics |
 
-Permissions are defined centrally in `backend/functions/roles.json` and enforced through Firebase custom claims. Cloud Functions (`onboardUser`, `assignRole`, `refreshUserSession`) keep `/users` documents aligned with claim updates, while Firestore security rules ensure managers/masters only modify clubs where they are explicitly listed.
+Permissions are defined centrally in `backend/functions/roles.json` and mirrored in frontend utilities for consistent checks.
 
 ## 🗂️ Documentation
 - [`docs/architecture.md`](docs/architecture.md) – System topology, sequence diagrams, and deployment flow.

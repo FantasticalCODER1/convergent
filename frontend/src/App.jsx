@@ -16,19 +16,11 @@ import ClubDetail from './pages/ClubDetail.jsx';
 import CalendarPage from './pages/Calendar.jsx';
 import Certificates from './pages/Certificates.jsx';
 import AdminPanel from './pages/AdminPanel.jsx';
-import RequireRole from './components/RequireRole.jsx';
 import { useAuth } from './context/AuthContext.js';
-import { ROLES } from './utils/roles.js';
-
-const BASE_ROLES = [ROLES.STUDENT, ROLES.MANAGER, ROLES.MASTER, ROLES.ADMIN];
 
 export default function App() {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const isAuthenticated = Boolean(user);
-
-  if (loading && !isAuthenticated) {
-    return <div className="flex min-h-screen items-center justify-center bg-background text-sm text-slate-500">Preparing your workspace…</div>;
-  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -39,54 +31,12 @@ export default function App() {
             <Navbar />
             <main className="p-6">
               <Routes>
-                <Route
-                  path="/"
-                  element={
-                    <RequireRole allowedRoles={BASE_ROLES}>
-                      <Dashboard />
-                    </RequireRole>
-                  }
-                />
-                <Route
-                  path="/clubs"
-                  element={
-                    <RequireRole allowedRoles={BASE_ROLES}>
-                      <Clubs />
-                    </RequireRole>
-                  }
-                />
-                <Route
-                  path="/clubs/:id"
-                  element={
-                    <RequireRole allowedRoles={BASE_ROLES}>
-                      <ClubDetail />
-                    </RequireRole>
-                  }
-                />
-                <Route
-                  path="/calendar"
-                  element={
-                    <RequireRole allowedRoles={BASE_ROLES}>
-                      <CalendarPage />
-                    </RequireRole>
-                  }
-                />
-                <Route
-                  path="/certificates"
-                  element={
-                    <RequireRole allowedRoles={BASE_ROLES}>
-                      <Certificates />
-                    </RequireRole>
-                  }
-                />
-                <Route
-                  path="/admin"
-                  element={
-                    <RequireRole minimumRole={ROLES.ADMIN}>
-                      <AdminPanel />
-                    </RequireRole>
-                  }
-                />
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/clubs" element={<Clubs />} />
+                <Route path="/clubs/:id" element={<ClubDetail />} />
+                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/certificates" element={<Certificates />} />
+                <Route path="/admin" element={<AdminPanel />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>

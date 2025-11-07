@@ -20,7 +20,7 @@
 - **Platform**: Firebase Functions (Node 18 runtime) orchestrating certificates, attendance, and seeding.
 - **Database**: Firestore in Native mode structured around clubs, events, certificates, and logs.
 - **Storage**: Firebase Storage for logos, resources, and generated certificates.
-- **Security**: Role definitions in `roles.json`, mirrored to frontend utilities and enforced through Firebase custom claims + security rules. Cloud Functions issue and refresh claims while syncing `/users` documents for audit trails.
+- **Security**: Role definitions in `roles.json`, mirrored to frontend utilities for consistent access control.
 
 ## DevOps & Tooling
 - **CI/CD**: GitHub Actions workflow (`.github/workflows/deploy.yml`) deploying hosting & functions on push.

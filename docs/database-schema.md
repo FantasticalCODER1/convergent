@@ -9,7 +9,6 @@
 - `houses` (array<string>) – optional for analytics
 - `joinedClubs` (array<reference>)
 - `hoursLogged` (number)
-- `lastLoginAt` (timestamp) – maintained by `refreshUserSession` callable
 
 ### `clubs`
 - `name` (string)
@@ -17,51 +16,51 @@
 - `description` (string)
 - `logoUrl` (string)
 - `frequency` (string)
-- `masterInCharge` (string)
-- `masterId` (string | null) – UID of the Master-in-Charge
-- `managerIds` (array<string>) – UIDs of Boys-in-Charge
+- `masterInCharge` (reference<users>)
+- `managers` (array<reference<users>>)
 - `createdAt` (timestamp)
-- `openMembership` (boolean)
 
-### `clubs/{clubId}/events/{eventId}`
+### `clubEvents`
+- `club` (reference<clubs>)
 - `title` (string)
-- `start` (timestamp)
-- `end` (timestamp)
+- `startTime` (timestamp)
+- `endTime` (timestamp)
 - `location` (string)
-- `description` (string)
-- `category` (string: meeting, competition, rehearsal, etc.)
-- `createdBy` (string – UID)
-- `updatedAt` (timestamp)
-- `qrSlug` (string) – unique slug used for verification URLs
+- `type` (string: meeting, competition, rehearsal, etc.)
+- `attendanceCode` (string)
+- `qrUrl` (string)
 
-### `clubs/{clubId}/certificates/{certificateId}` & `users/{uid}/certificates/{certificateId}`
-- `studentId` (string)
-- `clubId` (string)
-- `eventId` (string | null)
-- `type` (string: participation, leadership, achievement)
+### `certificates`
+- `student` (reference<users>)
+- `club` (reference<clubs>)
+- `event` (reference<clubEvents>)
 - `issuedAt` (timestamp)
-- `issuedBy` (string – UID)
 - `revoked` (boolean)
 - `verificationUrl` (string)
 
-### `clubs/{clubId}/events/{eventId}/attendance/{uid}`
+### `attendanceLogs`
+- `event` (reference<clubEvents>)
+- `student` (reference<users>)
 - `status` (string: present, excused, absent)
-- `markedBy` (string – UID)
-- `method` (string: qr, manual)
-- `timestamp` (timestamp)
+- `scannedAt` (timestamp)
+- `hours` (number)
 
-### `clubs/{clubId}/posts/{postId}`
-- `authorId` (string)
-- `type` (string: announcement, minutes, resource)
-- `content` (string – rich text payload)
+### `clubPosts`
+- `club` (reference<clubs>)
+- `author` (reference<users>)
+- `content` (string)
 - `attachments` (array<string>)
 - `createdAt` (timestamp)
 
-### `logs`
-- `type` (string: role_change, certificate_issue, attendance_mark, etc.)
-- `userId` (string)
+### `activityLogs`
+- `club` (reference<clubs>)
+- `type` (string: meeting, certificate, award, etc.)
 - `payload` (map)
 - `createdAt` (timestamp)
 
 ## Security Roles
-Roles are defined in `backend/functions/roles.json` and replicated in the frontend utilities to enable consistent checks. Firebase custom claims ensure every request carries the correct `role`, while Cloud Functions (`onboardUser`, `assignRole`, `refreshUserSession`) synchronize `/users` documents. Security rules enforce that managers and masters may only update clubs where their UID appears in `managerIds` or matches `masterId`, and only admins can mutate global settings.
+Roles are defined in `backend/functions/roles.json` and replicated in the frontend utilities to enable consistent checks. Firebase security rules should enforce:
+- Students read/write only their attendance RSVPs and profile data.
+- Managers manage clubs they are assigned to.
+- Masters approve events and certify participation.
+- Admins have full read/write access.
