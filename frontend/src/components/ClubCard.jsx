@@ -10,12 +10,12 @@ import { Link } from 'react-router-dom';
 
 export default function ClubCard({ id, name, logoUrl, frequency, masterInCharge }) {
   return (
-    <div className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-soft transition duration-250 transform hover:-translate-y-0.5 hover:shadow-lg">
+    <div className="shadow-soft duration-250 flex flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 p-4 transition hover:-translate-y-0.5 hover:shadow-lg">
       <div className="flex items-center gap-4">
         {logoUrl ? (
-          <img src={logoUrl} alt={name} className="h-12 w-12 rounded-full object-cover shadow" />
+          <img src={logoUrl} alt={name} className="size-12 rounded-full object-cover shadow" />
         ) : (
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand/15 text-accent">
+          <div className="bg-brand/15 text-accent flex size-12 items-center justify-center rounded-full">
             {name?.charAt(0) ?? '?'}
           </div>
         )}
@@ -28,7 +28,7 @@ export default function ClubCard({ id, name, logoUrl, frequency, masterInCharge 
         <p className="text-xs text-slate-500">Master-in-Charge: {masterInCharge}</p>
         <Link
           to={`/clubs/${id}`}
-          className="rounded-full bg-brand px-3 py-1 text-xs font-semibold text-white shadow-soft hover:bg-brand-dark"
+          className="bg-brand shadow-soft hover:bg-brand-dark rounded-full px-3 py-1 text-xs font-semibold text-white"
         >
           View
         </Link>

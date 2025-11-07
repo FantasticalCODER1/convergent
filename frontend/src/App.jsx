@@ -16,18 +16,18 @@ import ClubDetail from './pages/ClubDetail.jsx';
 import CalendarPage from './pages/Calendar.jsx';
 import Certificates from './pages/Certificates.jsx';
 import AdminPanel from './pages/AdminPanel.jsx';
-import { useAuth } from './context/AuthContext.js';
+import { useAuth } from './context/AuthContext.jsx';
 
 export default function App() {
   const { user } = useAuth();
   const isAuthenticated = Boolean(user);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background min-h-screen">
       {isAuthenticated ? (
         <div className="flex">
           <Sidebar />
-          <div className="flex-1 bg-background/60">
+          <div className="bg-background/60 flex-1">
             <Navbar />
             <main className="p-6">
               <Routes>

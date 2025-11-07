@@ -9,8 +9,8 @@
 import { useState } from 'react';
 import confetti from 'canvas-confetti';
 import CertificateTemplate from '../components/CertificateTemplate.jsx';
-import { generateQrDataUrl } from '../utils/qrGenerator.js';
-import { generateCertificatePdf } from '../utils/pdfGenerator.js';
+import { generateQrDataUrl } from '../utils/qrGenerator.jsx';
+import { generateCertificatePdf } from '../utils/pdfGenerator.jsx';
 
 export default function Certificates() {
   const [qrPreview, setQrPreview] = useState(null);
@@ -43,13 +43,13 @@ export default function Certificates() {
     <div className="space-y-6">
       <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-accent">Certificates</h2>
+          <h2 className="text-accent text-2xl font-semibold">Certificates</h2>
           <p className="text-sm text-slate-500">
             Issue, manage, and verify participation certificates for your clubs.
           </p>
         </div>
         <button
-          className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-soft transition duration-250 hover:bg-brand-dark"
+          className="bg-brand shadow-soft duration-250 hover:bg-brand-dark rounded-full px-4 py-2 text-sm font-semibold text-white transition"
           onClick={handleGenerate}
           type="button"
         >
@@ -64,11 +64,11 @@ export default function Certificates() {
           eventName="Annual Showcase"
           date="1 Jan 2024"
         />
-        <div className="rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-soft">
+        <div className="shadow-soft rounded-3xl border border-slate-200 bg-white/95 p-6">
           <h3 className="text-lg font-semibold text-slate-800">QR Preview</h3>
           <p className="mt-2 text-sm text-slate-500">Each certificate includes a QR code for verification.</p>
           {qrPreview ? (
-            <img src={qrPreview} alt="QR preview" className="mx-auto mt-4 h-32 w-32 rounded-xl border border-brand/30 p-2 shadow-soft" />
+            <img src={qrPreview} alt="QR preview" className="border-brand/30 shadow-soft mx-auto mt-4 size-32 rounded-xl border p-2" />
           ) : (
             <div className="mt-4 rounded-2xl border border-dashed border-slate-300 p-6 text-sm text-slate-400">
               Generate a sample certificate to preview the QR code.

@@ -34,10 +34,10 @@ export default function Clubs() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-accent">Clubs &amp; Societies</h2>
+          <h2 className="text-accent text-2xl font-semibold">Clubs &amp; Societies</h2>
           <p className="text-sm text-slate-500">Discover all the co-curricular activities available this term.</p>
         </div>
-        <button className="rounded-full border border-brand px-4 py-2 text-sm font-semibold text-brand transition duration-250 hover:bg-brand/10">
+        <button className="border-brand text-brand duration-250 hover:bg-brand/10 rounded-full border px-4 py-2 text-sm font-semibold transition">
           Create club
         </button>
       </header>

@@ -8,10 +8,10 @@
 
 export default function EventCard({ title, date, location, description }) {
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-soft transition duration-250 transform hover:-translate-y-0.5 hover:shadow-lg">
+    <article className="shadow-soft duration-250 rounded-2xl border border-slate-200 bg-white/90 p-4 transition hover:-translate-y-0.5 hover:shadow-lg">
       <header className="mb-2 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-slate-800">{title}</h3>
-        <span className="text-xs font-semibold uppercase tracking-wide text-accent">{date}</span>
+        <span className="text-accent text-xs font-semibold uppercase tracking-wide">{date}</span>
       </header>
       <p className="text-sm text-slate-600">{description}</p>
       {location && <p className="mt-3 text-xs text-slate-400">📍 {location}</p>}

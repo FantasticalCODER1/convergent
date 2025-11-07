@@ -6,14 +6,14 @@
 // Top navigation bar responsible for session controls and quick identity cues.
 // TODO: Extend with notification center and real-time alert badges.
 
-import { useAuth } from '../context/AuthContext.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
 export default function Navbar() {
   const { user, signOut } = useAuth();
 
   return (
-    <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/90 px-6 py-4 shadow-soft backdrop-blur-md">
-      <h1 className="text-xl font-semibold text-accent">Convergent</h1>
+    <header className="shadow-soft sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/90 px-6 py-4 backdrop-blur-md">
+      <h1 className="text-accent text-xl font-semibold">Convergent</h1>
       <div className="flex items-center gap-4">
         {user && (
           <div className="text-right">
@@ -24,7 +24,7 @@ export default function Navbar() {
         <button
           type="button"
           onClick={signOut}
-          className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-soft hover:bg-brand-dark"
+          className="bg-brand shadow-soft hover:bg-brand-dark rounded-full px-4 py-2 text-sm font-semibold text-white"
         >
           Sign out
         </button>

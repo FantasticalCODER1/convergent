@@ -7,7 +7,7 @@
 // TODO: Embed analytics widgets and AI-generated summaries of club engagement.
 
 import EventCard from '../components/EventCard.jsx';
-import { useAuth } from '../context/AuthContext.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -30,8 +30,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl bg-gradient-to-r from-brand/10 via-white to-brand/20 p-6 shadow-soft">
-        <h2 className="text-2xl font-semibold text-accent">Hello, {user?.displayName || 'Student'}!</h2>
+      <section className="from-brand/10 to-brand/20 shadow-soft rounded-3xl bg-gradient-to-r via-white p-6">
+        <h2 className="text-accent text-2xl font-semibold">Hello, {user?.displayName || 'Student'}!</h2>
         <p className="mt-2 text-sm text-slate-600">
           Here’s what’s coming up in your clubs this week. Keep an eye on events and announcements.
         </p>
@@ -40,7 +40,7 @@ export default function Dashboard() {
       <section>
         <header className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-slate-800">Upcoming Events</h3>
-          <button className="text-sm font-semibold text-brand hover:text-brand-dark">View calendar</button>
+          <button className="text-brand hover:text-brand-dark text-sm font-semibold">View calendar</button>
         </header>
         <div className="grid gap-4 md:grid-cols-2">
           {sampleEvents.map((event) => (

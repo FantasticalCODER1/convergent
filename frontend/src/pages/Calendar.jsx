@@ -13,7 +13,7 @@ export default function CalendarPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-accent">Calendar</h2>
+          <h2 className="text-accent text-2xl font-semibold">Calendar</h2>
           <p className="text-sm text-slate-500">
             Track upcoming meetings, events, and competitions across the school.
           </p>
@@ -22,7 +22,7 @@ export default function CalendarPage() {
           {filters.map((filter) => (
             <button
               key={filter}
-              className="rounded-full border border-brand/30 bg-white/80 px-4 py-2 text-xs font-semibold text-slate-600 shadow-soft transition duration-250 hover:bg-brand/10 hover:text-accent"
+              className="border-brand/30 shadow-soft duration-250 hover:bg-brand/10 hover:text-accent rounded-full border bg-white/80 px-4 py-2 text-xs font-semibold text-slate-600 transition"
             >
               {filter}
             </button>
@@ -30,7 +30,7 @@ export default function CalendarPage() {
         </div>
       </header>
 
-      <div className="rounded-3xl border border-slate-200 bg-white/95 p-6 text-center text-sm text-slate-500 shadow-soft">
+      <div className="shadow-soft rounded-3xl border border-slate-200 bg-white/95 p-6 text-center text-sm text-slate-500">
         A dynamic calendar visualization will appear here, syncing automatically with club events and school-wide activities.
       </div>
     </div>
