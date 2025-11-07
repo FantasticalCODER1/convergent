@@ -1,0 +1,6 @@
+{
+  "student": ["view"],
+  "manager": ["view", "post", "attendance"],
+  "master": ["view", "post", "attendance", "certify"],
+  "admin": ["all"]
+}
