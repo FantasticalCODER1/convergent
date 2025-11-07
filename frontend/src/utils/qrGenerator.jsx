@@ -1,5 +1,5 @@
 import QRCode from 'qrcode';
-export async function generateQR(text, opts = {}) {
+export async function generateQrDataUrl(text, opts = {}) {
   return QRCode.toDataURL(text, {
     errorCorrectionLevel: 'M',
     width: 256,
