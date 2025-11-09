@@ -1,13 +1,13 @@
 {
   "root": true,
-  "ignorePatterns": ["node_modules/**", "frontend/dist/**", "**/dist/**"],
+  "ignorePatterns": ["node_modules/**"],
   "env": {
     "es2023": true,
     "node": true
   },
-  "extends": ["eslint:recommended"],
   "parserOptions": {
     "ecmaVersion": 2023,
     "sourceType": "module"
-  }
+  },
+  "extends": ["eslint:recommended", "prettier"]
 }

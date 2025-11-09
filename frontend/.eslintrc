@@ -1,10 +1,30 @@
 {
-  "extends": ["eslint:recommended", "plugin:react/recommended"],
+  "root": true,
+  "ignorePatterns": ["dist/**", "node_modules/**"],
+  "env": {
+    "browser": true,
+    "es2023": true,
+    "node": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2023,
+    "sourceType": "module"
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended",
+    "plugin:jsx-a11y/recommended",
+    "plugin:tailwindcss/recommended",
+    "prettier"
+  ],
   "plugins": ["react"],
   "settings": {
     "react": { "version": "detect" }
   },
   "rules": {
-    "react/react-in-jsx-scope": "off"
+    "react/react-in-jsx-scope": "off",
+    "react/prop-types": "off",
+    "tailwindcss/classnames-order": "off"
   }
 }
