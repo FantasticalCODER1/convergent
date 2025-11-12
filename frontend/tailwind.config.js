@@ -1,11 +1,3 @@
-/**
- * Project: Convergent
- * Author: GPT-5 Codex
- * Date: 2025-11-06
- */
-// Tailwind configuration customizing the Convergent brand palette and typography baseline.
-// TODO: Introduce theming tokens for house-specific accents in future iterations.
-
 import defaultTheme from 'tailwindcss/defaultTheme';
 
 /** @type {import('tailwindcss').Config} */
@@ -17,19 +9,20 @@ const config = {
         sans: ['"Inter"', '"Nunito Sans"', ...defaultTheme.fontFamily.sans]
       },
       colors: {
+        glass: 'rgba(255,255,255,0.08)',
         brand: {
-          DEFAULT: '#3B82F6',
-          dark: '#1E40AF',
-          light: '#93C5FD'
+          DEFAULT: '#6366F1',
+          dark: '#4F46E5',
+          light: '#A5B4FC'
         },
-        accent: '#1E40AF',
-        background: '#F8FAFC'
+        accent: '#22D3EE',
+        surface: '#0F172A'
       },
       boxShadow: {
-        soft: '0 10px 30px rgba(59, 130, 246, 0.08)'
+        glass: '0 15px 45px rgba(15, 23, 42, 0.35)'
       },
-      transitionDuration: {
-        250: '250ms'
+      borderRadius: {
+        glass: '28px'
       }
     }
   },

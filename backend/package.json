@@ -2,28 +2,8 @@
   "name": "convergent-backend",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
-  "engines": {
-    "node": "^18"
-  },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "serve": "vite preview",
-    "lint": "eslint . --ext .js,.jsx",
-    "format": "prettier --write .",
-    "serve:functions": "firebase emulators:start --only functions",
-    "deploy": "firebase deploy --only functions"
-  },
-  "dependencies": {
-    "firebase-admin": "^11.10.1",
-    "firebase-functions": "^4.5.0",
-    "qrcode": "^1.5.3"
-  },
-  "devDependencies": {
-    "eslint": "^8.55.0",
-    "eslint-config-prettier": "^9.0.0",
-    "prettier": "^3.1.1",
-    "vite": "^5.0.0"
+    "serve:functions": "npm --prefix functions run serve",
+    "deploy": "npm --prefix functions run deploy"
   }
 }

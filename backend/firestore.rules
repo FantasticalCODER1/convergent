@@ -1,91 +1,52 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function roleOrder(role) {
-      return role == 'admin' ? 3 : role == 'master' ? 2 : role == 'manager' ? 1 : 0;
+
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    function currentRole() {
-      return request.auth != null && request.auth.token.role != null
-        ? request.auth.token.role
-        : 'student';
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
-    function hasRole(requiredRole) {
-      return request.auth != null && roleOrder(currentRole()) >= roleOrder(requiredRole);
+    match /users/{uid} {
+      allow read: if isSignedIn() && (uid == request.auth.uid || userRole() in ['teacher', 'admin']);
+      allow write: if isSignedIn() && uid == request.auth.uid;
     }
 
-    function clubDocument(clubId) {
-      return get(/databases/$(database)/documents/clubs/$(clubId));
-    }
-
-    function clubData(clubId) {
-      return clubDocument(clubId).data;
-    }
-
-    function isClubManager(clubId) {
-      return hasRole('admin')
-        || (
-          request.auth != null
-          && clubData(clubId) != null
-          && clubData(clubId).managerIds != null
-          && clubData(clubId).managerIds.hasAny([request.auth.uid])
-        );
-    }
-
-    function isClubMaster(clubId) {
-      return hasRole('admin')
-        || (
-          request.auth != null
-          && clubData(clubId) != null
-          && clubData(clubId).masterId != null
-          && clubData(clubId).masterId == request.auth.uid
-        );
-    }
-
-    match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || hasRole('admin'));
-      allow write: if hasRole('admin');
+    function clubManagers() {
+      return request.method == 'create' ? request.resource.data.managers : resource.data.managers;
     }
 
     match /clubs/{clubId} {
-      allow read: if request.auth != null;
-      allow create, update, delete: if hasRole('admin');
-
-      match /events/{eventId} {
-        allow read: if request.auth != null;
-        allow create, update, delete: if isClubManager(clubId) || isClubMaster(clubId);
-
-        match /attendance/{attendanceId} {
-          allow read: if request.auth != null;
-          allow create: if request.auth != null && (
-            request.auth.uid == attendanceId
-            || isClubManager(clubId)
-            || isClubMaster(clubId)
-          );
-          allow update, delete: if isClubManager(clubId) || isClubMaster(clubId);
-        }
-      }
-
-      match /certificates/{certificateId} {
-        allow read: if request.auth != null;
-        allow create, update, delete: if isClubMaster(clubId);
-      }
-
-      match /resources/{resourceId} {
-        allow read: if request.auth != null;
-        allow write: if isClubManager(clubId) || isClubMaster(clubId);
-      }
+      allow read: if isSignedIn();
+      allow create, update, delete: if isSignedIn() &&
+        (userRole() in ['admin', 'teacher'] ||
+         (clubManagers() != null && request.auth.uid in clubManagers()));
     }
 
-    match /logs/{logId} {
-      allow read: if hasRole('manager');
-      allow write: if hasRole('manager');
+    match /clubPosts/{clubId}/posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() &&
+        (request.auth.uid == resource.data.authorUid || userRole() in ['admin', 'teacher']);
     }
 
-    match /{document=**} {
-      allow read: if request.auth != null;
-      allow write: if hasRole('admin');
+    match /events/{eventId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && userRole() in ['admin', 'teacher', 'manager'];
+    }
+
+    match /certificates/{certId} {
+      allow read: if true;
+      allow create: if isSignedIn() && userRole() in ['admin', 'teacher'];
+      allow update, delete: if isSignedIn() && userRole() in ['admin'];
+    }
+
+    match /classes/{classId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && userRole() in ['admin', 'teacher'];
     }
   }
 }

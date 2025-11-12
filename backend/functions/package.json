@@ -1,0 +1,16 @@
+{
+  "name": "convergent-functions",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": "18"
+  },
+  "scripts": {
+    "serve": "npx firebase emulators:start --only functions",
+    "deploy": "npx firebase deploy --only functions"
+  },
+  "dependencies": {
+    "firebase-admin": "^11.10.1",
+    "firebase-functions": "^4.5.0"
+  }
+}
