@@ -1,18 +1,12 @@
 import { useEffect, useState } from 'react';
-import { collection, doc, getDocs, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
-import { db } from '../firebase';
 import QRCode from 'qrcode';
 import jsPDF from 'jspdf';
 import { v4 as uuid } from 'uuid';
 import { useAuth } from '../context/AuthContext';
+import { data } from '../data';
+import type { CertDoc } from '../data/DataProvider';
 
-type Certificate = {
-  id: string;
-  eventTitle: string;
-  clubName: string;
-  verifierUrl: string;
-  issuedAt?: Date | null;
-};
+type Certificate = CertDoc & { verifierUrl: string };
 
 export default function Certificates() {
   const { user } = useAuth();
@@ -20,25 +14,13 @@ export default function Certificates() {
   const [loading, setLoading] = useState(true);
   const [issuing, setIssuing] = useState(false);
 
-const loadCertificates = async (uid: string) => {
-  const certificatesQuery = query(collection(db, 'certificates'), where('userUid', '==', uid));
-  const snap = await getDocs(certificatesQuery);
-  setCertificates(
-    snap.docs.map((docSnap) => {
-        const data = docSnap.data() as Record<string, any>;
-        return {
-          id: docSnap.id,
-          eventTitle: data.eventTitle ?? 'Certificate',
-          clubName: data.clubName ?? 'Convergent',
-          verifierUrl: data.verifierUrl ?? '',
-          issuedAt:
-            data.issuedAt instanceof Date
-              ? data.issuedAt
-              : data.issuedAt?.toDate
-                ? data.issuedAt.toDate()
-                : null
-        };
-      })
+  const loadCertificates = async (uid: string) => {
+    const entries = await data.listCertsForUser(uid);
+    setCertificates(
+      entries.map((entry) => ({
+        ...entry,
+        verifierUrl: `${window.location.origin}/verify?id=${entry.verifierId}`
+      }))
     );
     setLoading(false);
   };
@@ -46,23 +28,24 @@ const loadCertificates = async (uid: string) => {
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    loadCertificates(user.uid);
+    loadCertificates(user.id);
   }, [user]);
 
   const issueSample = async () => {
     if (!user) return;
     setIssuing(true);
     try {
-      const id = uuid();
-      const verifierUrl = `${window.location.origin}/verify?id=${id}`;
-      await setDoc(doc(db, 'certificates', id), {
-        userUid: user.uid,
+      const verifierId = uuid();
+      await data.createCert({
+        userUid: user.id,
         name: user.name,
         eventTitle: 'Sample Event',
         clubName: 'Convergent',
-        issuedAt: serverTimestamp(),
-        verifierUrl
+        issuedAt: Date.now(),
+        verifierId
       });
+
+      const verifierUrl = `${window.location.origin}/verify?id=${verifierId}`;
 
       const qrUrl = await QRCode.toDataURL(verifierUrl);
       const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
@@ -77,13 +60,21 @@ const loadCertificates = async (uid: string) => {
       pdf.addImage(qrUrl, 'PNG', 60, 240, 160, 160);
       pdf.save('certificate.pdf');
 
-      await loadCertificates(user.uid);
+      await loadCertificates(user.id);
     } catch (error) {
       console.error('Failed to issue certificate', error);
     } finally {
       setIssuing(false);
     }
   };
+
+  if (!user) {
+    return (
+      <div className="rounded-3xl border border-white/5 bg-white/5 p-6 text-white/70">
+        Sign in to generate and view certificates.
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -121,7 +112,7 @@ const loadCertificates = async (uid: string) => {
                 <p className="text-sm uppercase tracking-[0.2em] text-white/60">{cert.clubName}</p>
                 <h3 className="text-2xl font-semibold text-white">{cert.eventTitle}</h3>
                 <p className="text-sm text-white/60">
-                  Issued {cert.issuedAt ? cert.issuedAt.toLocaleDateString() : '—'}
+                  Issued {cert.issuedAt ? new Date(cert.issuedAt).toLocaleDateString() : '—'}
                 </p>
                 <p className="mt-4 text-xs text-emerald-300">Tap to verify</p>
               </a>

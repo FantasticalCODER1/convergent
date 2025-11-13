@@ -4,10 +4,9 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { EventClickArg } from '@fullcalendar/core';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../firebase';
-import { addToGoogleCalendar } from '../services/CalendarService';
-import { useAuth } from '../context/AuthContext';
+import { data } from '../data';
+import { addToGoogleCalendar, downloadIcs } from '../services/Calendar';
+import type { EventDoc } from '../data/DataProvider';
 
 type EventPayload = {
   id: string;
@@ -20,25 +19,21 @@ type EventPayload = {
 export default function CalendarPage() {
   const [events, setEvents] = useState<EventPayload[]>([]);
   const [loading, setLoading] = useState(true);
-  const { accessToken } = useAuth();
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const snap = await getDocs(collection(db, 'events'));
+        const stored = await data.listEvents();
         if (cancelled) return;
         setEvents(
-          snap.docs.map((docSnap) => {
-            const data = docSnap.data() as Record<string, any>;
-            return {
-              id: docSnap.id,
-              title: data.title ?? 'Untitled event',
-              start: toIso(data.start),
-              end: toIso(data.end),
-              extendedProps: data
-            } satisfies EventPayload;
-          })
+          stored.map((event) => ({
+            id: event.id,
+            title: event.title,
+            start: event.start,
+            end: event.end,
+            extendedProps: event
+          }))
         );
       } finally {
         if (!cancelled) setLoading(false);
@@ -50,21 +45,23 @@ export default function CalendarPage() {
   }, []);
 
   const handleEventClick = async (info: EventClickArg) => {
-    const data = info.event.extendedProps as Record<string, any>;
+    const eventData = info.event.extendedProps as EventDoc;
+    const startIso = eventData.start ?? info.event.start?.toISOString() ?? new Date().toISOString();
+    const endIso = eventData.end ?? info.event.end?.toISOString() ?? startIso;
+    const payload = {
+      title: eventData.title ?? info.event.title,
+      description: eventData.description ?? '',
+      location: eventData.location ?? '',
+      start: startIso,
+      end: endIso
+    };
     try {
-      const startIso = toIso(data.start) ?? info.event.start?.toISOString() ?? new Date().toISOString();
-      const endIso = toIso(data.end) ?? info.event.end?.toISOString() ?? startIso;
-      await addToGoogleCalendar(accessToken, {
-        title: data.title ?? info.event.title,
-        description: data.description ?? '',
-        location: data.location ?? '',
-        start: startIso,
-        end: endIso
-      });
-      alert('Event added to Google Calendar or downloaded as ICS.');
+      await addToGoogleCalendar(payload);
+      alert('Event added to Google Calendar.');
     } catch (err) {
       console.error(err);
-      alert('Unable to add event. Please try again.');
+      downloadIcs(payload);
+      alert('Google Calendar insert failed. Downloaded ICS instead.');
     }
   };
 
@@ -96,14 +93,4 @@ export default function CalendarPage() {
       </div>
     </div>
   );
-}
-
-function toIso(value: unknown) {
-  if (!value) return undefined;
-  if (typeof value === 'string') return value;
-  if (value instanceof Date) return value.toISOString();
-  if (typeof value === 'object' && value !== null && 'toDate' in value) {
-    return (value as { toDate: () => Date }).toDate().toISOString();
-  }
-  return undefined;
 }

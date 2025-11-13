@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
-import { addDoc, collection, getDocs, orderBy, query, serverTimestamp } from 'firebase/firestore';
-import { useAuth } from '../context/AuthContext';
-import { db } from '../firebase';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { data } from '../data';
+import { useAuth } from '../context/AuthContext';
 
 const schema = z.object({
   name: z.string().min(3, 'Club name should be at least 3 characters'),
@@ -18,13 +17,8 @@ const schema = z.object({
 
 type ClubForm = z.infer<typeof schema>;
 
-type Club = ClubForm & {
-  id: string;
-  logoUrl?: string;
-};
-
 export default function Clubs() {
-  const [clubs, setClubs] = useState<Club[]>([]);
+  const [clubs, setClubs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -32,13 +26,8 @@ export default function Clubs() {
 
   const fetchClubs = async () => {
     try {
-      const snap = await getDocs(query(collection(db, 'clubs'), orderBy('name', 'asc')));
-      setClubs(
-        snap.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...(docSnap.data() as ClubForm & { logoUrl?: string })
-        }))
-      );
+      const items = await data.listClubs();
+      setClubs(items.sort((a, b) => a.name.localeCompare(b.name)));
     } finally {
       setLoading(false);
     }
@@ -104,11 +93,9 @@ function CreateClubForm({ onCreated }: { onCreated: () => Promise<void> | void }
   } = useForm<ClubForm>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (values: ClubForm) => {
-    await addDoc(collection(db, 'clubs'), {
+    await data.createClub({
       ...values,
-      logoUrl: '',
-      managers: user ? [user.uid] : [],
-      createdAt: serverTimestamp()
+      managers: user ? [user.id] : []
     });
     reset();
     await onCreated();

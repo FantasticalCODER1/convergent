@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
-import { db } from '../firebase';
-import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { data } from '../data';
+import type { EventDoc } from '../data/DataProvider';
+import { useAuth } from '../context/AuthContext';
 
 type EventRecord = {
   id: string;
@@ -35,29 +35,25 @@ export default function Dashboard() {
     let isMounted = true;
     (async () => {
       try {
-        const clubsPromise = getDocs(collection(db, 'clubs'));
-        const eventsPromise = getDocs(query(collection(db, 'events'), orderBy('start', 'asc')));
-        const certificatesPromise = getDocs(collection(db, 'certificates'));
-        const [clubsSnap, eventsSnap, certSnap] = await Promise.all([clubsPromise, eventsPromise, certificatesPromise]);
+        const [clubs, events, certs] = await Promise.all([
+          data.listClubs(),
+          data.listEvents(),
+          user ? data.listCertsForUser(user.id) : Promise.resolve([])
+        ]);
 
         if (!isMounted) return;
 
-        const parsedEvents: EventRecord[] = eventsSnap.docs.map((docSnap) => {
-          const data = docSnap.data() as Record<string, any>;
-          return {
-            id: docSnap.id,
-            title: data.title ?? 'Untitled',
-            type: data.type,
-            start: toDate(data.start)
-          };
-        });
-
-        setCounts({
-          clubs: clubsSnap.size,
-          events: eventsSnap.size,
-          certificates: certSnap.docs.filter((d) => (d.data() as Record<string, any>).userUid === user?.uid).length
-        });
-        setEvents(parsedEvents);
+        setCounts({ clubs: clubs.length, events: events.length, certificates: certs.length });
+        setEvents(
+          events
+            .map((event) => ({
+              id: event.id,
+              title: event.title,
+              type: event.type,
+              start: toDate(event.start)
+            }))
+            .sort((a, b) => (a.start?.getTime() ?? 0) - (b.start?.getTime() ?? 0))
+        );
       } catch (err) {
         console.error('Failed to load dashboard data', err);
       } finally {
@@ -67,7 +63,7 @@ export default function Dashboard() {
     return () => {
       isMounted = false;
     };
-  }, [user?.uid]);
+  }, [user?.id]);
 
   const nextEvent = useMemo(() => {
     const now = Date.now();
@@ -159,12 +155,8 @@ export default function Dashboard() {
   );
 }
 
-function toDate(value: unknown): Date | null {
+function toDate(value: EventDoc['start'] | Date | undefined): Date | null {
   if (!value) return null;
   if (value instanceof Date) return value;
-  if (typeof value === 'string') return new Date(value);
-  if (typeof value === 'object' && value !== null && 'toDate' in value && typeof (value as any).toDate === 'function') {
-    return (value as { toDate: () => Date }).toDate();
-  }
-  return null;
+  return new Date(value);
 }

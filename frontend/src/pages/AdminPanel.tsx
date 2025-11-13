@@ -1,15 +1,9 @@
 import { useEffect, useState } from 'react';
-import { collection, doc, getDocs, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
 import RequireRole from '../components/RequireRole';
-import type { Role } from '../context/AuthContext';
+import type { Role, UserDoc } from '../data/DataProvider';
+import { data } from '../data';
 
-type ManagedUser = {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-};
+type ManagedUser = UserDoc;
 
 export default function AdminPanel() {
   return (
@@ -24,13 +18,8 @@ function AdminInner() {
   const [loading, setLoading] = useState(true);
 
   const loadUsers = async () => {
-    const snap = await getDocs(collection(db, 'users'));
-    setUsers(
-      snap.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...(docSnap.data() as Omit<ManagedUser, 'id'>)
-      }))
-    );
+    const records = await data.listUsers();
+    setUsers(records);
     setLoading(false);
   };
 
@@ -39,7 +28,7 @@ function AdminInner() {
   }, []);
 
   const changeRole = async (id: string, role: Role) => {
-    await updateDoc(doc(db, 'users', id), { role });
+    await data.updateUserRole(id, role);
     await loadUsers();
   };
 

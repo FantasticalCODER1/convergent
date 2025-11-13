@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { doc, getDoc, collection, query, orderBy, getDocs, addDoc, serverTimestamp, limit } from 'firebase/firestore';
-import { db } from '../firebase';
-import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import clsx from 'clsx';
+import { data } from '../data';
+import { useAuth } from '../context/AuthContext';
+import type { ClubDoc, PostDoc } from '../data/DataProvider';
 
 type ClubDoc = {
   id: string;
@@ -15,12 +15,7 @@ type ClubDoc = {
   schedule: string;
 };
 
-type Post = {
-  id: string;
-  text: string;
-  authorUid: string;
-  createdAt?: Date | null;
-};
+type Post = PostDoc & { createdAtDate: Date | null };
 
 export default function ClubDetail() {
   const { id } = useParams<{ id: string }>();
@@ -36,14 +31,15 @@ export default function ClubDetail() {
     (async () => {
       setLoading(true);
       try {
-        const [clubSnap, postsSnap] = await Promise.all([getDoc(doc(db, 'clubs', id)), loadPosts(id)]);
+        const [clubDoc, postsList] = await Promise.all([data.getClub(id), data.listPosts(id)]);
         if (cancelled) return;
-        if (clubSnap.exists()) {
-          setClub({ id: clubSnap.id, ...(clubSnap.data() as Omit<ClubDoc, 'id'>) });
-        } else {
-          setClub(null);
-        }
-        setPosts(postsSnap);
+        setClub(clubDoc ?? null);
+        setPosts(
+          postsList.map((post) => ({
+            ...post,
+            createdAtDate: post.createdAt ? new Date(post.createdAt) : null
+          }))
+        );
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -57,13 +53,14 @@ export default function ClubDetail() {
     if (!id || !user || !text.trim()) return;
     setPosting(true);
     try {
-      await addDoc(collection(db, 'clubPosts', id, 'posts'), {
-        text: text.trim(),
-        authorUid: user.uid,
-        createdAt: serverTimestamp()
-      });
-      const updated = await loadPosts(id);
-      setPosts(updated);
+      await data.addPost(id, text.trim(), user.id);
+      const updated = await data.listPosts(id);
+      setPosts(
+        updated.map((post) => ({
+          ...post,
+          createdAtDate: post.createdAt ? new Date(post.createdAt) : null
+        }))
+      );
     } finally {
       setPosting(false);
     }
@@ -119,9 +116,7 @@ export default function ClubDetail() {
               animate={{ opacity: 1, y: 0 }}
             >
               <p>{post.text}</p>
-              {post.createdAt && (
-                <p className="mt-2 text-xs text-white/50">{post.createdAt.toLocaleString()}</p>
-              )}
+              {post.createdAtDate && <p className="mt-2 text-xs text-white/50">{post.createdAtDate.toLocaleString()}</p>}
             </motion.div>
           ))}
         </div>
@@ -161,23 +156,4 @@ function PostComposer({ onSubmit, disabled }: { onSubmit: (text: string) => void
       </button>
     </div>
   );
-}
-
-async function loadPosts(clubId: string) {
-  const q = query(collection(db, 'clubPosts', clubId, 'posts'), orderBy('createdAt', 'desc'), limit(10));
-  const snap = await getDocs(q);
-  return snap.docs.map((docSnap) => {
-    const data = docSnap.data() as Record<string, any>;
-    return {
-      id: docSnap.id,
-      text: data.text ?? '',
-      authorUid: data.authorUid ?? '',
-      createdAt:
-        data.createdAt instanceof Date
-          ? data.createdAt
-          : data.createdAt?.toDate
-            ? data.createdAt.toDate()
-            : null
-    };
-  });
 }

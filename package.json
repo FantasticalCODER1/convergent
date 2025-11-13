@@ -8,10 +8,12 @@
     "install:backend": "cd backend && npm install",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "cd backend && npm run serve:functions",
+    "dev:backend": "node scripts/devBackend.mjs",
     "format": "npm run format --prefix frontend && npm run format --prefix backend",
     "prepare": "husky install",
-    "sync:changelog": "node scripts/updateChangelog.js"
+    "sync:changelog": "node scripts/updateChangelog.js",
+    "oauth:assist": "node scripts/oauth-assist.mjs",
+    "oauth:reset": "node scripts/oauth-reset.mjs"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

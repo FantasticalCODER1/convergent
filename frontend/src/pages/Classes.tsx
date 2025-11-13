@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { fetchCourses, fetchCoursework } from '../services/ClassroomService';
 import { useAuth } from '../context/AuthContext';
+import { listCourses, listCoursework } from '../services/Classroom';
 
 type Course = {
   id: string;
@@ -18,7 +18,7 @@ type Coursework = {
 };
 
 export default function Classes() {
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [selected, setSelected] = useState<Course | null>(null);
   const [coursework, setCoursework] = useState<Coursework[]>([]);
@@ -29,7 +29,7 @@ export default function Classes() {
   useEffect(() => {
     if (!accessToken) return;
     setLoadingCourses(true);
-    fetchCourses(accessToken)
+    listCourses()
       .then((data) => {
         setCourses(data);
       })
@@ -47,7 +47,7 @@ export default function Classes() {
     setSelected(course);
     setLoadingWork(true);
     try {
-      const work = await fetchCoursework(accessToken, course.id);
+      const work = await listCoursework(course.id);
       setCoursework(work);
     } catch (err) {
       console.error(err);
@@ -57,6 +57,14 @@ export default function Classes() {
       setLoadingWork(false);
     }
   };
+
+  if (!user) {
+    return (
+      <div className="rounded-3xl border border-white/5 bg-white/5 p-6 text-white/70">
+        Sign in to view Classroom courses.
+      </div>
+    );
+  }
 
   if (!accessToken) {
     return (
