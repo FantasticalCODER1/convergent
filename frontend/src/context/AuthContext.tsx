@@ -1,89 +1,87 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { GoogleAuthProvider, User, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { auth, db, provider } from '../firebase';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { getGoogleAccessAndProfile, clearGoogleAuthCache } from '../auth/google';
+import { data } from '../data';
+import type { UserDoc } from '../data/DataProvider';
 
-export type Role = 'student' | 'teacher' | 'admin' | 'manager';
-
-export type AppUser = {
-  uid: string;
-  name: string;
-  email: string;
-  role: Role;
-  photoURL?: string;
-  clubsJoined: string[];
-};
-
-export type AuthState = {
-  user: AppUser | null;
+type AuthState = {
+  user: UserDoc | null;
   accessToken?: string;
-  loading: boolean;
   login: () => Promise<void>;
-  logout: () => Promise<void>;
+  logout: () => void;
+  loading: boolean;
+  error?: string;
 };
 
 const AuthContext = createContext<AuthState>({} as AuthState);
+const STORAGE_KEY = 'convergent-user-id';
 
 export const useAuth = () => useContext(AuthContext);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AppUser | null>(null);
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<UserDoc | null>(null);
   const [accessToken, setAccessToken] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | undefined>();
 
   const login = async () => {
-    const result = await signInWithPopup(auth, provider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    const token = credential?.accessToken;
-    if (token) setAccessToken(token);
+    setLoading(true);
+    setError(undefined);
+    try {
+      const { accessToken: token, profile } = await getGoogleAccessAndProfile();
+      setAccessToken(token);
 
-    const currentUser = result.user as User;
-    const ref = doc(db, 'users', currentUser.uid);
-    const snap = await getDoc(ref);
+      const existing = await data.getUser(profile.sub);
+      const nextUser: UserDoc =
+        existing ??
+        ({
+          id: profile.sub,
+          name: profile.name || 'Student',
+          email: profile.email || '',
+          photoURL: profile.picture,
+          role: 'student',
+          clubsJoined: []
+        } satisfies UserDoc);
 
-    if (!snap.exists()) {
-      const newUser: AppUser = {
-        uid: currentUser.uid,
-        name: currentUser.displayName || 'Student',
-        email: currentUser.email || '',
-        role: 'student',
-        photoURL: currentUser.photoURL || '',
-        clubsJoined: []
-      };
-      await setDoc(ref, { ...newUser, createdAt: serverTimestamp() });
-      setUser(newUser);
-    } else {
-      setUser(snap.data() as AppUser);
+      nextUser.name = profile.name || nextUser.name;
+      nextUser.email = profile.email || nextUser.email;
+      nextUser.photoURL = profile.picture || nextUser.photoURL;
+
+      await data.upsertUser(nextUser);
+      localStorage.setItem(STORAGE_KEY, nextUser.id);
+      setUser(nextUser);
+    } catch (e: any) {
+      const message = e?.message ?? String(e);
+      setError(message === 'PROFILE_FETCH_FAILED' ? 'Could not read your Google profile. Try again or contact an admin.' : message);
+      setAccessToken(undefined);
+      clearGoogleAuthCache();
+    } finally {
+      setLoading(false);
     }
   };
 
-  const logout = async () => {
-    await signOut(auth);
+  const logout = () => {
+    localStorage.removeItem(STORAGE_KEY);
     setUser(null);
     setAccessToken(undefined);
+    setError(undefined);
+    clearGoogleAuthCache();
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (!firebaseUser) {
-        setUser(null);
-        setAccessToken(undefined);
-        setLoading(false);
-        return;
-      }
-
-      const ref = doc(db, 'users', firebaseUser.uid);
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        setUser(snap.data() as AppUser);
-      }
+    const lastId = localStorage.getItem(STORAGE_KEY);
+    if (!lastId) {
       setLoading(false);
-    });
-    return () => unsubscribe();
+      return;
+    }
+    (async () => {
+      const existing = await data.getUser(lastId);
+      setUser(existing ?? null);
+      setLoading(false);
+    })();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, accessToken, login, logout, loading, error }}>
       {children}
     </AuthContext.Provider>
   );

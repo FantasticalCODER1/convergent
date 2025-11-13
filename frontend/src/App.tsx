@@ -10,8 +10,11 @@ import AdminPanel from './pages/AdminPanel';
 import Classes from './pages/Classes';
 import Login from './pages/Login';
 import Verify from './pages/Verify';
+import DevSeed from './pages/DevSeed';
 import RequireRole from './components/RequireRole';
-import { CalendarDays, GraduationCap, Home, Shield, Trophy, UsersRound, NotebookPen } from 'lucide-react';
+import RequireAuth from './components/RequireAuth';
+import { CalendarDays, Home, NotebookPen, Shield, Trophy, UsersRound } from 'lucide-react';
+import DebugOAuth from './pages/DebugOAuth';
 
 const navLinks = [
   { to: '/dashboard', label: 'Dashboard', icon: Home },
@@ -26,37 +29,36 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/debug/oauth" element={<DebugOAuth />} />
       <Route path="/verify" element={<Verify />} />
-      <Route element={<ProtectedLayout />}>
+      <Route
+        element={
+          <RequireAuth>
+            <Shell />
+          </RequireAuth>
+        }
+      >
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route element={<Shell />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/clubs" element={<Clubs />} />
-          <Route path="/clubs/:id" element={<ClubDetail />} />
-          <Route path="/calendar" element={<CalendarPage />} />
-          <Route path="/classes" element={<Classes />} />
-          <Route path="/certificates" element={<Certificates />} />
-          <Route
-            path="/admin"
-            element={
-              <RequireRole role="admin">
-                <AdminPanel />
-              </RequireRole>
-            }
-          />
-          <Route path="/unauthorised" element={<div className="p-8">No access</div>} />
-        </Route>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/clubs" element={<Clubs />} />
+        <Route path="/clubs/:id" element={<ClubDetail />} />
+        <Route path="/calendar" element={<CalendarPage />} />
+        <Route path="/classes" element={<Classes />} />
+        <Route path="/certificates" element={<Certificates />} />
+        <Route
+          path="/admin"
+          element={
+            <RequireRole role="admin">
+              <AdminPanel />
+            </RequireRole>
+          }
+        />
+        {import.meta.env.DEV && <Route path="/dev/seed" element={<DevSeed />} />}
+        <Route path="/unauthorised" element={<div className="p-8">No access</div>} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
-}
-
-function ProtectedLayout() {
-  const { user, loading } = useAuth();
-  if (loading) return <div className="grid min-h-screen place-items-center text-white">Loading…</div>;
-  if (!user) return <Navigate to="/login" replace />;
-  return <Outlet />;
 }
 
 function Shell() {
