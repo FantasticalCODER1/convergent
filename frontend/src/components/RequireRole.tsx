@@ -1,8 +1,8 @@
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import type { Role } from '../data/DataProvider';
+import type { UserRole } from '../types/User';
+import { useAuth } from '../hooks/useAuth';
 
-export default function RequireRole({ role, children }: { role: Role; children: JSX.Element }) {
+export default function RequireRole({ role, children }: { role: UserRole; children: JSX.Element }) {
   const { user, loading } = useAuth();
 
   if (loading) return <div className="p-8 text-sm opacity-80">Loading access…</div>;
