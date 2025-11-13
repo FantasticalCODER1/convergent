@@ -10,8 +10,11 @@ backend/dist/
 
 # Environment & local overrides
 .env
+.env.*
 frontend/.env
+frontend/.env.*
 backend/.env
+backend/.env.*
 *.local
 *.log
 

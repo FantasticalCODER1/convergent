@@ -6,6 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "lint": "echo \"Skipping frontend lint for now\"",
     "format": "echo \"frontend format placeholder\"",
     "serve:emulators": "firebase emulators:start",
     "deploy": "firebase deploy"
