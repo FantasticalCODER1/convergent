@@ -1,6 +1,7 @@
-import { type ComponentType } from 'react';
+import { type ComponentType, useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Navigate, Outlet, Route, Routes, NavLink as RouterNavLink } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './hooks/useAuth';
 import Dashboard from './pages/Dashboard';
 import Clubs from './pages/Clubs';
 import ClubDetail from './pages/ClubDetail';
@@ -71,21 +72,7 @@ function Shell() {
             <p className="text-xs uppercase tracking-[0.25em] text-accent">Convergent</p>
             <p className="text-lg font-semibold text-white/90">Unified co-curricular platform</p>
           </div>
-          {user && (
-            <div className="flex items-center gap-4">
-              <div className="text-right text-sm leading-tight text-white/80">
-                <p className="font-semibold">{user.name}</p>
-                <p className="text-white/60">{user.role}</p>
-              </div>
-              <button
-                type="button"
-                onClick={logout}
-                className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium hover:bg-white/20"
-              >
-                Sign out
-              </button>
-            </div>
-          )}
+          {user ? <ProfileDropdown userName={user.name} userEmail={user.email} userRole={user.role} onSignOut={logout} /> : null}
         </div>
       </header>
       <div className="mx-auto flex w-full max-w-6xl gap-6 px-4 py-8 md:px-6">
@@ -98,6 +85,54 @@ function Shell() {
           <Outlet />
         </main>
       </div>
+    </div>
+  );
+}
+
+function ProfileDropdown({ userName, userEmail, userRole, onSignOut }: { userName: string; userEmail: string; userRole: string; onSignOut: () => Promise<void> | void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handler = (event: MouseEvent) => {
+      if (!ref.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-left text-sm text-white/80 transition hover:bg-white/10"
+      >
+        <div className="text-right leading-tight">
+          <p className="font-semibold text-white">{userName}</p>
+          <p className="text-xs text-white/60">{userRole}</p>
+        </div>
+        <span aria-hidden className="text-white/60">
+          ▾
+        </span>
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-white/10 bg-slate-900/95 p-4 text-sm shadow-xl">
+          <p className="font-semibold text-white">{userName}</p>
+          <p className="text-white/60">{userEmail}</p>
+          <div className="mt-4 space-y-2">
+            <button
+              type="button"
+              onClick={() => onSignOut()}
+              className="w-full rounded-xl border border-white/10 px-4 py-2 text-left text-white/80 transition hover:bg-white/10"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

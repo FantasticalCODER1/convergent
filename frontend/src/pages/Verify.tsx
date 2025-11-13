@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { data as provider } from '../data';
-import type { CertDoc } from '../data/DataProvider';
+import { verifyCertificateByCode } from '../services/certificatesService';
+import type { CertificateRecord } from '../types/Certificate';
 
 type VerifyState =
   | { status: 'loading' }
   | { status: 'invalid'; message: string }
-  | { status: 'valid'; cert: CertDoc };
+  | { status: 'valid'; cert: CertificateRecord };
 
 export default function Verify() {
   const [state, setState] = useState<VerifyState>({ status: 'loading' });
@@ -17,8 +17,7 @@ export default function Verify() {
       setState({ status: 'invalid', message: 'Missing certificate id.' });
       return;
     }
-    provider
-      .getCertByVerifier(id)
+    verifyCertificateByCode(id)
       .then((cert) => {
         if (!cert) {
           setState({ status: 'invalid', message: 'Certificate not found.' });
@@ -51,13 +50,11 @@ export default function Verify() {
         <p className="text-sm uppercase tracking-[0.3em] text-emerald-200">Verified</p>
         <h1 className="text-4xl font-semibold text-white">Certificate is valid</h1>
         <p className="mt-4 text-lg text-white/80">
-          Awarded to <span className="font-semibold text-white">{cert.name}</span> for{' '}
+          Awarded to <span className="font-semibold text-white">{cert.userName}</span> for{' '}
           <span className="font-semibold text-white">{cert.eventTitle}</span>
           {cert.clubName ? ` · ${cert.clubName}` : ''}
         </p>
-        {cert.issuedAt && (
-          <p className="mt-2 text-sm text-white/60">Issued at {new Date(cert.issuedAt).toLocaleString()}</p>
-        )}
+        {cert.issuedAt && <p className="mt-2 text-sm text-white/60">Issued at {new Date(cert.issuedAt).toLocaleString()}</p>}
       </div>
     </div>
   );

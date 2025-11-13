@@ -169,7 +169,7 @@ async function fetchUserInfo(accessToken: string): Promise<GoogleProfile> {
   throw new Error('PROFILE_FETCH_FAILED');
 }
 
-export async function getGoogleAccessAndProfile(): Promise<{ accessToken: string; profile: GoogleProfile }> {
+export async function getGoogleAccessAndProfile(): Promise<{ accessToken: string; profile: GoogleProfile; idToken?: string }> {
   const state = await ensureValidAccessToken();
   if (!state.accessToken) throw new Error('ACCESS_TOKEN_MISSING');
 
@@ -179,7 +179,7 @@ export async function getGoogleAccessAndProfile(): Promise<{ accessToken: string
     cached.profile = profile;
   }
 
-  return { accessToken: state.accessToken, profile: state.profile };
+  return { accessToken: state.accessToken, profile: state.profile, idToken: state.idToken };
 }
 
 export function getGoogleConfigSummary() {
