@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "serve:functions": "npm --prefix functions run serve",
-    "deploy": "npm --prefix functions run deploy"
+    "deploy": "npm --prefix functions run deploy",
+    "format": "echo \"backend format placeholder\""
   }
 }
