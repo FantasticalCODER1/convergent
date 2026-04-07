@@ -24,12 +24,14 @@ const rsvpsRef = collection(firestore, 'eventRsvps');
 
 function mapEvent(snapshot: any): EventRecord {
   const data = snapshot.data();
+  const startTime = toIso(data.startTime) ?? toIso(data.createdAt) ?? new Date(0).toISOString();
+  const endTime = toIso(data.endTime) ?? startTime;
   return {
     id: snapshot.id,
     title: data.title ?? 'Untitled event',
     description: data.description,
-    startTime: toIso(data.startTime),
-    endTime: toIso(data.endTime),
+    startTime,
+    endTime,
     location: data.location,
     type: (data.type ?? 'club') as EventKind,
     clubId: data.clubId,

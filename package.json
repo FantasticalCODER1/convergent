@@ -9,9 +9,9 @@
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "node scripts/devBackend.mjs",
-    "format": "npm run format --prefix frontend && npm run format --prefix backend",
-    "prepare": "husky install",
-    "sync:changelog": "node scripts/updateChangelog.js",
+    "build": "npm run build --prefix frontend",
+    "typecheck": "npm run typecheck --prefix frontend",
+    "check": "npm run typecheck && npm run build",
     "oauth:assist": "node scripts/oauth-assist.mjs",
     "oauth:reset": "node scripts/oauth-reset.mjs"
   },

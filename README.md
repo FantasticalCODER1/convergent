@@ -1,12 +1,12 @@
-# Convergent – The Co-Curricular Hub
+# Convergent - The Co-Curricular Hub
 
 Convergent is a full-stack platform built for schools to consolidate all co-curricular activities into a unified, student-friendly portal. The experience blends the minimalism of Notion with the collaboration of Google Classroom, empowering students, Boy-in-Charge managers, Masters-in-Charge, and administrators to manage clubs, events, certificates, and attendance from a single source of truth.
 
 ## ✨ Product Vision
-- **Centralize participation** – Discover clubs, RSVP to events, and view attendance history effortlessly.
-- **Celebrate achievements** – Issue digitally-verifiable certificates with QR validation.
-- **Automate reporting** – Generate analytics and end-of-term summaries for every activity.
-- **Scale with the school** – Firebase-first architecture designed for 800+ users on free tiers.
+- **Centralize participation**: Discover clubs, RSVP to events, and view attendance history effortlessly.
+- **Celebrate achievements**: Issue digitally-verifiable certificates with QR validation.
+- **Automate reporting**: Generate analytics and end-of-term summaries for every activity.
+- **Scale with the school**: Firebase-first architecture designed for 800+ users on free tiers.
 
 ## 🏗️ Architecture Overview
 Convergent is organized as a monorepo with decoupled frontend and backend services.
@@ -16,8 +16,7 @@ convergent/
 ├── frontend/        # Vite + React + Tailwind interface, Firebase Auth & Firestore clients
 ├── backend/         # Firebase Functions for certificates, attendance, role orchestration
 ├── docs/            # Architecture, database schema, and deployment playbooks
-├── .github/         # CI/CD automation for Firebase Hosting deployments
-├── .husky/          # Git hooks for formatting & changelog automation
+├── .github/         # CI automation for frontend validation
 └── package.json     # Workspace-level scripts for tooling and automation
 ```
 
@@ -26,22 +25,19 @@ convergent/
 | --- | --- | --- |
 | Frontend | React 18, Vite, Tailwind CSS | Responsive UI, role-aware routing, PDF/QR generation |
 | Backend | Firebase Functions, Firestore, Firebase Auth | Secure serverless APIs, certificate issuance, attendance webhooks |
-| Tooling | ESLint, Prettier, Husky, GitHub Actions | Automated linting, formatting, changelog & deployment pipelines |
+| Tooling | TypeScript, GitHub Actions | Type checks, production builds, and repository validation |
 | PDF & QR | jsPDF, canvas-confetti, qrcode | Certificate exports with celebratory feedback |
 
 ## 🚀 Getting Started
 ### 1. Clone & Install
 ```bash
-# clone the repository
-git clone https://github.com/<org>/convergent.git
+git clone https://github.com/FantasticalCODER1/convergent.git
 cd convergent
-
-# install frontend and backend dependencies
 npm run install:all
 ```
 
 ### 2. Environment Variables
-Create `frontend/.env` and populate the Firebase credentials provided by the school domain administrator.
+Create `frontend/.env.local` and populate the Firebase credentials provided by the school domain administrator.
 ```bash
 VITE_FIREBASE_API_KEY=your-api-key
 VITE_FIREBASE_AUTH_DOMAIN=your-app.firebaseapp.com
@@ -62,24 +58,32 @@ cd ../backend
 npm run serve:functions
 ```
 
-> Formatting is enforced via Husky: commits trigger `npm run format`, and changelog versioning runs automatically after each commit.
-
-### 4. Linting & Formatting
+### 4. Project Checks
 ```bash
-cd frontend
-npm run lint
-npm run format
-
-cd ../backend
-npm run lint
-npm run format
+# root-level commands for CI and Codex
+npm run check
 ```
 
-### 5. Production Build & Deployment
+### 5. Frontend Validation
 ```bash
 cd frontend
+npm run typecheck
 npm run build
-npm run serve        # optional local preview of the production build
+```
+
+### 6. GitHub + Codex App Workflow
+- Keep the project in the GitHub repository at `FantasticalCODER1/convergent`.
+- Open the repository from the Codex app through GitHub so Codex works against the same branch history and pull requests.
+- Use `main` as the working baseline unless you intentionally need an isolated branch.
+- Run `npm run check` before pushing changes.
+- Store secrets only in local `.env.local` files or GitHub repository secrets, never in tracked files.
+
+### 7. Production Build & Deployment
+```bash
+npm run build
+
+cd frontend
+npm run preview      # optional local preview of the production build
 
 cd ../backend
 npm run deploy       # deploys Firebase Functions & hosting via GitHub Actions

@@ -4,8 +4,6 @@
   "private": true,
   "scripts": {
     "serve:functions": "npm --prefix functions run serve",
-    "deploy": "npm --prefix functions run deploy",
-    "lint": "echo \"Skipping backend lint for now\"",
-    "format": "echo \"backend format placeholder\""
+    "deploy": "npm --prefix functions run deploy"
   }
 }

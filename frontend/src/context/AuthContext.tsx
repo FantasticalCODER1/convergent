@@ -48,13 +48,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAccessToken(googleToken);
       const credential = GoogleAuthProvider.credential(idToken, googleToken);
       await signInWithCredential(auth, credential);
+      const existing = await fetchUser(profile.sub);
       const record = await upsertUserProfile({
         id: profile.sub,
-        name: profile.name || 'Student',
-        email: profile.email || '',
-        role: 'student',
-        photoURL: profile.picture,
-        clubsJoined: []
+        name: profile.name || existing?.name || 'Student',
+        email: profile.email || existing?.email || '',
+        role: existing?.role ?? 'student',
+        photoURL: profile.picture ?? existing?.photoURL,
+        clubsJoined: existing?.clubsJoined ?? []
       });
       setUser(record);
     } catch (err: any) {

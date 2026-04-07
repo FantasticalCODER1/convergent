@@ -1,4 +1,4 @@
-name: Deploy Convergent
+name: Validate Convergent
 
 on:
   push:
@@ -18,23 +18,19 @@ jobs:
           node-version: 18
 
       - name: Install root dependencies
-        run: npm install
+        run: npm ci
 
       - name: Install frontend dependencies
-        run: npm install
+        run: npm ci
         working-directory: frontend
 
       - name: Install backend dependencies
-        run: npm install
+        run: npm ci
         working-directory: backend
 
-      - name: Lint frontend
-        run: npm run lint
+      - name: Typecheck frontend
+        run: npm run typecheck
         working-directory: frontend
-
-      - name: Lint backend
-        run: npm run lint
-        working-directory: backend
 
       - name: Build frontend
         run: npm run build
@@ -47,5 +43,5 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
 
-      - name: Skip deploy (local only)
-        run: echo "Skipping Firebase deploy – local development mode"
+      - name: Repository baseline
+        run: echo "Validation complete. Deployment is handled separately."
