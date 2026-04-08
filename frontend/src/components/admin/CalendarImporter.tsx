@@ -1,94 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ImportedEventPayload } from '../../services/eventsService';
 import { useEvents } from '../../hooks/useEvents';
+import { buildImportedEvents } from '../../lib/eventImport';
 
-type JsonFallback = Record<string, any>;
-
-function parseCsv(text: string) {
-  const rows: string[][] = [];
-  let current = '';
-  let row: string[] = [];
-  let inQuotes = false;
-
-  for (let i = 0; i < text.length; i += 1) {
-    const char = text[i];
-    if (char === '"' && text[i + 1] === '"') {
-      current += '"';
-      i += 1;
-      continue;
-    }
-    if (char === '"') {
-      inQuotes = !inQuotes;
-      continue;
-    }
-    if (!inQuotes && char === ',') {
-      row.push(current.trim());
-      current = '';
-      continue;
-    }
-    if (!inQuotes && (char === '\n' || char === '\r')) {
-      if (current || row.length > 0) {
-        row.push(current.trim());
-        rows.push(row);
-      }
-      current = '';
-      row = [];
-      continue;
-    }
-    current += char;
-  }
-  if (current || row.length > 0) {
-    row.push(current.trim());
-    rows.push(row);
-  }
-  return rows;
-}
-
-function normalizeDate(date: string | undefined, time: string | undefined) {
-  if (!date && !time) return null;
-  if (date && time) return new Date(`${date}T${time}`).toISOString();
-  if (date) return new Date(`${date}T09:00`).toISOString();
-  const today = new Date();
-  const fallbackDate = today.toISOString().split('T')[0];
-  return new Date(`${fallbackDate}T${time ?? '09:00'}`).toISOString();
-}
-
-function extractField(row: Record<string, string>, keys: string[], fallback?: string) {
-  for (const key of keys) {
-    if (row[key]) return row[key];
-  }
-  return fallback;
-}
-
-function mapRow(row: Record<string, string>, fallback: JsonFallback): ImportedEventPayload {
-  const date = extractField(row, ['date', 'day'], fallback?.date);
-  const startTime = extractField(row, ['start', 'start_time', 'startTime'], fallback?.start);
-  const endTime = extractField(row, ['end', 'end_time', 'endTime'], fallback?.end ?? startTime);
-
-  const startIso = normalizeDate(date, startTime) ?? new Date().toISOString();
-  const endIso = normalizeDate(date, endTime) ?? startIso;
-
-  const title = extractField(row, ['title', 'name', 'activity'], fallback?.title) ?? 'Untitled activity';
-  const description = extractField(row, ['description', 'details'], fallback?.description);
-  const location = extractField(row, ['location', 'venue'], fallback?.location);
-  const type = (extractField(row, ['type', 'category'], fallback?.type) ?? 'club').toLowerCase();
-
-  const sourceId =
-    extractField(row, ['id', 'event_id', 'slug'], fallback?.id) ??
-    `${title}-${startIso}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-
-  return {
-    title,
-    description: description ?? undefined,
-    location: location ?? undefined,
-    type: type === 'school' || type === 'competition' ? (type as any) : 'club',
-    startTime: startIso,
-    endTime: endIso,
-    clubId: fallback?.clubId ?? undefined,
-    sourceId,
-    source: 'admin-importer'
-  };
-}
+type Props = {
+  clubId: string;
+  onImported?: () => Promise<void> | void;
+};
 
 async function readFile(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -99,46 +17,58 @@ async function readFile(file: File) {
   });
 }
 
-export function CalendarImporter() {
+export function CalendarImporter({ clubId, onImported }: Props) {
   const { importEvents } = useEvents({ autoLoad: false });
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [jsonFile, setJsonFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<ImportedEventPayload[]>([]);
   const [status, setStatus] = useState<string | null>(null);
-  const [isRunning, setRunning] = useState(false);
+  const [isParsing, setParsing] = useState(false);
+  const [isApplying, setApplying] = useState(false);
 
-  const runImport = async () => {
+  const hasPreview = preview.length > 0;
+  const previewLabel = useMemo(() => {
+    if (!hasPreview) return 'No preview generated yet.';
+    return `${preview.length} normalized event${preview.length === 1 ? '' : 's'} ready to apply.`;
+  }, [hasPreview, preview.length]);
+
+  const buildPreview = async () => {
     if (!csvFile) {
       setStatus('Select activities_guess.csv first.');
       return;
     }
-    setRunning(true);
+    setParsing(true);
     setStatus('Parsing files…');
     try {
       const csvText = await readFile(csvFile);
       const jsonText = jsonFile ? await readFile(jsonFile) : '[]';
-      const csvRows = parseCsv(csvText.trim());
-      const headers = csvRows.shift() ?? [];
-      const fallbackRecords: JsonFallback[] = JSON.parse(jsonText || '[]');
-      const fallbackMap = new Map<string, JsonFallback>();
-      fallbackRecords.forEach((entry) => {
-        if (entry?.id) fallbackMap.set(String(entry.id), entry);
-      });
+      const payloads = buildImportedEvents(csvText, jsonText, clubId);
+      setPreview(payloads);
+      setStatus(`Preview ready. ${payloads.length} event${payloads.length === 1 ? '' : 's'} normalized.`);
+    } catch (err: any) {
+      setPreview([]);
+      setStatus(err?.message ?? 'Preview failed.');
+    } finally {
+      setParsing(false);
+    }
+  };
 
-      const payloads: ImportedEventPayload[] = csvRows.map((cells) => {
-        const row: Record<string, string> = {};
-        headers.forEach((header, index) => {
-          row[header] = cells[index] ?? '';
-        });
-        const fallback = fallbackMap.get(row.id) ?? fallbackRecords.find((entry) => entry.title === row.title) ?? {};
-        return mapRow(row, fallback);
-      });
-
-      await importEvents(payloads);
-      setStatus(`Imported ${payloads.length} events.`);
+  const applyPreview = async () => {
+    if (!hasPreview) {
+      setStatus('Build a preview first.');
+      return;
+    }
+    setApplying(true);
+    setStatus('Applying import…');
+    try {
+      const result = await importEvents(preview);
+      const errorSuffix = result.errors.length > 0 ? ` ${result.errors.length} row(s) were skipped.` : '';
+      setStatus(`Applied import. Created ${result.created}, updated ${result.updated}, skipped ${result.skipped}.${errorSuffix}`);
+      await onImported?.();
     } catch (err: any) {
       setStatus(err?.message ?? 'Import failed.');
     } finally {
-      setRunning(false);
+      setApplying(false);
     }
   };
 
@@ -146,7 +76,7 @@ export function CalendarImporter() {
     <div className="space-y-3 rounded-2xl border border-dashed border-amber-400/40 bg-amber-50/5 p-4 text-white">
       <div>
         <p className="text-xs uppercase tracking-[0.3em] text-amber-200">Calendar importer</p>
-        <p className="text-sm text-white/70">Mirror data/activities_guess.csv (+ optional JSON) into Firestore.</p>
+        <p className="text-sm text-white/70">Preview CSV/JSON imports locally, then apply the normalized rows through the privileged import function.</p>
       </div>
       <label className="space-y-1 text-sm">
         <span className="text-white/70">activities_guess.csv</span>
@@ -156,11 +86,37 @@ export function CalendarImporter() {
         <span className="text-white/70">activities_guess.json (optional gaps file)</span>
         <input type="file" accept=".json" onChange={(event) => setJsonFile(event.target.files?.[0] ?? null)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2" />
       </label>
-      <button type="button" onClick={runImport} disabled={isRunning} className="rounded-2xl bg-amber-500 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-amber-400 disabled:opacity-60">
-        {isRunning ? 'Importing…' : 'Import events'}
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={buildPreview}
+          disabled={isParsing || isApplying}
+          className="rounded-2xl bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 disabled:opacity-60"
+        >
+          {isParsing ? 'Parsing…' : 'Build preview'}
+        </button>
+        <button
+          type="button"
+          onClick={applyPreview}
+          disabled={!hasPreview || isApplying || isParsing}
+          className="rounded-2xl bg-amber-500 px-4 py-2 text-sm font-medium text-slate-900 hover:bg-amber-400 disabled:opacity-60"
+        >
+          {isApplying ? 'Applying…' : 'Apply import'}
+        </button>
+      </div>
+      <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-3 text-xs text-white/70">
+        <p>{previewLabel}</p>
+        {preview.slice(0, 5).map((event) => (
+          <div key={event.sourceId} className="mt-2 rounded-xl border border-white/5 bg-white/5 px-3 py-2">
+            <p className="font-medium text-white">{event.title}</p>
+            <p>{new Date(event.startTime).toLocaleString()} · {event.type}</p>
+            <p className="text-white/50">{event.sourceId}</p>
+          </div>
+        ))}
+        {preview.length > 5 ? <p className="mt-2 text-white/50">Showing the first 5 rows.</p> : null}
+      </div>
       <p className="text-xs text-white/60">
-        Tip: For bulk automation run <code>scripts/calendarImporter.ts</code> which uses the same schema but talks directly to Firestore through the Admin SDK.
+        The companion script <code>scripts/calendarImporter.ts</code> now performs a dry-run normalization summary only. Firestore writes happen through the import function.
       </p>
       {status && <p className="text-xs text-white/70">{status}</p>}
     </div>

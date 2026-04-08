@@ -10,8 +10,8 @@
 5. Copy the **Client ID** (must end with `.apps.googleusercontent.com`) → put into `frontend/.env.local`:
 
 VITE_GOOGLE_CLIENT_ID=YOUR_CLIENT_ID.apps.googleusercontent.com
-VITE_DATA_MODE=local
 
 6. Restart: `cd frontend && npm run dev`
 7. Visit `/debug/oauth` → click **Get token**. Expect `ok: true`.
 8. If it still fails: remove app from Google Account → Security → Third-party access → try again.
+9. Convergent now accepts only `@doonschool.com` identities in the app flow.

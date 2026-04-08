@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  deploy:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -28,13 +28,14 @@ jobs:
         run: npm ci
         working-directory: backend
 
-      - name: Typecheck frontend
-        run: npm run typecheck
-        working-directory: frontend
+      - name: Lint repository
+        run: npm run lint
 
-      - name: Build frontend
-        run: npm run build
-        working-directory: frontend
+      - name: Run tests
+        run: npm run test
+
+      - name: Run repository check
+        run: npm run check
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
@@ -42,6 +43,7 @@ jobs:
           VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
 
       - name: Repository baseline
         run: echo "Validation complete. Deployment is handled separately."

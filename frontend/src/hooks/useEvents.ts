@@ -75,8 +75,12 @@ export function useEvents(options: Options = { autoLoad: true }) {
   );
 
   const importEvents = useCallback(async (payloads: ImportedEventPayload[]) => {
-    await upsertImportedEvents(payloads);
+    if (!payloads[0]?.clubId) {
+      throw new Error('Imported events must target a club.');
+    }
+    const result = await upsertImportedEvents(payloads[0].clubId, payloads);
     await refresh();
+    return result;
   }, [refresh]);
 
   return {

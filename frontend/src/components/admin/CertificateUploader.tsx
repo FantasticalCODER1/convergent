@@ -1,25 +1,25 @@
 import { useState } from 'react';
-import { v4 as uuid } from 'uuid';
 import type { AppUser } from '../../types/User';
 import { issueCertificate, uploadCertificateAsset } from '../../services/certificatesService';
 import { useAuth } from '../../hooks/useAuth';
 
 type Props = {
+  clubId: string;
+  clubName: string;
   users: AppUser[];
   onIssued?: () => void;
 };
 
-export function CertificateUploader({ users, onIssued }: Props) {
+export function CertificateUploader({ clubId, clubName, users, onIssued }: Props) {
   const { user } = useAuth();
   const [targetUserId, setTargetUserId] = useState('');
-  const [clubName, setClubName] = useState('');
   const [eventTitle, setEventTitle] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setSubmitting] = useState(false);
 
   const submit = async () => {
-    if (!targetUserId || !clubName || !eventTitle) {
+    if (!targetUserId || !eventTitle) {
       setStatus('Fill in all fields.');
       return;
     }
@@ -34,23 +34,21 @@ export function CertificateUploader({ users, onIssued }: Props) {
       let fileUrl: string | undefined;
       let storagePath: string | undefined;
       if (file) {
-        const uploaded = await uploadCertificateAsset(target.id, file);
+        const uploaded = await uploadCertificateAsset(clubId, target.id, file);
         fileUrl = uploaded.url;
         storagePath = uploaded.path;
       }
-      const verifierId = uuid();
-      await issueCertificate({
+      const certificate = await issueCertificate({
+        clubId,
         userId: target.id,
         userName: target.name,
         clubName,
         eventTitle,
-        verifierId,
         fileUrl,
         storagePath,
         uploadedBy: user?.id
       });
-      setStatus(`Issued certificate. Verifier: ${verifierId}`);
-      setClubName('');
+      setStatus(`Issued certificate. Verifier: ${certificate.verifierId}`);
       setEventTitle('');
       setFile(null);
       onIssued?.();
@@ -84,7 +82,7 @@ export function CertificateUploader({ users, onIssued }: Props) {
       </label>
       <label className="space-y-1 text-sm text-white/80">
         Club / Issuer
-        <input value={clubName} onChange={(event) => setClubName(event.target.value)} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2" />
+        <input value={clubName} disabled className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-white/60" />
       </label>
       <label className="space-y-1 text-sm text-white/80">
         Event / Context

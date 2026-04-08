@@ -1,14 +1,14 @@
 import {
   Timestamp,
-  addDoc,
   collection,
   doc,
   getDoc,
   getDocs,
   serverTimestamp,
-  setDoc,
-  updateDoc
+  setDoc
 } from 'firebase/firestore';
+import { callFunction } from '../firebase/functions';
+import { normalizeUserRole } from '../lib/policy';
 import type { AppUser, UserRole } from '../types/User';
 import { firestore } from '../firebase/firestore';
 
@@ -20,7 +20,7 @@ function mapUser(snapshot: any): AppUser {
     id: snapshot.id ?? data.id,
     name: data.name ?? 'Student',
     email: data.email ?? '',
-    role: (data.role ?? 'student') as UserRole,
+    role: normalizeUserRole(data.role),
     clubsJoined: data.clubsJoined ?? [],
     photoURL: data.photoURL,
     lastLoginAt: toIso(data.lastLoginAt),
@@ -39,12 +39,13 @@ export async function upsertUserProfile(input: AppUser) {
   const ref = doc(usersRef, input.id);
   const existing = await getDoc(ref);
   const createdAtExisting = existing.exists() ? existing.data()?.createdAt : undefined;
+  const existingRole = normalizeUserRole(existing.exists() ? existing.data()?.role : input.role);
   await setDoc(
     ref,
     {
       name: input.name,
       email: input.email,
-      role: input.role,
+      role: existingRole,
       clubsJoined: input.clubsJoined ?? [],
       photoURL: input.photoURL ?? null,
       lastLoginAt: serverTimestamp(),
@@ -70,17 +71,32 @@ export async function listUsers(): Promise<AppUser[]> {
   return snaps.docs.map((snap) => mapUser(snap));
 }
 
-export async function updateUserRole(id: string, role: UserRole) {
-  await updateDoc(doc(usersRef, id), { role, updatedAt: serverTimestamp() });
+export async function listClubUsers(clubId: string): Promise<AppUser[]> {
+  const records = await callFunction<{ clubId: string }, AppUser[]>('listClubUsers', { clubId });
+  return records.map((record) => ({
+    ...record,
+    role: normalizeUserRole(record.role)
+  }));
 }
 
-export async function createUser(input: Omit<AppUser, 'id' | 'clubsJoined'> & { clubsJoined?: string[] }) {
-  const docRef = await addDoc(usersRef, {
-    ...input,
+export async function updateUserRole(id: string, role: UserRole) {
+  await callFunction<{ id: string; role: UserRole }, { ok: true }>('updateUserRole', {
+    id,
+    role: normalizeUserRole(role)
+  });
+}
+
+export async function createUser(input: AppUser) {
+  const userRef = doc(usersRef, input.id);
+  await setDoc(userRef, {
+    name: input.name,
+    email: input.email,
+    role: normalizeUserRole(input.role),
     clubsJoined: input.clubsJoined ?? [],
+    photoURL: input.photoURL ?? null,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
-  });
-  const snap = await getDoc(docRef);
+  }, { merge: true });
+  const snap = await getDoc(userRef);
   return mapUser(snap);
 }

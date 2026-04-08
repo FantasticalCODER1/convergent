@@ -55,7 +55,7 @@ export class LocalProvider implements DataProvider {
   }
 
   async listCertsForUser(uid: string) {
-    return db.certs.where('userUid').equals(uid).toArray();
+    return db.certs.where('userId').equals(uid).toArray();
   }
 
   async createCert(input: Omit<CertDoc, 'id'>) {

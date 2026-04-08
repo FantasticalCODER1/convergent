@@ -1,0 +1,52 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function hasAllowedEmail() {
+      return isSignedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email.matches('.*@doonschool\\.com$');
+    }
+
+    function currentUserDoc() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid));
+    }
+
+    function currentRole() {
+      return currentUserDoc().data.role == 'teacher'
+        ? 'master'
+        : currentUserDoc().data.role;
+    }
+
+    function clubDoc(clubId) {
+      return firestore.get(/databases/(default)/documents/clubs/$(clubId));
+    }
+
+    function managesClub(clubId) {
+      return hasAllowedEmail()
+        && currentRole() in ['manager', 'master']
+        && request.auth.uid in clubDoc(clubId).data.managerIds;
+    }
+
+    function canManageClubAssets(clubId) {
+      return hasAllowedEmail() && (currentRole() == 'admin' || managesClub(clubId));
+    }
+
+    match /certificates/{clubId}/{userId}/{fileName} {
+      allow read: if hasAllowedEmail() && (request.auth.uid == userId || canManageClubAssets(clubId));
+      allow write: if canManageClubAssets(clubId);
+    }
+
+    match /certificates/{userId}/{fileName} {
+      allow read: if hasAllowedEmail() && (request.auth.uid == userId || currentRole() == 'admin');
+      allow write: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

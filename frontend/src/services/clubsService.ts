@@ -1,22 +1,18 @@
 import {
   Timestamp,
   addDoc,
-  arrayRemove,
-  arrayUnion,
   collection,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
-  increment,
   orderBy,
   query,
   serverTimestamp,
-  setDoc,
   updateDoc
 } from 'firebase/firestore';
 import type { Club, ClubPost } from '../types/Club';
 import type { AppUser } from '../types/User';
+import { callFunction } from '../firebase/functions';
 import { firestore } from '../firebase/firestore';
 
 const clubsRef = collection(firestore, 'clubs');
@@ -90,38 +86,17 @@ export async function createClub(input: CreateClubInput, author?: AppUser) {
 }
 
 export async function joinClub(clubId: string, user: AppUser) {
-  const membershipRef = doc(firestore, `clubs/${clubId}/memberships/${user.id}`);
-  const clubDoc = doc(clubsRef, clubId);
-  const userDoc = doc(collection(firestore, 'users'), user.id);
-
-  const existing = await getDoc(membershipRef);
-  if (existing.exists()) {
-    return;
-  }
-
-  await setDoc(
-    membershipRef,
-    {
-      userId: user.id,
-      joinedAt: serverTimestamp()
-    },
-    { merge: true }
-  );
-  await updateDoc(clubDoc, { memberCount: increment(1) });
-  await updateDoc(userDoc, { clubsJoined: arrayUnion(clubId) });
+  await callFunction<{ clubId: string; joined: boolean }, { ok: true; joined: boolean }>('setClubMembership', {
+    clubId,
+    joined: true
+  });
 }
 
 export async function leaveClub(clubId: string, user: AppUser) {
-  const membershipRef = doc(firestore, `clubs/${clubId}/memberships/${user.id}`);
-  const clubDoc = doc(clubsRef, clubId);
-  const userDoc = doc(collection(firestore, 'users'), user.id);
-
-  const existing = await getDoc(membershipRef);
-  if (!existing.exists()) return;
-
-  await deleteDoc(membershipRef);
-  await updateDoc(userDoc, { clubsJoined: arrayRemove(clubId) });
-  await updateDoc(clubDoc, { memberCount: increment(-1) });
+  await callFunction<{ clubId: string; joined: boolean }, { ok: true; joined: boolean }>('setClubMembership', {
+    clubId,
+    joined: false
+  });
 }
 
 export async function listClubPosts(clubId: string): Promise<ClubPost[]> {

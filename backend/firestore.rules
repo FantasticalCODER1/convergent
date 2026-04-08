@@ -1,52 +1,175 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function userRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    function hasAllowedEmail() {
+      return isSignedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email.matches('.*@doonschool\\.com$');
+    }
+
+    function currentUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function rawUserRole() {
+      return currentUserDoc().data.role;
+    }
+
+    function normalizedRole(role) {
+      return role == 'teacher' ? 'master' : role;
+    }
+
+    function isAdmin() {
+      return hasAllowedEmail() && normalizedRole(rawUserRole()) == 'admin';
+    }
+
+    function isClubScopedRole() {
+      return hasAllowedEmail() && normalizedRole(rawUserRole()) in ['manager', 'master'];
+    }
+
+    function clubDoc(clubId) {
+      return get(/databases/$(database)/documents/clubs/$(clubId));
+    }
+
+    function managesClub(clubId) {
+      return isClubScopedRole()
+        && request.auth.uid in clubDoc(clubId).data.managerIds;
+    }
+
+    function isClubManager() {
+      return hasAllowedEmail() && request.auth.uid in resource.data.managerIds;
+    }
+
+    function createsOnlySafeUserFields(uid) {
+      return request.resource.data.email == request.auth.token.email
+        && request.resource.data.email.matches('.*@doonschool\\.com$')
+        && request.resource.data.role == 'student'
+        && request.resource.data.keys().hasOnly([
+          'name',
+          'email',
+          'role',
+          'clubsJoined',
+          'photoURL',
+          'lastLoginAt',
+          'updatedAt',
+          'createdAt'
+        ]);
+    }
+
+    function updatesOnlySafeUserFields(uid) {
+      return request.resource.data.email == resource.data.email
+        && request.resource.data.email.matches('.*@doonschool\\.com$')
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.keys().hasOnly([
+          'name',
+          'email',
+          'role',
+          'clubsJoined',
+          'photoURL',
+          'lastLoginAt',
+          'updatedAt',
+          'createdAt'
+        ]);
+    }
+
+    function allowsLegacyTeacherMigration(uid) {
+      return resource.data.role == 'teacher'
+        && request.resource.data.role == 'master'
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.email.matches('.*@doonschool\\.com$')
+        && request.resource.data.keys().hasOnly([
+          'name',
+          'email',
+          'role',
+          'clubsJoined',
+          'photoURL',
+          'lastLoginAt',
+          'updatedAt',
+          'createdAt'
+        ]);
+    }
+
+    function userCanManageClub(clubId) {
+      return isAdmin() || managesClub(clubId);
+    }
+
+    function isClubScopedEvent(data) {
+      return data.clubId is string && data.clubId.size() > 0;
+    }
+
+    function canCreateEvent() {
+      return isAdmin()
+        || (isClubScopedEvent(request.resource.data) && userCanManageClub(request.resource.data.clubId));
+    }
+
+    function canUpdateExistingEvent() {
+      return isAdmin()
+        || (
+          isClubScopedEvent(resource.data)
+          && isClubScopedEvent(request.resource.data)
+          && resource.data.clubId == request.resource.data.clubId
+          && userCanManageClub(request.resource.data.clubId)
+        );
     }
 
     match /users/{uid} {
-      allow read: if isSignedIn() && (uid == request.auth.uid || userRole() in ['teacher', 'admin']);
-      allow write: if isSignedIn() && uid == request.auth.uid;
-    }
-
-    function clubManagers() {
-      return request.method == 'create' ? request.resource.data.managers : resource.data.managers;
+      allow read: if hasAllowedEmail() && (uid == request.auth.uid || isAdmin());
+      allow create: if hasAllowedEmail() && uid == request.auth.uid && createsOnlySafeUserFields(uid);
+      allow update: if hasAllowedEmail() && uid == request.auth.uid && (updatesOnlySafeUserFields(uid) || allowsLegacyTeacherMigration(uid));
+      allow delete: if false;
     }
 
     match /clubs/{clubId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isSignedIn() &&
-        (userRole() in ['admin', 'teacher'] ||
-         (clubManagers() != null && request.auth.uid in clubManagers()));
-    }
+      allow read: if hasAllowedEmail();
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin() || isClubManager();
 
-    match /clubPosts/{clubId}/posts/{postId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isSignedIn() &&
-        (request.auth.uid == resource.data.authorUid || userRole() in ['admin', 'teacher']);
+      match /memberships/{userId} {
+        allow read: if hasAllowedEmail();
+        allow create, delete: if false;
+        allow update: if false;
+      }
+
+      match /posts/{postId} {
+        allow read: if hasAllowedEmail();
+        allow create: if hasAllowedEmail()
+          && request.resource.data.authorId == request.auth.uid;
+        allow update, delete: if hasAllowedEmail()
+          && (
+            resource.data.authorId == request.auth.uid
+            || isAdmin()
+            || userCanManageClub(clubId)
+          );
+      }
     }
 
     match /events/{eventId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && userRole() in ['admin', 'teacher', 'manager'];
+      allow read: if hasAllowedEmail();
+      allow create: if hasAllowedEmail() && canCreateEvent();
+      allow update, delete: if hasAllowedEmail() && canUpdateExistingEvent();
+    }
+
+    match /eventRsvps/{rsvpId} {
+      allow read: if hasAllowedEmail() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create, update, delete: if false;
     }
 
     match /certificates/{certId} {
-      allow read: if true;
-      allow create: if isSignedIn() && userRole() in ['admin', 'teacher'];
-      allow update, delete: if isSignedIn() && userRole() in ['admin'];
-    }
-
-    match /classes/{classId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && userRole() in ['admin', 'teacher'];
+      allow read: if hasAllowedEmail()
+        && (
+          resource.data.userId == request.auth.uid
+          || isAdmin()
+          || (
+            resource.data.clubId is string
+            && resource.data.clubId.size() > 0
+            && userCanManageClub(resource.data.clubId)
+          )
+        );
+      allow create, update, delete: if false;
     }
   }
 }

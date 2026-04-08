@@ -6,8 +6,10 @@
     "node": "18"
   },
   "scripts": {
+    "lint": "node --check index.js",
     "serve": "npx firebase emulators:start --only functions",
-    "deploy": "npx firebase deploy --only functions"
+    "deploy": "npx firebase deploy --only functions",
+    "test": "node --test ../../tests/backend-contracts.test.js"
   },
   "dependencies": {
     "firebase-admin": "^11.10.1",

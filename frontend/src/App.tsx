@@ -1,21 +1,22 @@
-import { type ComponentType, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, type ComponentType, useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Navigate, Outlet, Route, Routes, NavLink as RouterNavLink } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
-import Dashboard from './pages/Dashboard';
-import Clubs from './pages/Clubs';
-import ClubDetail from './pages/ClubDetail';
-import CalendarPage from './pages/CalendarPage';
-import Certificates from './pages/Certificates';
-import AdminPanel from './pages/AdminPanel';
-import Classes from './pages/Classes';
-import Login from './pages/Login';
-import Verify from './pages/Verify';
-import DevSeed from './pages/DevSeed';
 import RequireRole from './components/RequireRole';
 import RequireAuth from './components/RequireAuth';
 import { CalendarDays, Home, NotebookPen, Shield, Trophy, UsersRound } from 'lucide-react';
-import DebugOAuth from './pages/DebugOAuth';
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Clubs = lazy(() => import('./pages/Clubs'));
+const ClubDetail = lazy(() => import('./pages/ClubDetail'));
+const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+const Certificates = lazy(() => import('./pages/Certificates'));
+const AdminPanel = lazy(() => import('./pages/AdminPanel'));
+const Classes = lazy(() => import('./pages/Classes'));
+const Login = lazy(() => import('./pages/Login'));
+const Verify = lazy(() => import('./pages/Verify'));
+const DevSeed = lazy(() => import('./pages/DevSeed'));
+const DebugOAuth = lazy(() => import('./pages/DebugOAuth'));
 
 const navLinks = [
   { to: '/dashboard', label: 'Dashboard', icon: Home },
@@ -28,42 +29,49 @@ const navLinks = [
 
 function AppRoutes() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/debug/oauth" element={<DebugOAuth />} />
-      <Route path="/verify" element={<Verify />} />
-      <Route
-        element={
-          <RequireAuth>
-            <Shell />
-          </RequireAuth>
-        }
-      >
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/clubs" element={<Clubs />} />
-        <Route path="/clubs/:id" element={<ClubDetail />} />
-        <Route path="/calendar" element={<CalendarPage />} />
-        <Route path="/classes" element={<Classes />} />
-        <Route path="/certificates" element={<Certificates />} />
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/debug/oauth" element={<DebugOAuth />} />
+        <Route path="/verify" element={<Verify />} />
         <Route
-          path="/admin"
           element={
-            <RequireRole role="admin">
-              <AdminPanel />
-            </RequireRole>
+            <RequireAuth>
+              <Shell />
+            </RequireAuth>
           }
-        />
-        {import.meta.env.DEV && <Route path="/dev/seed" element={<DevSeed />} />}
-        <Route path="/unauthorised" element={<div className="p-8">No access</div>} />
-      </Route>
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+        >
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/clubs" element={<Clubs />} />
+          <Route path="/clubs/:id" element={<ClubDetail />} />
+          <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/classes" element={<Classes />} />
+          <Route path="/certificates" element={<Certificates />} />
+          <Route
+            path="/admin"
+            element={
+              <RequireRole role="admin">
+                <AdminPanel />
+              </RequireRole>
+            }
+          />
+          {import.meta.env.DEV && <Route path="/dev/seed" element={<DevSeed />} />}
+          <Route path="/unauthorised" element={<div className="p-8">No access</div>} />
+        </Route>
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </Suspense>
   );
+}
+
+function RouteFallback() {
+  return <div className="grid min-h-screen place-items-center bg-slate-950 text-white/70">Loading…</div>;
 }
 
 function Shell() {
   const { user, logout } = useAuth();
+  const visibleNavLinks = navLinks.filter((link) => link.to !== '/admin' || user?.role === 'admin');
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white">
       <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-900/70 backdrop-blur-xl">
@@ -77,7 +85,7 @@ function Shell() {
       </header>
       <div className="mx-auto flex w-full max-w-6xl gap-6 px-4 py-8 md:px-6">
         <aside className="glass-card hidden w-60 shrink-0 flex-col space-y-2 p-4 md:flex">
-          {navLinks.map((link) => (
+          {visibleNavLinks.map((link) => (
             <NavLink key={link.to} to={link.to} icon={link.icon} label={link.label} />
           ))}
         </aside>

@@ -1,28 +1,55 @@
 # Convergent Architecture Overview
 
-## System Diagram
-```
-[Google Identity] --> [Firebase Auth] --> [Convergent Frontend]
-                                      \-> [Firestore]
-                                      \-> [Cloud Storage]
-                       [Cloud Functions] <-> [Firestore]
-                               |
-                          [GitHub Actions] --> [Firebase Hosting]
+## System Shape
+```text
+Google Identity / GIS
+        |
+        v
+Firebase Auth
+        |
+        v
+React + Vite frontend
+   |         |         |
+   v         v         v
+Firestore  Storage  Cloud Functions
 ```
 
 ## Frontend
-- **Framework**: React 18 + Vite for fast bundling and module-based routing.
-- **Styling**: Tailwind CSS with custom brand tokens.
-- **State**: React context for auth; future slices for clubs, events, and analytics.
-- **PDF/QR**: jsPDF for client-side export, `canvas-confetti` for celebratory feedback, `qrcode` for validation codes.
+- React 18 + Vite + Tailwind CSS
+- Route-level protected navigation with `RequireAuth` and `RequireRole`
+- Firestore client services for users, clubs, posts, events, RSVPs, and certificate lists
+- Cloud Functions client calls for public certificate verification and privileged admin/certificate actions
+- Google Classroom and Google Calendar integrations remain client-side API calls
 
 ## Backend
-- **Platform**: Firebase Functions (Node 18 runtime) orchestrating certificates, attendance, and seeding.
-- **Database**: Firestore in Native mode structured around clubs, events, certificates, and logs.
-- **Storage**: Firebase Storage for logos, resources, and generated certificates.
-- **Security**: Role definitions in `roles.json`, mirrored to frontend utilities for consistent access control.
+- Firebase Functions currently expose:
+  - `verifyCertificate`
+  - `issueCertificate`
+  - `updateUserRole`
+  - `listClubUsers`
+  - `setClubMembership`
+  - `setEventRsvp`
+  - `applyEventImport`
+- Firestore is the source of truth for:
+  - `users`
+  - `clubs`
+  - `clubs/{clubId}/memberships`
+  - `clubs/{clubId}/posts`
+  - `events`
+  - `eventRsvps`
+  - `certificates`
+- Storage now writes new certificate assets under `certificates/{clubId}/{userId}/...`
 
-## DevOps & Tooling
-- **CI/CD**: GitHub Actions workflow (`.github/workflows/deploy.yml`) validating the frontend on pushes to `main`.
-- **Code Quality**: TypeScript compile checks and production builds from the repo root.
-- **Docs & Governance**: CHANGELOG for versioning, MIT License for open collaboration.
+## Security Model
+- Only `@doonschool.com` accounts are accepted by the frontend auth flow and privileged Functions.
+- Canonical roles are `student`, `manager`, `master`, and `admin`.
+- `manager` and `master` are club-scoped roles derived from `clubs.managerIds`; `admin` is the only global privileged role.
+- Firestore rules now match the live collection layout and the callable-function-backed aggregate writes used by the frontend.
+- Storage rules restrict certificate uploads to admins or managers/masters of the target club.
+- Route guards remain a UI layer only; privileged changes must succeed through rules or Functions.
+
+## Operational Reality
+- CI is validation-only. It runs lint, tests, and the existing frontend build/typecheck workflow.
+- Emulator validation is repo-owned and runs through `npm run test:emulators`.
+- Attendance, logs, reports, and analytics are not implemented in the current backend.
+- The Dexie/local-provider code exists for experimentation and export only; it is not the production data path.

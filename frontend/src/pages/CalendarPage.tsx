@@ -5,12 +5,17 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import type { EventClickArg } from '@fullcalendar/core';
 import { EventDetails } from '../components/EventDetails';
+import { EventEditor } from '../components/admin/EventEditor';
 import { useEvents } from '../hooks/useEvents';
+import { useAuth } from '../hooks/useAuth';
 import type { EventRecord } from '../types/Event';
 
 export default function CalendarPage() {
-  const { events, loading, toggleRsvp, rsvps } = useEvents();
+  const { user } = useAuth();
+  const { events, loading, toggleRsvp, rsvps, saveEvent } = useEvents();
   const [selected, setSelected] = useState<EventRecord | null>(null);
+  const [editingGlobalEvent, setEditingGlobalEvent] = useState<EventRecord | null>(null);
+  const schoolEvents = useMemo(() => events.filter((event) => !event.clubId), [events]);
 
   const calendarEvents = useMemo(
     () =>
@@ -55,6 +60,42 @@ export default function CalendarPage() {
           />
         )}
       </div>
+      {user?.role === 'admin' ? (
+        <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
+          <EventEditor
+            event={editingGlobalEvent}
+            allowedTypes={['school']}
+            title="Manage school-wide events"
+            description="These events stay global and remain admin-only."
+            onSave={async (payload) => {
+              await saveEvent({ ...payload, type: 'school', clubId: undefined });
+              setEditingGlobalEvent(null);
+            }}
+            onCancelEdit={() => setEditingGlobalEvent(null)}
+          />
+          <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-white">
+            <div>
+              <p className="text-xs uppercase tracking-[0.25em] text-white/50">School-wide events</p>
+              <p className="text-sm text-white/60">Pick an existing global event to edit it.</p>
+            </div>
+            {schoolEvents.length === 0 ? (
+              <p className="text-sm text-white/60">No school-wide events yet.</p>
+            ) : (
+              schoolEvents.map((event) => (
+                <button
+                  key={event.id}
+                  type="button"
+                  onClick={() => setEditingGlobalEvent(event)}
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left hover:bg-white/10"
+                >
+                  <p className="font-medium text-white">{event.title}</p>
+                  <p className="text-xs text-white/60">{new Date(event.startTime).toLocaleString()}</p>
+                </button>
+              ))
+            )}
+          </div>
+        </section>
+      ) : null}
       <EventDetails
         event={selected}
         open={!!selected}

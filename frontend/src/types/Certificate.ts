@@ -1,5 +1,6 @@
 export interface CertificateRecord {
   id: string;
+  clubId?: string;
   userId: string;
   userName: string;
   clubName: string;
@@ -9,4 +10,5 @@ export interface CertificateRecord {
   fileUrl?: string;
   uploadedBy?: string;
   storagePath?: string;
+  createdAt?: string;
 }

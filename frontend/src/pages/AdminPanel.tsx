@@ -2,11 +2,7 @@ import { useEffect, useState } from 'react';
 import RequireRole from '../components/RequireRole';
 import type { AppUser, UserRole } from '../types/User';
 import { listUsers, updateUserRole } from '../services/usersService';
-import { useEvents } from '../hooks/useEvents';
 import { ClubEditor } from '../components/admin/ClubEditor';
-import { EventEditor } from '../components/admin/EventEditor';
-import { CertificateUploader } from '../components/admin/CertificateUploader';
-import { CalendarImporter } from '../components/admin/CalendarImporter';
 
 export default function AdminPanel() {
   return (
@@ -19,7 +15,6 @@ export default function AdminPanel() {
 function AdminInner() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const { saveEvent, refresh: refreshEvents } = useEvents({ autoLoad: false });
 
   const loadUsers = async () => {
     setLoading(true);
@@ -37,24 +32,16 @@ function AdminInner() {
     await loadUsers();
   };
 
-  const handleManualEvent = async (payload: Parameters<typeof saveEvent>[0]) => {
-    await saveEvent(payload);
-    await refreshEvents();
-  };
-
   return (
     <div className="space-y-6">
       <div>
         <p className="text-sm uppercase tracking-[0.25em] text-white/60">Control</p>
         <h1 className="text-3xl font-semibold text-white">Admin panel</h1>
-        <p className="text-white/60">Manage access, clubs, events, and imports.</p>
+        <p className="text-white/60">Manage global access and create new clubs. Club-scoped operations now live on each club page.</p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <ClubEditor onCreated={refreshEvents} />
-        <EventEditor onSave={handleManualEvent} />
-        <CertificateUploader users={users} onIssued={loadUsers} />
-        <CalendarImporter />
+        <ClubEditor onCreated={loadUsers} />
       </div>
 
       <section className="space-y-4 rounded-3xl border border-white/5 bg-white/5 p-6 shadow-glass">
@@ -75,7 +62,7 @@ function AdminInner() {
                   value={user.role}
                   onChange={(event) => changeRole(user.id, event.target.value as UserRole)}
                 >
-                  {['student', 'manager', 'teacher', 'admin'].map((role) => (
+                  {['student', 'manager', 'master', 'admin'].map((role) => (
                     <option key={role} value={role}>
                       {role}
                     </option>

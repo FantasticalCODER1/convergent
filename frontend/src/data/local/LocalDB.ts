@@ -15,7 +15,7 @@ export class LocalDB extends Dexie {
       clubs: 'id, name, category',
       events: 'id, start, type, clubId',
       posts: 'id, clubId, createdAt',
-      certs: 'id, userUid, verifierId'
+      certs: 'id, userId, verifierId'
     });
   }
 }

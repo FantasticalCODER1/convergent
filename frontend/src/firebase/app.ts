@@ -9,13 +9,16 @@ type FirebaseConfig = {
   messagingSenderId?: string;
 };
 
+const isEmulatorMode = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
+
 function getConfig(): FirebaseConfig {
+  const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? 'demo-convergent';
   const config: FirebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? '',
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? '',
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID ?? '',
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ?? '',
-    appId: import.meta.env.VITE_FIREBASE_APP_ID ?? '',
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? (isEmulatorMode ? 'demo-api-key' : ''),
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? (isEmulatorMode ? `${projectId}.firebaseapp.com` : ''),
+    projectId,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ?? (isEmulatorMode ? `${projectId}.appspot.com` : ''),
+    appId: import.meta.env.VITE_FIREBASE_APP_ID ?? (isEmulatorMode ? '1:000000000000:web:demo-convergent' : ''),
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? ''
   };
 

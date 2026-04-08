@@ -1,5 +1,7 @@
 declare const google: any;
 
+import { ALLOWED_EMAIL_DOMAIN, isAllowedSchoolEmail } from '../lib/policy';
+
 export type GoogleProfile = {
   sub: string;
   name: string;
@@ -179,6 +181,10 @@ export async function getGoogleAccessAndProfile(): Promise<{ accessToken: string
     cached.profile = profile;
   }
 
+  if (!isAllowedSchoolEmail(state.profile.email)) {
+    throw new Error(`Only ${ALLOWED_EMAIL_DOMAIN} accounts are allowed`);
+  }
+
   return { accessToken: state.accessToken, profile: state.profile, idToken: state.idToken };
 }
 
@@ -187,7 +193,8 @@ export function getGoogleConfigSummary() {
     clientIdSuffixOk: !!clientId && clientId.endsWith(REQUIRED_SUFFIX),
     clientIdPresent: !!clientId,
     origin: window.location.origin,
-    scopes: SCOPES
+    scopes: SCOPES,
+    allowedDomain: ALLOWED_EMAIL_DOMAIN
   };
 }
 

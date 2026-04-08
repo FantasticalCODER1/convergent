@@ -3,15 +3,22 @@ import { useParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { motion } from 'framer-motion';
 import { ClubDetails } from '../components/ClubDetails';
+import { ClubManagementPanel } from '../components/club/ClubManagementPanel';
 import { useAuth } from '../hooks/useAuth';
 import { useClubs } from '../hooks/useClubs';
+import { useEvents } from '../hooks/useEvents';
+import { canManageClub } from '../lib/policy';
+import { listClubUsers } from '../services/usersService';
 import type { Club } from '../types/Club';
+import type { AppUser } from '../types/User';
 
 export default function ClubDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { getClubById, joinClub, leaveClub, fetchPosts, submitPost, postsForClub } = useClubs();
+  const { events, refresh: refreshEvents, saveEvent } = useEvents({ autoLoad: false });
   const [club, setClub] = useState<Club | null>(null);
+  const [clubUsers, setClubUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
 
@@ -21,10 +28,18 @@ export default function ClubDetail() {
     (async () => {
       const doc = await getClubById(id);
       setClub(doc ?? null);
-      await fetchPosts(id);
+      await Promise.all([fetchPosts(id), refreshEvents()]);
       setLoading(false);
     })();
-  }, [id, getClubById, fetchPosts]);
+  }, [id, getClubById, fetchPosts, refreshEvents]);
+
+  useEffect(() => {
+    if (!id || !club || !canManageClub(user, club)) {
+      setClubUsers([]);
+      return;
+    }
+    void listClubUsers(id).then(setClubUsers).catch(() => setClubUsers([]));
+  }, [club, id, user]);
 
   if (!id) {
     return <div className="rounded-3xl border border-white/5 bg-white/5 p-6 text-white/70">Club not found.</div>;
@@ -40,6 +55,8 @@ export default function ClubDetail() {
 
   const joined = (user?.clubsJoined ?? []).includes(club.id);
   const posts = postsForClub(club.id);
+  const manageable = canManageClub(user, club);
+  const clubEvents = useMemo(() => events.filter((event) => event.clubId === club.id), [club.id, events]);
 
   const handlePost = async (text: string) => {
     if (!text.trim()) return;
@@ -78,6 +95,10 @@ export default function ClubDetail() {
           ))}
         </div>
       </section>
+
+      {manageable ? (
+        <ClubManagementPanel club={club} users={clubUsers} events={clubEvents} onSaveEvent={saveEvent} onRefresh={refreshEvents} />
+      ) : null}
     </div>
   );
 }

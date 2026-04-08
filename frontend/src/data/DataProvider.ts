@@ -1,4 +1,4 @@
-export type Role = 'student' | 'teacher' | 'manager' | 'admin';
+export type Role = 'student' | 'master' | 'manager' | 'admin';
 
 export type UserDoc = {
   id: string;
@@ -16,7 +16,7 @@ export type ClubDoc = {
   category: string;
   mic: string;
   schedule: string;
-  managers: string[];
+  managerIds: string[];
 };
 
 export type EventDoc = {
@@ -40,7 +40,7 @@ export type PostDoc = {
 
 export type CertDoc = {
   id: string;
-  userUid: string;
+  userId: string;
   name: string;
   eventTitle: string;
   clubName: string;

@@ -1,15 +1,12 @@
 import {
   Timestamp,
-  addDoc,
   collection,
-  getDoc,
   getDocs,
-  limit,
   query,
-  serverTimestamp,
   where
 } from 'firebase/firestore';
 import type { CertificateRecord } from '../types/Certificate';
+import { callFunction } from '../firebase/functions';
 import { firestore } from '../firebase/firestore';
 import { uploadFile } from '../firebase/storage';
 
@@ -24,6 +21,7 @@ function mapCertificate(snapshot: any): CertificateRecord {
   const data = snapshot.data();
   return {
     id: snapshot.id,
+    clubId: data.clubId,
     userId: data.userId,
     userName: data.userName,
     clubName: data.clubName,
@@ -37,31 +35,18 @@ function mapCertificate(snapshot: any): CertificateRecord {
 }
 
 export type IssueCertificateInput = {
+  clubId: string;
   userId: string;
-  userName: string;
+  userName?: string;
   clubName: string;
   eventTitle: string;
-  verifierId: string;
   fileUrl?: string;
   storagePath?: string;
   uploadedBy?: string;
 };
 
 export async function issueCertificate(input: IssueCertificateInput) {
-  const docRef = await addDoc(certificatesRef, {
-    userId: input.userId,
-    userName: input.userName,
-    clubName: input.clubName,
-    eventTitle: input.eventTitle,
-    verifierId: input.verifierId,
-    fileUrl: input.fileUrl ?? null,
-    storagePath: input.storagePath ?? null,
-    uploadedBy: input.uploadedBy ?? null,
-    issuedAt: serverTimestamp(),
-    createdAt: serverTimestamp()
-  });
-  const snap = await getDoc(docRef);
-  return mapCertificate(snap);
+  return callFunction<IssueCertificateInput, CertificateRecord>('issueCertificate', input);
 }
 
 export async function listCertificatesForUser(userId: string) {
@@ -71,16 +56,13 @@ export async function listCertificatesForUser(userId: string) {
 }
 
 export async function verifyCertificateByCode(code: string) {
-  const q = query(certificatesRef, where('verifierId', '==', code), limit(1));
-  const snap = await getDocs(q);
-  if (snap.empty) return null;
-  return mapCertificate(snap.docs[0]);
+  return callFunction<{ code: string }, CertificateRecord | null>('verifyCertificate', { code });
 }
 
-export async function uploadCertificateAsset(userId: string, file: File) {
+export async function uploadCertificateAsset(clubId: string, userId: string, file: File) {
   const timestamp = Date.now();
   const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-  const path = `certificates/${userId}/${timestamp}_${safeName}`;
+  const path = `certificates/${clubId}/${userId}/${timestamp}_${safeName}`;
   const url = await uploadFile(path, file, { contentType: file.type });
   return { url, path };
 }

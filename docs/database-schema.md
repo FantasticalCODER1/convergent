@@ -1,66 +1,83 @@
 # Firestore Data Model
 
+This document describes the schema the current app actually uses today.
+
+## Canonical Roles
+- `student`
+- `manager`
+- `master`
+- `admin`
+
 ## Collections
+### `users/{userId}`
+- `name`
+- `email`
+- `role`
+- `clubsJoined`
+- `photoURL`
+- `lastLoginAt`
+- `createdAt`
+- `updatedAt`
 
-### `users`
-- `displayName` (string)
-- `email` (string, unique, domain-restricted)
-- `role` (string: `student`, `manager`, `master`, `admin`)
-- `houses` (array<string>) – optional for analytics
-- `joinedClubs` (array<reference>)
-- `hoursLogged` (number)
+### `clubs/{clubId}`
+- `name`
+- `description`
+- `category`
+- `mic`
+- `schedule`
+- `logoUrl`
+- `managerIds`
+- `memberCount`
+- `createdAt`
+- `updatedAt`
 
-### `clubs`
-- `name` (string)
-- `slug` (string, unique)
-- `description` (string)
-- `logoUrl` (string)
-- `frequency` (string)
-- `masterInCharge` (reference<users>)
-- `managers` (array<reference<users>>)
-- `createdAt` (timestamp)
+### `clubs/{clubId}/memberships/{userId}`
+- `userId`
+- `joinedAt`
 
-### `clubEvents`
-- `club` (reference<clubs>)
-- `title` (string)
-- `startTime` (timestamp)
-- `endTime` (timestamp)
-- `location` (string)
-- `type` (string: meeting, competition, rehearsal, etc.)
-- `attendanceCode` (string)
-- `qrUrl` (string)
+### `clubs/{clubId}/posts/{postId}`
+- `clubId`
+- `authorId`
+- `authorName`
+- `text`
+- `createdAt`
 
-### `certificates`
-- `student` (reference<users>)
-- `club` (reference<clubs>)
-- `event` (reference<clubEvents>)
-- `issuedAt` (timestamp)
-- `revoked` (boolean)
-- `verificationUrl` (string)
+### `events/{eventId}`
+- `title`
+- `description`
+- `startTime`
+- `endTime`
+- `location`
+- `type`
+- `clubId`
+- `source`
+- `sourceId`
+- `rsvpCount`
+- `createdAt`
+- `updatedAt`
 
-### `attendanceLogs`
-- `event` (reference<clubEvents>)
-- `student` (reference<users>)
-- `status` (string: present, excused, absent)
-- `scannedAt` (timestamp)
-- `hours` (number)
+### `eventRsvps/{eventId_userId}`
+- `eventId`
+- `userId`
+- `attending`
+- `respondedAt`
 
-### `clubPosts`
-- `club` (reference<clubs>)
-- `author` (reference<users>)
-- `content` (string)
-- `attachments` (array<string>)
-- `createdAt` (timestamp)
+### `certificates/{certificateId}`
+- `clubId`
+- `userId`
+- `userName`
+- `clubName`
+- `eventTitle`
+- `verifierId`
+- `fileUrl`
+- `storagePath`
+- `uploadedBy`
+- `issuedAt`
+- `createdAt`
 
-### `activityLogs`
-- `club` (reference<clubs>)
-- `type` (string: meeting, certificate, award, etc.)
-- `payload` (map)
-- `createdAt` (timestamp)
-
-## Security Roles
-Roles are defined in `backend/functions/roles.json` and replicated in the frontend utilities to enable consistent checks. Firebase security rules should enforce:
-- Students read/write only their attendance RSVPs and profile data.
-- Managers manage clubs they are assigned to.
-- Masters approve events and certify participation.
-- Admins have full read/write access.
+## Current Non-Schema Reality
+- Club membership and RSVP aggregates are maintained through callable Functions, not direct client-side aggregate writes.
+- New certificate uploads live at `certificates/{clubId}/{userId}/...` in Storage.
+- Attendance collections are not implemented.
+- Activity logs and reports are not implemented.
+- The local Dexie provider uses an older experimental shape and should not be treated as production schema.

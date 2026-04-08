@@ -4,8 +4,28 @@
       "collectionGroup": "events",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "start", "order": "DESCENDING" },
-        { "fieldPath": "type", "order": "ASCENDING" }
+        { "fieldPath": "startTime", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "eventRsvps",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "certificates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "certificates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "verifierId", "order": "ASCENDING" }
       ]
     },
     {
@@ -13,13 +33,6 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "certificates",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "userUid", "order": "ASCENDING" }
       ]
     }
   ],

@@ -1,7 +1,16 @@
-import { GoogleAuthProvider, connectAuthEmulator, getAuth, onAuthStateChanged, signInWithCredential, signOut } from 'firebase/auth';
+import {
+  GoogleAuthProvider,
+  connectAuthEmulator,
+  getAuth,
+  onAuthStateChanged,
+  signInWithCredential,
+  signInWithEmailAndPassword,
+  signOut
+} from 'firebase/auth';
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { clearGoogleAuthCache, getGoogleAccessAndProfile } from '../auth/google';
 import { getFirebaseApp } from '../firebase/app';
+import { isAllowedSchoolEmail, normalizeUserRole } from '../lib/policy';
 import type { AppUser } from '../types/User';
 import { fetchUser, upsertUserProfile } from '../services/usersService';
 
@@ -9,6 +18,7 @@ type AuthState = {
   user: AppUser | null;
   accessToken?: string;
   login: () => Promise<void>;
+  loginWithEmulator?: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   loading: boolean;
   error?: string;
@@ -17,6 +27,7 @@ type AuthState = {
 
 const auth = getAuth(getFirebaseApp());
 const shouldUseEmulator = import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
+const shouldUseEmulatorLogin = shouldUseEmulator && import.meta.env.VITE_ENABLE_EMULATOR_LOGIN === 'true';
 if (shouldUseEmulator) {
   const url = import.meta.env.VITE_AUTH_EMULATOR_URL ?? 'http://127.0.0.1:9099';
   connectAuthEmulator(auth, url, { disableWarnings: true });
@@ -45,15 +56,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { accessToken: googleToken, profile, idToken } = await getGoogleAccessAndProfile();
       if (!idToken) throw new Error('Missing Google ID token');
+      if (!isAllowedSchoolEmail(profile.email)) {
+        throw new Error('Only @doonschool.com accounts are allowed');
+      }
       setAccessToken(googleToken);
       const credential = GoogleAuthProvider.credential(idToken, googleToken);
-      await signInWithCredential(auth, credential);
-      const existing = await fetchUser(profile.sub);
+      const signedIn = await signInWithCredential(auth, credential);
+      const uid = signedIn.user.uid;
+      const existing = await fetchUser(uid);
       const record = await upsertUserProfile({
-        id: profile.sub,
+        id: uid,
         name: profile.name || existing?.name || 'Student',
         email: profile.email || existing?.email || '',
-        role: existing?.role ?? 'student',
+        role: normalizeUserRole(existing?.role),
         photoURL: profile.picture ?? existing?.photoURL,
         clubsJoined: existing?.clubsJoined ?? []
       });
@@ -62,6 +77,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(err?.message ?? 'Authentication failed');
       setAccessToken(undefined);
       clearGoogleAuthCache();
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loginWithEmulator = useCallback(async (email: string, password: string) => {
+    if (!shouldUseEmulatorLogin) {
+      throw new Error('Emulator login is not enabled.');
+    }
+    setLoading(true);
+    setError(undefined);
+    setAccessToken(undefined);
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!isAllowedSchoolEmail(normalizedEmail)) {
+        throw new Error('Only @doonschool.com accounts are allowed');
+      }
+      await signInWithEmailAndPassword(auth, normalizedEmail, password);
+    } catch (err: any) {
+      setError(err?.message ?? 'Emulator authentication failed');
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -86,6 +122,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!fbUser) {
         setUser(null);
         setAccessToken(undefined);
+        setLoading(false);
+        return;
+      }
+      if (!isAllowedSchoolEmail(fbUser.email)) {
+        await signOut(auth);
+        setUser(null);
+        setAccessToken(undefined);
+        setError('Only @doonschool.com accounts are allowed');
         setLoading(false);
         return;
       }
@@ -126,12 +170,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       accessToken,
       login,
+      loginWithEmulator: shouldUseEmulatorLogin ? loginWithEmulator : undefined,
       logout,
       loading,
       error,
       refreshProfile
     }),
-    [user, accessToken, login, logout, loading, error, refreshProfile]
+    [user, accessToken, login, loginWithEmulator, logout, loading, error, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

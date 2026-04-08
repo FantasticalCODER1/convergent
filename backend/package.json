@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "lint": "npm --prefix functions run lint",
     "serve:functions": "npm --prefix functions run serve",
-    "deploy": "npm --prefix functions run deploy"
+    "deploy": "npm --prefix functions run deploy",
+    "test": "npm --prefix functions run test"
   }
 }

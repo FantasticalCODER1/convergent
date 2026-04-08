@@ -2,19 +2,17 @@ import {
   Timestamp,
   addDoc,
   collection,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
-  increment,
   limit,
   orderBy,
   query,
   serverTimestamp,
-  setDoc,
   updateDoc,
   where
 } from 'firebase/firestore';
+import { callFunction } from '../firebase/functions';
 import type { EventKind, EventRecord } from '../types/Event';
 import type { AppUser } from '../types/User';
 import { firestore } from '../firebase/firestore';
@@ -116,58 +114,29 @@ async function findEventBySourceId(sourceId: string) {
 }
 
 export type ImportedEventPayload = Omit<EventInput, 'id'> & { sourceId: string };
+export type EventImportResult = {
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: Array<{ index: number; sourceId: string | null; message: string }>;
+};
 
-export async function upsertImportedEvents(events: ImportedEventPayload[]) {
-  for (const payload of events) {
-    if (!payload.sourceId) continue;
-    const existing = await findEventBySourceId(payload.sourceId);
-    if (existing) {
-      await updateDoc(doc(eventsRef, existing.id), {
-        title: payload.title,
-        description: payload.description ?? null,
-        startTime: toTimestamp(payload.startTime),
-        endTime: toTimestamp(payload.endTime),
-        location: payload.location ?? null,
-        type: payload.type,
-        clubId: payload.clubId ?? null,
-        source: payload.source ?? 'importer',
-        updatedAt: serverTimestamp()
-      });
-    } else {
-      await saveEvent({ ...payload, source: payload.source ?? 'importer' });
-    }
-  }
+export async function upsertImportedEvents(clubId: string, events: ImportedEventPayload[]) {
+  return callFunction<{ clubId: string; events: ImportedEventPayload[] }, EventImportResult>('applyEventImport', {
+    clubId,
+    events: events.map((event) => ({
+      ...event,
+      clubId,
+      source: event.source ?? 'admin-importer'
+    }))
+  });
 }
 
 export async function rsvpToEvent(eventId: string, user: AppUser, attending: boolean) {
-  const rsvpDoc = doc(rsvpsRef, `${eventId}_${user.id}`);
-  const existing = await getDoc(rsvpDoc);
-  const eventDoc = doc(eventsRef, eventId);
-
-  if (attending) {
-    await setDoc(
-      rsvpDoc,
-      {
-        eventId,
-        userId: user.id,
-        attending: true,
-        respondedAt: serverTimestamp()
-      },
-      { merge: true }
-    );
-    if (!existing.exists()) {
-      await updateDoc(eventDoc, { rsvpCount: increment(1) });
-    }
-    return;
-  }
-
-  if (existing.exists()) {
-    await deleteDoc(rsvpDoc);
-    const data = existing.data();
-    if (data?.attending) {
-      await updateDoc(eventDoc, { rsvpCount: increment(-1) });
-    }
-  }
+  await callFunction<{ eventId: string; attending: boolean }, { ok: true; attending: boolean }>('setEventRsvp', {
+    eventId,
+    attending
+  });
 }
 
 export async function listRsvpsForUser(userId: string) {
