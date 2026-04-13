@@ -47,11 +47,16 @@ This document describes the schema the current app actually uses today.
 - `description`
 - `startTime`
 - `endTime`
+- `allDay`
 - `location`
 - `type`
 - `clubId`
 - `source`
 - `sourceId`
+- `sourceDataset`
+- `sourceTerm`
+- `importBatchId`
+- `sourceHash`
 - `rsvpCount`
 - `createdAt`
 - `updatedAt`

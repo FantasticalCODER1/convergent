@@ -30,6 +30,7 @@ Firestore  Storage  Cloud Functions
   - `setClubMembership`
   - `setEventRsvp`
   - `applyEventImport`
+- Calendar dataset ingestion is server-side through `scripts/importCalendarData.ts`, which reads `data/calendar/datasetsRegistry.json` and writes normalized school calendar events into Firestore using the Admin SDK.
 - Firestore is the source of truth for:
   - `users`
   - `clubs`
