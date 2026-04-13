@@ -1,0 +1,46 @@
+- generic [ref=e24]:
+  - banner [ref=e25]:
+    - generic [ref=e26]:
+      - generic [ref=e27]:
+        - paragraph [ref=e28]: Convergent
+        - paragraph [ref=e29]: Unified co-curricular platform
+      - button "Student User student" [ref=e31] [cursor=pointer]:
+        - generic [ref=e32]:
+          - paragraph [ref=e33]: Student User
+          - paragraph [ref=e34]: student
+        - generic [ref=e35]: ▾
+  - generic [ref=e36]:
+    - complementary [ref=e37]:
+      - link "Dashboard" [ref=e38] [cursor=pointer]:
+        - /url: /dashboard
+        - img [ref=e39]
+        - text: Dashboard
+      - link "Clubs" [ref=e42] [cursor=pointer]:
+        - /url: /clubs
+        - img [ref=e43]
+        - text: Clubs
+      - link "Calendar" [ref=e47] [cursor=pointer]:
+        - /url: /calendar
+        - img [ref=e48]
+        - text: Calendar
+      - link "Classes" [ref=e50] [cursor=pointer]:
+        - /url: /classes
+        - img [ref=e51]
+        - text: Classes
+      - link "Certificates" [ref=e54] [cursor=pointer]:
+        - /url: /certificates
+        - img [ref=e55]
+        - text: Certificates
+    - main [ref=e61]:
+      - generic [ref=e704]:
+        - generic [ref=e706]:
+          - paragraph [ref=e707]: Credentials
+          - heading "Certificates" [level=1] [ref=e708]
+          - paragraph [ref=e709]: View your certificate history. Issuance now happens from club management surfaces.
+        - link "Alpha Club Alpha Showcase Issued 08/04/2026 Verifier · IP9gfIp9… Tap to view verification page." [active] [ref=e712] [cursor=pointer]:
+          - /url: http://127.0.0.1:4173/verify?id=IP9gfIp94M65aIYjhEh0
+          - paragraph [ref=e713]: Alpha Club
+          - heading "Alpha Showcase" [level=3] [ref=e714]
+          - paragraph [ref=e715]: Issued 08/04/2026
+          - paragraph [ref=e716]: Verifier · IP9gfIp9…
+          - paragraph [ref=e717]: Tap to view verification page.

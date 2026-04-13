@@ -1,4 +1,6 @@
-import { addToGoogleCalendar, downloadIcs } from '../services/Calendar';
+import { useEffect, useState } from 'react';
+import { addToGoogleCalendar, canInsertIntoGoogleCalendar, downloadIcs } from '../services/Calendar';
+import { formatDateLabel, formatTimeLabel, formatTimestamp } from '../lib/formatters';
 import type { EventRecord } from '../types/Event';
 
 type Props = {
@@ -7,13 +9,24 @@ type Props = {
   attending?: boolean;
   onClose: () => void;
   onRsvp?: (attending: boolean) => Promise<void> | void;
+  canEdit?: boolean;
+  onEdit?: () => void;
 };
 
-export function EventDetails({ event, open, attending, onClose, onRsvp }: Props) {
+export function EventDetails({ event, open, attending, onClose, onRsvp, canEdit, onEdit }: Props) {
+  const [calendarMessage, setCalendarMessage] = useState<string | null>(null);
+  const [rsvpBusy, setRsvpBusy] = useState(false);
+
+  useEffect(() => {
+    setCalendarMessage(null);
+    setRsvpBusy(false);
+  }, [event?.id, open]);
+
   if (!open || !event) return null;
 
   const start = event.startTime ? new Date(event.startTime) : null;
   const end = event.endTime ? new Date(event.endTime) : null;
+  const canUseGoogleCalendar = canInsertIntoGoogleCalendar();
 
   const handleCalendar = async () => {
     if (!event.startTime) return;
@@ -22,20 +35,31 @@ export function EventDetails({ event, open, attending, onClose, onRsvp }: Props)
       description: event.description ?? '',
       location: event.location ?? '',
       start: event.startTime,
-      end: event.endTime ?? event.startTime
+      end: event.endTime ?? event.startTime,
+      allDay: event.allDay
     };
+    if (!canUseGoogleCalendar) {
+      downloadIcs(payload);
+      setCalendarMessage('Downloaded an .ics file for this environment.');
+      return;
+    }
     try {
       await addToGoogleCalendar(payload);
-      alert('Added to Google Calendar');
+      setCalendarMessage('Added to Google Calendar.');
     } catch {
       downloadIcs(payload);
-      alert('Calendar insert failed. Downloaded ICS instead.');
+      setCalendarMessage('Google Calendar was unavailable, so an .ics file was downloaded instead.');
     }
   };
 
-  const handleRsvp = (value: boolean) => {
+  const handleRsvp = async (value: boolean) => {
     if (!onRsvp) return;
-    void onRsvp(value);
+    setRsvpBusy(true);
+    try {
+      await onRsvp(value);
+    } finally {
+      setRsvpBusy(false);
+    }
   };
 
   return (
@@ -50,24 +74,33 @@ export function EventDetails({ event, open, attending, onClose, onRsvp }: Props)
             Close
           </button>
         </div>
-        {event.description && <p className="mt-4 text-white/80">{event.description}</p>}
-        <dl className="mt-4 space-y-1 text-sm text-white/70">
+        {event.description && <p className="mt-4 rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-white/80">{event.description}</p>}
+        <dl className="mt-4 grid gap-4 text-sm text-white/70 sm:grid-cols-2">
           {start && (
-            <div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <dt className="uppercase text-[10px] tracking-[0.3em] text-white/40">Starts</dt>
-              <dd>{start.toLocaleString()}</dd>
+              <dd className="mt-2 text-base text-white">{formatDateLabel(start)}</dd>
+              <dd className="text-white/60">{event.allDay ? 'All day' : formatTimeLabel(start)}</dd>
             </div>
           )}
           {end && (
-            <div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <dt className="uppercase text-[10px] tracking-[0.3em] text-white/40">Ends</dt>
-              <dd>{end.toLocaleString()}</dd>
+              <dd className="mt-2 text-base text-white">{formatDateLabel(end)}</dd>
+              <dd className="text-white/60">{event.allDay ? 'All day' : formatTimeLabel(end)}</dd>
             </div>
           )}
           {event.location && (
-            <div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
               <dt className="uppercase text-[10px] tracking-[0.3em] text-white/40">Location</dt>
-              <dd>{event.location}</dd>
+              <dd className="mt-2 text-base text-white">{event.location}</dd>
+            </div>
+          )}
+          {typeof event.rsvpCount === 'number' && (
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <dt className="uppercase text-[10px] tracking-[0.3em] text-white/40">Attendance</dt>
+              <dd className="mt-2 text-base text-white">{event.rsvpCount} RSVP{event.rsvpCount === 1 ? '' : 's'}</dd>
+              {event.updatedAt ? <dd className="text-white/50">Updated {formatTimestamp(event.updatedAt)}</dd> : null}
             </div>
           )}
         </dl>
@@ -77,20 +110,31 @@ export function EventDetails({ event, open, attending, onClose, onRsvp }: Props)
             onClick={handleCalendar}
             className="rounded-2xl border border-white/10 px-4 py-2 text-sm text-white transition hover:bg-white/10"
           >
-            Add to Calendar
+            {canUseGoogleCalendar ? 'Add to Google Calendar' : 'Download .ics'}
           </button>
           {onRsvp && (
             <button
               type="button"
-              onClick={() => handleRsvp(!attending)}
+              disabled={rsvpBusy}
+              onClick={() => void handleRsvp(!attending)}
               className={`rounded-2xl px-4 py-2 text-sm font-medium transition ${
                 attending ? 'bg-emerald-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
-              {attending ? 'Cancel RSVP' : 'RSVP'}
+              {rsvpBusy ? 'Saving…' : attending ? 'Cancel RSVP' : 'RSVP'}
             </button>
           )}
+          {canEdit && onEdit ? (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="rounded-2xl bg-indigo-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-600"
+            >
+              Edit event
+            </button>
+          ) : null}
         </div>
+        {calendarMessage ? <p className="mt-4 text-sm text-white/60">{calendarMessage}</p> : null}
       </div>
     </div>
   );

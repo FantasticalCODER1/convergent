@@ -1,0 +1,74 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e24]:
+    - banner [ref=e25]:
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - paragraph [ref=e28]: Convergent
+          - paragraph [ref=e29]: Unified co-curricular platform
+        - button "Student User student" [ref=e31] [cursor=pointer]:
+          - generic [ref=e32]:
+            - paragraph [ref=e33]: Student User
+            - paragraph [ref=e34]: student
+          - generic [ref=e35]: ▾
+    - generic [ref=e36]:
+      - complementary [ref=e37]:
+        - link "Dashboard" [ref=e38] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e39]
+          - text: Dashboard
+        - link "Clubs" [ref=e42] [cursor=pointer]:
+          - /url: /clubs
+          - img [ref=e43]
+          - text: Clubs
+        - link "Calendar" [ref=e47] [cursor=pointer]:
+          - /url: /calendar
+          - img [ref=e48]
+          - text: Calendar
+        - link "Classes" [ref=e50] [cursor=pointer]:
+          - /url: /classes
+          - img [ref=e51]
+          - text: Classes
+        - link "Certificates" [ref=e54] [cursor=pointer]:
+          - /url: /certificates
+          - img [ref=e55]
+          - text: Certificates
+      - main [ref=e61]:
+        - generic [ref=e166]:
+          - generic [ref=e168]:
+            - paragraph [ref=e169]: Communities
+            - heading "Clubs & Societies" [level=1] [ref=e170]
+            - paragraph [ref=e171]: Discover, join, and manage vibrant student communities.
+          - generic [ref=e172]:
+            - generic [ref=e209]:
+              - generic [ref=e210]:
+                - generic [ref=e211]:
+                  - generic [ref=e212]:
+                    - paragraph [ref=e213]: Tech
+                    - heading "Alpha Club" [level=3] [ref=e214]
+                  - generic [ref=e215]:
+                    - img [ref=e216]
+                    - text: "2"
+                - paragraph [ref=e220]: Alpha club
+                - generic [ref=e221]:
+                  - generic [ref=e222]: MIC · Teacher A
+                  - generic [ref=e223]: Wed 16:00
+                - button "Join" [ref=e225] [cursor=pointer]
+              - link "View timeline →" [ref=e226] [cursor=pointer]:
+                - /url: /clubs/club-alpha
+            - generic [ref=e227]:
+              - generic [ref=e228]:
+                - generic [ref=e229]:
+                  - generic [ref=e230]:
+                    - paragraph [ref=e231]: Service
+                    - heading "Beta Club" [level=3] [ref=e232]
+                  - generic [ref=e233]:
+                    - img [ref=e234]
+                    - text: "1"
+                - paragraph [ref=e238]: Beta club
+                - generic [ref=e239]:
+                  - generic [ref=e240]: MIC · Teacher B
+                  - generic [ref=e241]: Thu 16:00
+                - button "Leave" [ref=e243] [cursor=pointer]
+              - link "View timeline →" [ref=e244] [cursor=pointer]:
+                - /url: /clubs/club-beta
+  - generic [ref=e165]: "8"

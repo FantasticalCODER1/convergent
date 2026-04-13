@@ -194,6 +194,17 @@ exports.listClubUsers = functions.https.onCall(async (data, context) => {
   return users.filter(Boolean);
 });
 
+exports.listClubCertificates = functions.https.onCall(async (data, context) => {
+  const caller = await getCallerContext(context);
+  const clubId = normalizeRequiredString(data?.clubId, 'clubId');
+  await assertClubAccess(caller, clubId);
+
+  const snap = await admin.firestore().collection('certificates').where('clubId', '==', clubId).get();
+  return snap.docs
+    .map((doc) => toCertificateRecord(doc))
+    .sort((a, b) => String(b.issuedAt || '').localeCompare(String(a.issuedAt || '')));
+});
+
 exports.setClubMembership = functions.https.onCall(async (data, context) => {
   const caller = await getCallerContext(context);
   const clubId = normalizeRequiredString(data?.clubId, 'clubId');
@@ -280,6 +291,40 @@ exports.setEventRsvp = functions.https.onCall(async (data, context) => {
 
   await batch.commit();
   return { ok: true, attending };
+});
+
+exports.listEventAttendance = functions.https.onCall(async (data, context) => {
+  const caller = await getCallerContext(context);
+  const eventId = normalizeRequiredString(data?.eventId, 'eventId');
+  const eventSnap = await admin.firestore().doc(`events/${eventId}`).get();
+  if (!eventSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Event not found.');
+  }
+
+  const eventData = eventSnap.data() || {};
+  if (eventData.clubId) {
+    await assertClubAccess(caller, eventData.clubId);
+  } else {
+    assertRole(caller.role, ['admin']);
+  }
+
+  const rsvpSnap = await admin.firestore().collection('eventRsvps').where('eventId', '==', eventId).get();
+  const attendees = await Promise.all(
+    rsvpSnap.docs.map(async (doc) => {
+      const record = doc.data() || {};
+      const userSnap = await admin.firestore().doc(`users/${record.userId}`).get();
+      const user = userSnap.exists ? toAppUser(userSnap) : null;
+      return {
+        userId: record.userId,
+        name: user?.name || 'Member',
+        email: user?.email || '',
+        role: user?.role || 'student',
+        respondedAt: timestampToIso(record.respondedAt)
+      };
+    })
+  );
+
+  return attendees.sort((a, b) => a.name.localeCompare(b.name));
 });
 
 exports.issueCertificate = functions.https.onCall(async (data, context) => {

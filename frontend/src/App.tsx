@@ -32,7 +32,7 @@ function AppRoutes() {
     <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/debug/oauth" element={<DebugOAuth />} />
+        {import.meta.env.DEV && <Route path="/debug/oauth" element={<DebugOAuth />} />}
         <Route path="/verify" element={<Verify />} />
         <Route
           element={

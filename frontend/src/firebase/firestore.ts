@@ -7,17 +7,19 @@ import {
   getFirestore
 } from 'firebase/firestore';
 import { getFirebaseApp } from './app';
+import { isFirebaseEmulatorMode } from '../lib/firebaseEnv';
 
 export const firestore = getFirestore(getFirebaseApp());
 
-const shouldUseEmulator = import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
+const shouldUseEmulator = isFirebaseEmulatorMode;
+const FIRESTORE_EMULATOR_KEY = '__convergent_firestore_emulator__';
+const emulatorFlags = globalThis as typeof globalThis & Record<string, boolean | undefined>;
 
-if (shouldUseEmulator) {
+if (shouldUseEmulator && !emulatorFlags[FIRESTORE_EMULATOR_KEY]) {
   const host = import.meta.env.VITE_FIRESTORE_EMULATOR_HOST ?? '127.0.0.1';
   const port = Number(import.meta.env.VITE_FIRESTORE_EMULATOR_PORT ?? '8080');
   connectFirestoreEmulator(firestore, host, port);
-  // eslint-disable-next-line no-console
-  console.info(`[firebase] Connected Firestore emulator at ${host}:${port}`);
+  emulatorFlags[FIRESTORE_EMULATOR_KEY] = true;
 }
 
 export type WithId<T> = T & { id: string };

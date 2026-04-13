@@ -30,11 +30,15 @@ function mapEvent(snapshot: any): EventRecord {
     description: data.description,
     startTime,
     endTime,
+    allDay: !!data.allDay,
     location: data.location,
     type: (data.type ?? 'club') as EventKind,
     clubId: data.clubId,
     source: data.source,
     sourceId: data.sourceId,
+    sourceDataset: data.sourceDataset,
+    sourceTerm: data.sourceTerm,
+    sourceHash: data.sourceHash,
     rsvpCount: data.rsvpCount ?? 0,
     updatedAt: toIso(data.updatedAt)
   };
@@ -121,6 +125,14 @@ export type EventImportResult = {
   errors: Array<{ index: number; sourceId: string | null; message: string }>;
 };
 
+export type EventAttendanceRecord = {
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+  respondedAt?: string;
+};
+
 export async function upsertImportedEvents(clubId: string, events: ImportedEventPayload[]) {
   return callFunction<{ clubId: string; events: ImportedEventPayload[] }, EventImportResult>('applyEventImport', {
     clubId,
@@ -137,6 +149,10 @@ export async function rsvpToEvent(eventId: string, user: AppUser, attending: boo
     eventId,
     attending
   });
+}
+
+export async function listEventAttendance(eventId: string) {
+  return callFunction<{ eventId: string }, EventAttendanceRecord[]>('listEventAttendance', { eventId });
 }
 
 export async function listRsvpsForUser(userId: string) {

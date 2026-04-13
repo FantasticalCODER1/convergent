@@ -1,0 +1,20 @@
+- generic [ref=e4]:
+  - heading "Sign in to Convergent" [level=1] [ref=e5]
+  - button "Continue with Google" [ref=e6] [cursor=pointer]
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - paragraph [ref=e9]: Emulator sign-in
+      - paragraph [ref=e10]: Use the seeded local accounts for deterministic validation.
+    - generic [ref=e11]:
+      - button "admin@doonschool.com" [ref=e12] [cursor=pointer]
+      - button "master@doonschool.com" [ref=e13] [cursor=pointer]
+      - button "manager@doonschool.com" [ref=e14] [cursor=pointer]
+      - button "student@doonschool.com" [ref=e15] [cursor=pointer]
+    - generic [ref=e16]:
+      - textbox "student@doonschool.com" [ref=e17]
+      - textbox "password123" [ref=e18]
+    - button "Continue with Emulator Auth" [ref=e19] [cursor=pointer]
+  - generic [ref=e20]:
+    - generic [ref=e21]: "Origin: http://127.0.0.1:4173"
+    - generic [ref=e22]: "Client ID present: true"
+    - generic [ref=e23]: "Client ID suffix OK: true"

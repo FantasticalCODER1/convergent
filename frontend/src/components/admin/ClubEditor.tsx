@@ -55,33 +55,34 @@ export function ClubEditor({ onCreated }: { onCreated?: () => void }) {
     <form onSubmit={handleSubmit(submit)} className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-white shadow-glass">
       <div>
         <p className="text-xs uppercase tracking-[0.3em] text-white/50">Create club</p>
-        <p className="text-sm text-white/60">Set up a new club record.</p>
+        <p className="text-lg font-semibold text-white">Set up a new club record</p>
+        <p className="text-sm text-white/60">Global creation stays here. Day-to-day club operations now live on each club page.</p>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <label className="space-y-1 text-sm">
           <span className="text-white/70">Name</span>
-          <input {...register('name')} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2" />
+          <input {...register('name')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" />
           {errors.name && <span className="text-xs text-rose-300">{errors.name.message}</span>}
         </label>
         <label className="space-y-1 text-sm">
           <span className="text-white/70">Category</span>
-          <input {...register('category')} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2" />
+          <input {...register('category')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" />
           {errors.category && <span className="text-xs text-rose-300">{errors.category.message}</span>}
         </label>
         <label className="space-y-1 text-sm">
           <span className="text-white/70">MIC</span>
-          <input {...register('mic')} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2" />
+          <input {...register('mic')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" />
           {errors.mic && <span className="text-xs text-rose-300">{errors.mic.message}</span>}
         </label>
         <label className="space-y-1 text-sm">
           <span className="text-white/70">Schedule</span>
-          <input {...register('schedule')} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2" />
+          <input {...register('schedule')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" />
           {errors.schedule && <span className="text-xs text-rose-300">{errors.schedule.message}</span>}
         </label>
       </div>
       <label className="space-y-1 text-sm">
         <span className="text-white/70">Description</span>
-        <textarea {...register('description')} rows={3} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2" />
+        <textarea {...register('description')} rows={3} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" />
         {errors.description && <span className="text-xs text-rose-300">{errors.description.message}</span>}
       </label>
       <button type="submit" disabled={isSubmitting} className="rounded-2xl bg-indigo-500 px-4 py-2 text-sm font-medium hover:bg-indigo-600 disabled:opacity-60">

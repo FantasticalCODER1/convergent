@@ -1,0 +1,187 @@
+- generic [ref=e24]:
+  - banner [ref=e25]:
+    - generic [ref=e26]:
+      - generic [ref=e27]:
+        - paragraph [ref=e28]: Convergent
+        - paragraph [ref=e29]: Unified co-curricular platform
+      - button "Student User student" [ref=e31] [cursor=pointer]:
+        - generic [ref=e32]:
+          - paragraph [ref=e33]: Student User
+          - paragraph [ref=e34]: student
+        - generic [ref=e35]: ▾
+  - generic [ref=e36]:
+    - complementary [ref=e37]:
+      - link "Dashboard" [ref=e38] [cursor=pointer]:
+        - /url: /dashboard
+        - img [ref=e39]
+        - text: Dashboard
+      - link "Clubs" [ref=e42] [cursor=pointer]:
+        - /url: /clubs
+        - img [ref=e43]
+        - text: Clubs
+      - link "Calendar" [ref=e47] [cursor=pointer]:
+        - /url: /calendar
+        - img [ref=e48]
+        - text: Calendar
+      - link "Classes" [ref=e50] [cursor=pointer]:
+        - /url: /classes
+        - img [ref=e51]
+        - text: Classes
+      - link "Certificates" [ref=e54] [cursor=pointer]:
+        - /url: /certificates
+        - img [ref=e55]
+        - text: Certificates
+    - main [ref=e61]:
+      - generic [ref=e62]:
+        - generic [ref=e63]:
+          - paragraph [ref=e64]: Schedule
+          - heading "Calendar" [level=1] [ref=e65]
+          - paragraph [ref=e66]: Click any event to RSVP, view details, or add it to Google Calendar.
+        - generic [ref=e396]:
+          - generic [ref=e397]:
+            - heading "April 2026" [level=2] [ref=e399]
+            - generic [ref=e400]:
+              - generic [ref=e401]:
+                - button "month" [pressed] [ref=e402] [cursor=pointer]
+                - button "week" [ref=e403] [cursor=pointer]
+                - button "day" [ref=e404] [cursor=pointer]
+              - button "today" [disabled] [ref=e405]
+              - generic [ref=e406]:
+                - button "Previous month" [ref=e407] [cursor=pointer]:
+                  - img [ref=e408]: 
+                - button "Next month" [ref=e409] [cursor=pointer]:
+                  - img [ref=e410]: 
+          - generic "April 2026" [ref=e411]:
+            - grid [ref=e413]:
+              - rowgroup [ref=e414]:
+                - row "Sunday Monday Tuesday Wednesday Thursday Friday Saturday" [ref=e418]:
+                  - columnheader "Sunday" [ref=e419]:
+                    - generic "Sunday" [ref=e421]: Sun
+                  - columnheader "Monday" [ref=e422]:
+                    - generic "Monday" [ref=e424]: Mon
+                  - columnheader "Tuesday" [ref=e425]:
+                    - generic "Tuesday" [ref=e427]: Tue
+                  - columnheader "Wednesday" [ref=e428]:
+                    - generic "Wednesday" [ref=e430]: Wed
+                  - columnheader "Thursday" [ref=e431]:
+                    - generic "Thursday" [ref=e433]: Thu
+                  - columnheader "Friday" [ref=e434]:
+                    - generic "Friday" [ref=e436]: Fri
+                  - columnheader "Saturday" [ref=e437]:
+                    - generic "Saturday" [ref=e439]: Sat
+              - rowgroup [ref=e440]:
+                - generic [ref=e443]:
+                  - row "March 29, 2026 March 30, 2026 March 31, 2026 April 1, 2026 April 2, 2026 April 3, 2026 April 4, 2026" [ref=e445]:
+                    - gridcell "March 29, 2026" [ref=e446]:
+                      - generic "March 29, 2026" [ref=e449]: "29"
+                    - gridcell "March 30, 2026" [ref=e451]:
+                      - generic "March 30, 2026" [ref=e454]: "30"
+                    - gridcell "March 31, 2026" [ref=e456]:
+                      - generic "March 31, 2026" [ref=e459]: "31"
+                    - gridcell "April 1, 2026" [ref=e461]:
+                      - generic "April 1, 2026" [ref=e464]: "1"
+                    - gridcell "April 2, 2026" [ref=e466]:
+                      - generic "April 2, 2026" [ref=e469]: "2"
+                    - gridcell "April 3, 2026" [ref=e471]:
+                      - generic "April 3, 2026" [ref=e474]: "3"
+                    - gridcell "April 4, 2026" [ref=e476]:
+                      - generic "April 4, 2026" [ref=e479]: "4"
+                  - row "April 5, 2026 April 6, 2026 April 7, 2026 April 8, 2026 April 9, 2026 April 10, 2026 April 11, 2026" [ref=e481]:
+                    - gridcell "April 5, 2026" [ref=e482]:
+                      - generic "April 5, 2026" [ref=e485]: "5"
+                    - gridcell "April 6, 2026" [ref=e487]:
+                      - generic "April 6, 2026" [ref=e490]: "6"
+                    - gridcell "April 7, 2026" [ref=e492]:
+                      - generic "April 7, 2026" [ref=e495]: "7"
+                    - gridcell "April 8, 2026" [ref=e497]:
+                      - generic [ref=e498]:
+                        - generic "April 8, 2026" [ref=e500]: "8"
+                        - generic [ref=e505]:
+                          - generic [ref=e506]: 1:42p
+                          - generic [ref=e508]: Seeded Club Event
+                    - gridcell "April 9, 2026" [ref=e509]:
+                      - generic [ref=e510]:
+                        - generic "April 9, 2026" [ref=e512]: "9"
+                        - generic [ref=e517]:
+                          - generic [ref=e518]: 6a
+                          - generic [ref=e520]: Manager Club Event Updated
+                    - gridcell "April 10, 2026" [ref=e521]:
+                      - generic "April 10, 2026" [ref=e524]: "10"
+                    - gridcell "April 11, 2026" [ref=e526]:
+                      - generic [ref=e527]:
+                        - generic "April 11, 2026" [ref=e529]: "11"
+                        - generic [ref=e534]:
+                          - generic [ref=e535]: 6a
+                          - generic [ref=e537]: Admin School Event
+                  - row "April 12, 2026 April 13, 2026 April 14, 2026 April 15, 2026 April 16, 2026 April 17, 2026 April 18, 2026" [ref=e538]:
+                    - gridcell "April 12, 2026" [ref=e539]:
+                      - generic "April 12, 2026" [ref=e542]: "12"
+                    - gridcell "April 13, 2026" [ref=e544]:
+                      - generic "April 13, 2026" [ref=e547]: "13"
+                    - gridcell "April 14, 2026" [ref=e549]:
+                      - generic "April 14, 2026" [ref=e552]: "14"
+                    - gridcell "April 15, 2026" [ref=e554]:
+                      - generic "April 15, 2026" [ref=e557]: "15"
+                    - gridcell "April 16, 2026" [ref=e559]:
+                      - generic "April 16, 2026" [ref=e562]: "16"
+                    - gridcell "April 17, 2026" [ref=e564]:
+                      - generic "April 17, 2026" [ref=e567]: "17"
+                    - gridcell "April 18, 2026" [ref=e569]:
+                      - generic "April 18, 2026" [ref=e572]: "18"
+                  - row "April 19, 2026 April 20, 2026 April 21, 2026 April 22, 2026 April 23, 2026 April 24, 2026 April 25, 2026" [ref=e574]:
+                    - gridcell "April 19, 2026" [ref=e575]:
+                      - generic "April 19, 2026" [ref=e578]: "19"
+                    - gridcell "April 20, 2026" [ref=e580]:
+                      - generic [ref=e581]:
+                        - generic "April 20, 2026" [ref=e583]: "20"
+                        - generic [ref=e588]:
+                          - generic [ref=e589]: 6a
+                          - generic [ref=e591]: Import Event One Updated
+                    - gridcell "April 21, 2026" [ref=e592]:
+                      - generic [ref=e593]:
+                        - generic "April 21, 2026" [ref=e595]: "21"
+                        - generic [ref=e600]:
+                          - generic [ref=e601]: 6a
+                          - generic [ref=e603]: Import Event Two
+                    - gridcell "April 22, 2026" [ref=e604]:
+                      - generic "April 22, 2026" [ref=e607]: "22"
+                    - gridcell "April 23, 2026" [ref=e609]:
+                      - generic [ref=e610]:
+                        - generic "April 23, 2026" [ref=e612]: "23"
+                        - generic [ref=e617]:
+                          - generic [ref=e618]: 6a
+                          - generic [ref=e620]: Admin Imported Club Event
+                    - gridcell "April 24, 2026" [ref=e621]:
+                      - generic "April 24, 2026" [ref=e624]: "24"
+                    - gridcell "April 25, 2026" [ref=e626]:
+                      - generic "April 25, 2026" [ref=e629]: "25"
+                  - row "April 26, 2026 April 27, 2026 April 28, 2026 April 29, 2026 April 30, 2026 May 1, 2026 May 2, 2026" [ref=e631]:
+                    - gridcell "April 26, 2026" [ref=e632]:
+                      - generic "April 26, 2026" [ref=e635]: "26"
+                    - gridcell "April 27, 2026" [ref=e637]:
+                      - generic "April 27, 2026" [ref=e640]: "27"
+                    - gridcell "April 28, 2026" [ref=e642]:
+                      - generic "April 28, 2026" [ref=e645]: "28"
+                    - gridcell "April 29, 2026" [ref=e647]:
+                      - generic "April 29, 2026" [ref=e650]: "29"
+                    - gridcell "April 30, 2026" [ref=e652]:
+                      - generic "April 30, 2026" [ref=e655]: "30"
+                    - gridcell "May 1, 2026" [ref=e657]:
+                      - generic "May 1, 2026" [ref=e660]: "1"
+                    - gridcell "May 2, 2026" [ref=e662]:
+                      - generic "May 2, 2026" [ref=e665]: "2"
+                  - row "May 3, 2026 May 4, 2026 May 5, 2026 May 6, 2026 May 7, 2026 May 8, 2026 May 9, 2026" [ref=e667]:
+                    - gridcell "May 3, 2026" [ref=e668]:
+                      - generic "May 3, 2026" [ref=e671]: "3"
+                    - gridcell "May 4, 2026" [ref=e673]:
+                      - generic "May 4, 2026" [ref=e676]: "4"
+                    - gridcell "May 5, 2026" [ref=e678]:
+                      - generic "May 5, 2026" [ref=e681]: "5"
+                    - gridcell "May 6, 2026" [ref=e683]:
+                      - generic "May 6, 2026" [ref=e686]: "6"
+                    - gridcell "May 7, 2026" [ref=e688]:
+                      - generic "May 7, 2026" [ref=e691]: "7"
+                    - gridcell "May 8, 2026" [ref=e693]:
+                      - generic "May 8, 2026" [ref=e696]: "8"
+                    - gridcell "May 9, 2026" [ref=e698]:
+                      - generic "May 9, 2026" [ref=e701]: "9"

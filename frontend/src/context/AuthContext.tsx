@@ -10,6 +10,7 @@ import {
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { clearGoogleAuthCache, getGoogleAccessAndProfile } from '../auth/google';
 import { getFirebaseApp } from '../firebase/app';
+import { isFirebaseEmulatorMode } from '../lib/firebaseEnv';
 import { isAllowedSchoolEmail, normalizeUserRole } from '../lib/policy';
 import type { AppUser } from '../types/User';
 import { fetchUser, upsertUserProfile } from '../services/usersService';
@@ -26,11 +27,14 @@ type AuthState = {
 };
 
 const auth = getAuth(getFirebaseApp());
-const shouldUseEmulator = import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
-const shouldUseEmulatorLogin = shouldUseEmulator && import.meta.env.VITE_ENABLE_EMULATOR_LOGIN === 'true';
-if (shouldUseEmulator) {
+const shouldUseEmulator = isFirebaseEmulatorMode;
+const shouldUseEmulatorLogin = shouldUseEmulator;
+const AUTH_EMULATOR_KEY = '__convergent_auth_emulator__';
+const emulatorFlags = globalThis as typeof globalThis & Record<string, boolean | undefined>;
+if (shouldUseEmulator && !emulatorFlags[AUTH_EMULATOR_KEY]) {
   const url = import.meta.env.VITE_AUTH_EMULATOR_URL ?? 'http://127.0.0.1:9099';
   connectAuthEmulator(auth, url, { disableWarnings: true });
+  emulatorFlags[AUTH_EMULATOR_KEY] = true;
 }
 
 export const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -148,22 +152,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     return () => unsub();
   }, [hydrateUser]);
-
-  useEffect(() => {
-    if (!user || accessToken) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { accessToken: token } = await getGoogleAccessAndProfile();
-        if (!cancelled) setAccessToken(token);
-      } catch (err) {
-        console.warn('Silent Google token fetch failed', err);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user, accessToken]);
 
   const value = useMemo<AuthState>(
     () => ({

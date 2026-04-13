@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { isGoogleAuthConfigured } from '../auth/google';
 import { useAuth } from '../hooks/useAuth';
 import { useClassroom } from '../hooks/useClassroom';
+import { isFirebaseEmulatorMode } from '../lib/firebaseEnv';
 import type { ClassroomCourse } from '../services/classroomService';
 
 function formatDueDate(due?: { year: number; month: number; day: number }) {
@@ -14,6 +16,11 @@ export default function Classes() {
   const { user, accessToken } = useAuth();
   const { courses, coursework, loadingCourses, loadingWork, error, openCourse } = useClassroom();
   const [selected, setSelected] = useState<ClassroomCourse | null>(null);
+  const classroomUnavailableMessage = isFirebaseEmulatorMode
+    ? 'Live Classroom sync is intentionally disabled in emulator mode.'
+    : !isGoogleAuthConfigured()
+      ? 'Classroom becomes available once Google auth is configured for this environment.'
+      : 'Sign in with Google and grant Classroom access to view live courses.';
 
   if (!user) {
     return (
@@ -26,7 +33,7 @@ export default function Classes() {
   if (!accessToken) {
     return (
       <div className="rounded-3xl border border-white/5 bg-white/5 p-6 text-white/70">
-        Sign in with Google and grant Classroom access to view your classes.
+        {classroomUnavailableMessage}
       </div>
     );
   }

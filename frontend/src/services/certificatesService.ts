@@ -52,7 +52,13 @@ export async function issueCertificate(input: IssueCertificateInput) {
 export async function listCertificatesForUser(userId: string) {
   const q = query(certificatesRef, where('userId', '==', userId));
   const snap = await getDocs(q);
-  return snap.docs.map((docSnap) => mapCertificate(docSnap));
+  return snap.docs
+    .map((docSnap) => mapCertificate(docSnap))
+    .sort((a, b) => String(b.issuedAt ?? '').localeCompare(String(a.issuedAt ?? '')));
+}
+
+export async function listCertificatesForClub(clubId: string) {
+  return callFunction<{ clubId: string }, CertificateRecord[]>('listClubCertificates', { clubId });
 }
 
 export async function verifyCertificateByCode(code: string) {
