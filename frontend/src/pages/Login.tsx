@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { getGoogleConfigSummary } from '../auth/google';
+import { isGoogleAuthConfigured } from '../auth/google';
+import { isFirebaseEmulatorMode } from '../lib/firebaseEnv';
 
 const emulatorUsers = [
   'admin@doonschool.com',
@@ -13,11 +14,11 @@ const emulatorUsers = [
 export default function Login() {
   const { login, loginWithEmulator, loading, error, user } = useAuth();
   const location = useLocation();
-  const cfg = useMemo(() => getGoogleConfigSummary(), []);
   const [email, setEmail] = useState('student@doonschool.com');
   const [password, setPassword] = useState('password123');
   const from = (location.state as any)?.from?.pathname || '/';
-  const emulatorLoginEnabled = !!loginWithEmulator && import.meta.env.VITE_ENABLE_EMULATOR_LOGIN === 'true';
+  const emulatorLoginEnabled = isFirebaseEmulatorMode && !!loginWithEmulator;
+  const googleLoginEnabled = !isFirebaseEmulatorMode && isGoogleAuthConfigured();
 
   if (user) {
     return <Navigate to={from} replace />;
@@ -25,20 +26,21 @@ export default function Login() {
 
   return (
     <div className="min-h-screen grid place-items-center bg-gradient-to-br from-indigo-900 to-slate-900">
-      <div className="bg-white/10 p-8 rounded-2xl backdrop-blur border border-white/20 w-full max-w-md text-white space-y-4">
-        <h1 className="text-2xl font-semibold">Sign in to Convergent</h1>
-        <button
-          disabled={loading}
-          onClick={login}
-          className="w-full py-3 rounded-full bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60"
-        >
-          {loading ? 'Signing in…' : 'Continue with Google'}
-        </button>
+      <div className="w-full max-w-lg space-y-5 rounded-3xl border border-white/20 bg-white/10 p-8 text-white shadow-2xl backdrop-blur">
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">Convergent</p>
+          <h1 className="text-3xl font-semibold">Sign in to your co-curricular workspace</h1>
+          <p className="text-sm text-white/70">
+            {emulatorLoginEnabled
+              ? 'Use the seeded local accounts for deterministic emulator validation.'
+              : 'Use your school Google account to access clubs, calendar, and certificates.'}
+          </p>
+        </div>
         {emulatorLoginEnabled ? (
           <div className="space-y-3 rounded-2xl border border-emerald-300/20 bg-emerald-500/5 p-4">
             <div>
               <p className="text-xs uppercase tracking-[0.25em] text-emerald-200">Emulator sign-in</p>
-              <p className="text-sm text-white/70">Use the seeded local accounts for deterministic validation.</p>
+              <p className="text-sm text-white/70">Local auth is active. Google token flows only start when a feature explicitly requests them.</p>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
               {emulatorUsers.map((seededEmail) => (
@@ -81,12 +83,21 @@ export default function Login() {
             </button>
           </div>
         ) : null}
+        {googleLoginEnabled ? (
+          <button
+            disabled={loading}
+            onClick={login}
+            className="w-full rounded-full bg-indigo-500 py-3 hover:bg-indigo-600 disabled:opacity-60"
+          >
+            {loading ? 'Signing in…' : 'Continue with Google'}
+          </button>
+        ) : null}
+        {!googleLoginEnabled && !emulatorLoginEnabled ? (
+          <div className="rounded-2xl border border-amber-300/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-100">
+            Google sign-in is not configured for this environment yet.
+          </div>
+        ) : null}
         {error && <div className="text-red-300 text-sm whitespace-pre-wrap">{error}</div>}
-        <div className="text-xs opacity-70 border-t border-white/10 pt-3">
-          <div>Origin: {cfg.origin}</div>
-          <div>Client ID present: {String(cfg.clientIdPresent)}</div>
-          <div>Client ID suffix OK: {String(cfg.clientIdSuffixOk)}</div>
-        </div>
       </div>
     </div>
   );

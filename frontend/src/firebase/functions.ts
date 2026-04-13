@@ -1,16 +1,18 @@
 import { connectFunctionsEmulator, getFunctions, httpsCallable } from 'firebase/functions';
 import { getFirebaseApp } from './app';
+import { isFirebaseEmulatorMode } from '../lib/firebaseEnv';
 
 export const functions = getFunctions(getFirebaseApp());
 
-const shouldUseFunctionsEmulator = import.meta.env.DEV && import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
+const shouldUseFunctionsEmulator = isFirebaseEmulatorMode;
+const FUNCTIONS_EMULATOR_KEY = '__convergent_functions_emulator__';
+const emulatorFlags = globalThis as typeof globalThis & Record<string, boolean | undefined>;
 
-if (shouldUseFunctionsEmulator) {
+if (shouldUseFunctionsEmulator && !emulatorFlags[FUNCTIONS_EMULATOR_KEY]) {
   const host = import.meta.env.VITE_FUNCTIONS_EMULATOR_HOST ?? '127.0.0.1';
   const port = Number(import.meta.env.VITE_FUNCTIONS_EMULATOR_PORT ?? '5001');
   connectFunctionsEmulator(functions, host, port);
-  // eslint-disable-next-line no-console
-  console.info(`[firebase] Connected Functions emulator at ${host}:${port}`);
+  emulatorFlags[FUNCTIONS_EMULATOR_KEY] = true;
 }
 
 export async function callFunction<TInput, TOutput>(name: string, payload?: TInput) {

@@ -1,0 +1,111 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e24]:
+    - banner [ref=e25]:
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - paragraph [ref=e28]: Convergent
+          - paragraph [ref=e29]: Unified co-curricular platform
+        - button "Admin User admin" [ref=e31] [cursor=pointer]:
+          - generic [ref=e32]:
+            - paragraph [ref=e33]: Admin User
+            - paragraph [ref=e34]: admin
+          - generic [ref=e35]: ▾
+    - generic [ref=e36]:
+      - complementary [ref=e37]:
+        - link "Dashboard" [ref=e38] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e39]
+          - text: Dashboard
+        - link "Clubs" [ref=e42] [cursor=pointer]:
+          - /url: /clubs
+          - img [ref=e43]
+          - text: Clubs
+        - link "Calendar" [ref=e47] [cursor=pointer]:
+          - /url: /calendar
+          - img [ref=e48]
+          - text: Calendar
+        - link "Classes" [ref=e50] [cursor=pointer]:
+          - /url: /classes
+          - img [ref=e51]
+          - text: Classes
+        - link "Certificates" [ref=e54] [cursor=pointer]:
+          - /url: /certificates
+          - img [ref=e55]
+          - text: Certificates
+        - link "Admin" [ref=e61] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e62]
+          - text: Admin
+      - main [ref=e64]:
+        - generic [ref=e169]:
+          - generic [ref=e170]:
+            - paragraph [ref=e171]: Control
+            - heading "Admin panel" [level=1] [ref=e172]
+            - paragraph [ref=e173]: Manage global access and create new clubs. Club-scoped operations now live on each club page.
+          - generic [ref=e175]:
+            - generic [ref=e176]:
+              - paragraph [ref=e177]: Create club
+              - paragraph [ref=e178]: Set up a new club record.
+            - generic [ref=e179]:
+              - generic [ref=e180]:
+                - text: Name
+                - textbox "Name" [ref=e181]
+              - generic [ref=e182]:
+                - text: Category
+                - textbox "Category" [ref=e183]
+              - generic [ref=e184]:
+                - text: MIC
+                - textbox "MIC" [ref=e185]
+              - generic [ref=e186]:
+                - text: Schedule
+                - textbox "Schedule" [ref=e187]
+            - generic [ref=e188]:
+              - text: Description
+              - textbox "Description" [ref=e189]
+            - button "Save club" [ref=e190] [cursor=pointer]
+          - generic [ref=e191]:
+            - generic [ref=e192]:
+              - heading "Users" [level=2] [ref=e193]
+              - paragraph [ref=e194]: Update roles to control privileged access.
+            - generic [ref=e195]:
+              - generic [ref=e196]:
+                - paragraph [ref=e197]: Admin User
+                - paragraph [ref=e198]: admin@doonschool.com
+                - combobox [ref=e199]:
+                  - option "student"
+                  - option "manager"
+                  - option "master"
+                  - option "admin" [selected]
+              - generic [ref=e200]:
+                - paragraph [ref=e201]: Manager User
+                - paragraph [ref=e202]: manager@doonschool.com
+                - combobox [ref=e203]:
+                  - option "student"
+                  - option "manager" [selected]
+                  - option "master"
+                  - option "admin"
+              - generic [ref=e204]:
+                - paragraph [ref=e205]: Master User
+                - paragraph [ref=e206]: master@doonschool.com
+                - combobox [ref=e207]:
+                  - option "student"
+                  - option "manager"
+                  - option "master" [selected]
+                  - option "admin"
+              - generic [ref=e208]:
+                - paragraph [ref=e209]: Student User
+                - paragraph [ref=e210]: student@doonschool.com
+                - combobox [ref=e211]:
+                  - option "student" [selected]
+                  - option "manager"
+                  - option "master"
+                  - option "admin"
+              - generic [ref=e212]:
+                - paragraph [ref=e213]: Sync User Updated
+                - paragraph [ref=e214]: sync@doonschool.com
+                - combobox [ref=e215]:
+                  - option "student"
+                  - option "manager"
+                  - option "master" [selected]
+                  - option "admin"
+  - generic [ref=e168]: "8"

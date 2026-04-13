@@ -1,4 +1,5 @@
-import { getGoogleAccessAndProfile } from '../auth/google';
+import { getGoogleAccessAndProfile, isGoogleAuthConfigured } from '../auth/google';
+import { isFirebaseEmulatorMode } from '../lib/firebaseEnv';
 
 type CalendarEventInput = {
   title: string;
@@ -6,9 +7,17 @@ type CalendarEventInput = {
   location?: string;
   start: string;
   end: string;
+  allDay?: boolean;
 };
 
+export function canInsertIntoGoogleCalendar() {
+  return !isFirebaseEmulatorMode && isGoogleAuthConfigured();
+}
+
 export async function addToGoogleCalendar(e: CalendarEventInput) {
+  if (!canInsertIntoGoogleCalendar()) {
+    throw new Error('CALENDAR_AUTH_UNAVAILABLE');
+  }
   try {
     const post = (token: string | undefined) =>
       fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
@@ -21,8 +30,8 @@ export async function addToGoogleCalendar(e: CalendarEventInput) {
           summary: e.title,
           description: e.description,
           location: e.location,
-          start: { dateTime: e.start },
-          end: { dateTime: e.end }
+          start: e.allDay ? { date: e.start.slice(0, 10) } : { dateTime: e.start },
+          end: e.allDay ? { date: e.end.slice(0, 10) } : { dateTime: e.end }
         })
       });
 
@@ -49,6 +58,8 @@ export function downloadIcs(event: CalendarEventInput) {
     )}00Z`;
   };
 
+  const toIcsDate = (iso: string) => iso.slice(0, 10).replace(/-/g, '');
+
   const escape = (value?: string) => (value ?? '').replace(/[\n,;]/g, ' ');
 
   const ics = `BEGIN:VCALENDAR
@@ -58,8 +69,9 @@ BEGIN:VEVENT
 SUMMARY:${escape(event.title)}
 DESCRIPTION:${escape(event.description)}
 LOCATION:${escape(event.location)}
-DTSTART:${toIcs(event.start)}
-DTEND:${toIcs(event.end)}
+${event.allDay ? `DTSTART;VALUE=DATE:${toIcsDate(event.start)}
+DTEND;VALUE=DATE:${toIcsDate(event.end)}` : `DTSTART:${toIcs(event.start)}
+DTEND:${toIcs(event.end)}`}
 END:VEVENT
 END:VCALENDAR`;
 

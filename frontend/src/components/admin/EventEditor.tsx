@@ -101,35 +101,35 @@ export function EventEditor({
     <form onSubmit={handleSubmit(submit)} className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-white shadow-glass">
       <div>
         <p className="text-xs uppercase tracking-[0.3em] text-white/50">{event ? 'Edit event' : 'Add event'}</p>
-        <p className="text-sm text-white/60">{title}</p>
+        <p className="text-lg font-semibold text-white">{title}</p>
         <p className="text-xs text-white/50">{description}</p>
       </div>
       <label className="space-y-1 text-sm">
         <span>Title</span>
-        <input {...register('title')} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2" />
+        <input {...register('title')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" />
         {errors.title && <span className="text-xs text-rose-300">{errors.title.message}</span>}
       </label>
       <div className="grid gap-3 md:grid-cols-3">
         <label className="space-y-1 text-sm">
           <span>Date</span>
-          <input type="date" {...register('date')} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2" />
+          <input type="date" {...register('date')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" />
         </label>
         <label className="space-y-1 text-sm">
           <span>Start time</span>
-          <input type="time" {...register('startTime')} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2" />
+          <input type="time" {...register('startTime')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" />
         </label>
         <label className="space-y-1 text-sm">
           <span>End time</span>
-          <input type="time" {...register('endTime')} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2" />
+          <input type="time" {...register('endTime')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" />
         </label>
       </div>
       <label className="space-y-1 text-sm">
         <span>Location</span>
-        <input {...register('location')} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2" />
+        <input {...register('location')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" />
       </label>
       <label className="space-y-1 text-sm">
         <span>Type</span>
-        <select {...register('type')} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-black">
+        <select {...register('type')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-white">
           {allowedTypes.map((type) => (
             <option key={type} value={type}>
               {type[0].toUpperCase()}
@@ -140,7 +140,7 @@ export function EventEditor({
       </label>
       <label className="space-y-1 text-sm">
         <span>Description</span>
-        <textarea {...register('description')} rows={3} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2" />
+        <textarea {...register('description')} rows={3} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" />
       </label>
       <div className="flex flex-wrap gap-2">
         <button type="submit" disabled={isSubmitting} className="rounded-2xl bg-indigo-500 px-4 py-2 text-sm font-medium hover:bg-indigo-600 disabled:opacity-60">

@@ -102,8 +102,6 @@ async function requestAccessToken(prompt: '' | 'consent') {
     expiresAt: Date.now() + response.expiresInMs,
     profile: undefined // force refetch to ensure freshness
   };
-
-  console.log('[auth/google] Issued access token via prompt', prompt || 'silent');
   return cached;
 }
 
@@ -119,7 +117,6 @@ async function ensureValidAccessToken() {
     return fresh;
   } catch (err) {
     if (firstPrompt === '') {
-      console.warn('[auth/google] Silent refresh failed, prompting user');
       const fresh = await requestAccessToken('consent');
       hasPromptedConsent = true;
       return fresh;
@@ -147,25 +144,19 @@ async function fetchUserInfo(accessToken: string): Promise<GoogleProfile> {
   for (const url of endpoints) {
     try {
       const response = await fetch(url, { headers: { Authorization: `Bearer ${accessToken}` } });
-      console.log('[auth/google] Using userinfo endpoint', url, 'status', response.status);
       if (response.ok) {
         const data = await response.json();
         return shapeProfile(data);
       }
-    } catch (err) {
-      console.warn('[auth/google] userinfo fetch failed for', url, err);
-    }
+    } catch {}
   }
 
   if (cached.idToken) {
     try {
       const [, payloadBase64] = cached.idToken.split('.');
       const payload = JSON.parse(atob(payloadBase64));
-      console.log('[auth/google] Decoded profile from id_token');
       return shapeProfile(payload);
-    } catch (err) {
-      console.warn('[auth/google] Failed to decode id_token', err);
-    }
+    } catch {}
   }
 
   throw new Error('PROFILE_FETCH_FAILED');
@@ -198,8 +189,11 @@ export function getGoogleConfigSummary() {
   };
 }
 
+export function isGoogleAuthConfigured() {
+  return !!clientId && clientId.endsWith(REQUIRED_SUFFIX);
+}
+
 export function clearGoogleAuthCache() {
   cached = {};
   hasPromptedConsent = false;
-  console.log('[auth/google] Cleared cached auth state');
 }

@@ -1,0 +1,14 @@
+{
+  "datasets": [
+    {
+      "id": "2025_autumn",
+      "label": "Autumn 2025",
+      "term": "Autumn 2025",
+      "file": "data/calendar/datasets/2025_autumn/activities_guess.json",
+      "csvFile": "data/calendar/datasets/2025_autumn/activities_guess.csv",
+      "lineFile": "data/calendar/datasets/2025_autumn/calendar_lines.json",
+      "rawFile": "data/calendar/datasets/2025_autumn/calendar_ocr_raw.txt",
+      "active": true
+    }
+  ]
+}

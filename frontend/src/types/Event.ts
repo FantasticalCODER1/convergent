@@ -6,11 +6,15 @@ export interface EventRecord {
   description?: string;
   startTime: string;
   endTime: string;
+  allDay?: boolean;
   location?: string;
   type: EventKind;
   clubId?: string;
   source?: string;
   sourceId?: string;
+  sourceDataset?: string;
+  sourceTerm?: string;
+  sourceHash?: string;
   rsvpCount?: number;
   updatedAt?: string;
 }

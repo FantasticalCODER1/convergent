@@ -1,4 +1,5 @@
 import { CalendarDays, MapPin, UsersRound } from 'lucide-react';
+import { formatDateTimeRange } from '../lib/formatters';
 import type { EventRecord } from '../types/Event';
 
 type Props = {
@@ -7,18 +8,6 @@ type Props = {
   onRsvp?: (eventId: string, attending: boolean) => Promise<void> | void;
   onOpen?: (event: EventRecord) => void;
 };
-
-function formatRange(start?: string, end?: string) {
-  if (!start) return 'TBD';
-  const startDate = new Date(start);
-  const endDate = end ? new Date(end) : null;
-  const dateDisplay = startDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-  const startTime = startDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-  if (!endDate) return `${dateDisplay} • ${startTime}`;
-  const sameDay = startDate.toDateString() === endDate.toDateString();
-  const endTime = endDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-  return sameDay ? `${dateDisplay} • ${startTime} – ${endTime}` : `${dateDisplay} • ${startTime} → ${endDate.toLocaleDateString()} ${endTime}`;
-}
 
 export function EventCard({ event, attending, onRsvp, onOpen }: Props) {
   const handleRsvp = () => {
@@ -42,13 +31,14 @@ export function EventCard({ event, attending, onRsvp, onOpen }: Props) {
       </div>
       <div className="mt-3 flex flex-col gap-2 text-sm text-white/70">
         <div className="flex items-center gap-2">
-          <CalendarDays className="size-4" /> {formatRange(event.startTime, event.endTime)}
+          <CalendarDays className="size-4" /> {formatDateTimeRange(event.startTime, event.endTime)}
         </div>
         {event.location && (
           <div className="flex items-center gap-2">
             <MapPin className="size-4" /> {event.location}
           </div>
         )}
+        {event.description ? <p className="rounded-2xl border border-white/10 bg-slate-950/30 px-3 py-2 text-xs leading-6 text-white/60">{event.description}</p> : null}
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         {onOpen && (
