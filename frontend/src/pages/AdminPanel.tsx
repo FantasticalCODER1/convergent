@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import RequireRole from '../components/RequireRole';
+import { EmptyStateCard } from '../components/EmptyStateCard';
 import { EventEditor } from '../components/admin/EventEditor';
 import type { AppUser, UserRole } from '../types/User';
 import { listUsers, updateUserRole } from '../services/usersService';
 import { ClubEditor } from '../components/admin/ClubEditor';
 import { useClubs } from '../hooks/useClubs';
 import { useEvents } from '../hooks/useEvents';
+import { useSchedules } from '../hooks/useSchedules';
 import { formatDateTimeRange } from '../lib/formatters';
 import type { EventRecord } from '../types/Event';
 
@@ -25,7 +27,8 @@ function AdminInner() {
   const [editingSchoolEvent, setEditingSchoolEvent] = useState<EventRecord | null>(null);
   const { clubs, refresh: refreshClubs } = useClubs();
   const { events, saveEvent } = useEvents();
-  const schoolEvents = events.filter((event) => !event.clubId);
+  const { datasets } = useSchedules();
+  const schoolEvents = events.filter((event) => !event.relatedGroupId && !event.clubId);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -74,11 +77,11 @@ function AdminInner() {
           </div>
           <EventEditor
             event={editingSchoolEvent}
-            allowedTypes={['school']}
+            allowedCategories={['school_wide', 'academic', 'meals']}
             title="School-wide event manager"
             description="Global events are created here; club events belong on club pages."
             onSave={async (payload) => {
-              await saveEvent({ ...payload, type: 'school', clubId: undefined });
+              await saveEvent({ ...payload, scope: 'school', relatedGroupId: undefined, category: payload.category });
               setEditingSchoolEvent(null);
             }}
             onCancelEdit={() => setEditingSchoolEvent(null)}
@@ -139,7 +142,7 @@ function AdminInner() {
                   ))}
                 </select>
                 <p className="mt-3 text-xs text-white/45">
-                  Club-scoped workflows now happen on the relevant club page after role assignment.
+                  Cohort: {user.grade && user.section ? `${user.grade} · ${user.section}` : 'grade/section not set yet'}
                 </p>
               </div>
             ))}
@@ -153,7 +156,7 @@ function AdminInner() {
           <p className="mt-2 text-sm text-white/60">Global admin actions live here. Club-scoped events, imports, attendance, and certificate issuance now live on each club page.</p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             {clubs.map((club) => (
-              <Link key={club.id} to={`/clubs/${club.id}`} className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-white transition hover:bg-white/10">
+              <Link key={club.id} to={`/my-clubs/${club.id}`} className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-white transition hover:bg-white/10">
                 <div className="font-medium">{club.name}</div>
                 <div className="mt-1 text-xs text-white/50">{club.schedule}</div>
               </Link>
@@ -162,8 +165,18 @@ function AdminInner() {
         </div>
         <div className="rounded-3xl border border-white/5 bg-white/5 p-6 shadow-glass">
           <h2 className="text-xl font-semibold text-white">Imports</h2>
-          <p className="mt-2 text-sm text-white/60">Calendar imports are intentionally club-scoped in this build so imported activity lands in the correct club workspace.</p>
-          <p className="mt-4 text-xs text-white/45">Use the club page importer instead of a global admin dump panel.</p>
+          <p className="mt-2 text-sm text-white/60">Calendar imports remain club-scoped so imported activity lands in the correct workspace. Timetable and meal datasets now also have a reserved place in the model.</p>
+          {datasets.length === 0 ? (
+            <div className="mt-4">
+              <EmptyStateCard
+                eyebrow="Datasets"
+                title="No timetable datasets published yet"
+                body="The schedule dataset collections and UI placeholders now exist. Admin can start adding metadata and imports without changing route structure again."
+              />
+            </div>
+          ) : (
+            <p className="mt-4 text-xs text-white/45">{datasets.length} schedule dataset record{datasets.length === 1 ? '' : 's'} currently available.</p>
+          )}
         </div>
       </section>
     </div>

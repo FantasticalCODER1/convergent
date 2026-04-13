@@ -2,6 +2,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
+import { GROUP_CATEGORY_KEYS, getCategoryMeta } from '../../domain/categories';
 import { createClub } from '../../services/clubsService';
 import type { CreateClubInput } from '../../services/clubsService';
 import { useAuth } from '../../hooks/useAuth';
@@ -9,9 +10,12 @@ import { useAuth } from '../../hooks/useAuth';
 const schema = z.object({
   name: z.string().min(3),
   description: z.string().min(10),
-  category: z.string().min(2),
+  category: z.enum(GROUP_CATEGORY_KEYS as [typeof GROUP_CATEGORY_KEYS[number], ...typeof GROUP_CATEGORY_KEYS[number][]]),
   mic: z.string().min(2),
-  schedule: z.string().min(2)
+  schedule: z.string().min(2),
+  meetingLocation: z.string().optional(),
+  classroomLink: z.string().optional(),
+  meetLink: z.string().optional()
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -26,7 +30,7 @@ export function ClubEditor({ onCreated }: { onCreated?: () => void }) {
     formState: { errors, isSubmitting }
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', description: '', category: '', mic: '', schedule: '' }
+    defaultValues: { name: '', description: '', category: 'club', mic: '', schedule: '', meetingLocation: '', classroomLink: '', meetLink: '' }
   });
 
   const submit = async (values: FormValues) => {
@@ -39,11 +43,16 @@ export function ClubEditor({ onCreated }: { onCreated?: () => void }) {
       name: values.name,
       description: values.description,
       category: values.category,
+      groupType: values.category as CreateClubInput['groupType'],
       mic: values.mic,
       schedule: values.schedule,
+      meetingLocation: values.meetingLocation || undefined,
       managerIds: [user.id],
       memberCount: 0,
-      logoUrl: undefined
+      logoUrl: undefined,
+      classroomLink: values.classroomLink || undefined,
+      meetLink: values.meetLink || undefined,
+      resourceLinks: []
     };
     await createClub(payload, user);
     reset();
@@ -66,7 +75,13 @@ export function ClubEditor({ onCreated }: { onCreated?: () => void }) {
         </label>
         <label className="space-y-1 text-sm">
           <span className="text-white/70">Category</span>
-          <input {...register('category')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" />
+          <select {...register('category')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-white">
+            {GROUP_CATEGORY_KEYS.map((category) => (
+              <option key={category} value={category}>
+                {getCategoryMeta(category).label}
+              </option>
+            ))}
+          </select>
           {errors.category && <span className="text-xs text-rose-300">{errors.category.message}</span>}
         </label>
         <label className="space-y-1 text-sm">
@@ -78,6 +93,18 @@ export function ClubEditor({ onCreated }: { onCreated?: () => void }) {
           <span className="text-white/70">Schedule</span>
           <input {...register('schedule')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" />
           {errors.schedule && <span className="text-xs text-rose-300">{errors.schedule.message}</span>}
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="text-white/70">Meeting location</span>
+          <input {...register('meetingLocation')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="text-white/70">Classroom link</span>
+          <input {...register('classroomLink')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" />
+        </label>
+        <label className="space-y-1 text-sm">
+          <span className="text-white/70">Meet link</span>
+          <input {...register('meetLink')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" />
         </label>
       </div>
       <label className="space-y-1 text-sm">

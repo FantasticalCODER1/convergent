@@ -9,6 +9,7 @@ import {
 } from 'firebase/auth';
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { clearGoogleAuthCache, getGoogleAccessAndProfile } from '../auth/google';
+import { buildScheduleAudienceKey } from '../domain/profile';
 import { getFirebaseApp } from '../firebase/app';
 import { isFirebaseEmulatorMode } from '../lib/firebaseEnv';
 import { isAllowedSchoolEmail, normalizeUserRole } from '../lib/policy';
@@ -74,7 +75,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: profile.email || existing?.email || '',
         role: normalizeUserRole(existing?.role),
         photoURL: profile.picture ?? existing?.photoURL,
-        clubsJoined: existing?.clubsJoined ?? []
+        clubsJoined: existing?.clubsJoined ?? [],
+        grade: existing?.grade,
+        section: existing?.section,
+        house: existing?.house,
+        residency: existing?.residency,
+        scheduleAudienceKey: existing?.scheduleAudienceKey,
+        profileCompletedAt: existing?.profileCompletedAt,
+        authProvider: 'google'
       });
       setUser(record);
     } catch (err: any) {
@@ -145,7 +153,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: fbUser.email ?? '',
           role: 'student',
           photoURL: fbUser.photoURL ?? undefined,
-          clubsJoined: []
+          clubsJoined: [],
+          authProvider: shouldUseEmulatorLogin ? 'password' : 'google',
+          scheduleAudienceKey: buildScheduleAudienceKey({ grade: undefined, section: undefined })
         }));
       setUser(record);
       setLoading(false);

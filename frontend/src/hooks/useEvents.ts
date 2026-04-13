@@ -59,7 +59,7 @@ export function useEvents(options: Options = { autoLoad: true }) {
 
   const persistEvent = useCallback(
     async (payload: EventInput) => {
-      const saved = await saveEvent(payload);
+      const saved = await saveEvent(payload, user ?? undefined);
       setEvents((prev) => {
         const idx = prev.findIndex((event) => event.id === saved.id);
         if (idx >= 0) {
@@ -71,14 +71,15 @@ export function useEvents(options: Options = { autoLoad: true }) {
       });
       return saved;
     },
-    []
+    [user]
   );
 
   const importEvents = useCallback(async (payloads: ImportedEventPayload[]) => {
-    if (!payloads[0]?.clubId) {
+    const groupId = payloads[0]?.relatedGroupId;
+    if (!groupId) {
       throw new Error('Imported events must target a club.');
     }
-    const result = await upsertImportedEvents(payloads[0].clubId, payloads);
+    const result = await upsertImportedEvents(groupId, payloads);
     await refresh();
     return result;
   }, [refresh]);

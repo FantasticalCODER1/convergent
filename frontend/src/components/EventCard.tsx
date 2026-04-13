@@ -1,4 +1,5 @@
 import { CalendarDays, MapPin, UsersRound } from 'lucide-react';
+import { getCategoryMeta } from '../domain/categories';
 import { formatDateTimeRange } from '../lib/formatters';
 import type { EventRecord } from '../types/Event';
 
@@ -14,12 +15,13 @@ export function EventCard({ event, attending, onRsvp, onOpen }: Props) {
     if (!onRsvp) return;
     onRsvp(event.id, !attending);
   };
+  const category = getCategoryMeta(event.category);
 
   return (
     <div className="rounded-3xl border border-white/5 bg-white/5 p-4 text-white shadow-glass">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{event.type ?? 'event'}</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{category.shortLabel}</p>
           <h3 className="text-xl font-semibold">{event.title}</h3>
         </div>
         {typeof event.rsvpCount === 'number' && (
@@ -38,6 +40,11 @@ export function EventCard({ event, attending, onRsvp, onOpen }: Props) {
             <MapPin className="size-4" /> {event.location}
           </div>
         )}
+        {event.classroomLink || event.meetLink || event.resourceLinks.length > 0 ? (
+          <p className="rounded-2xl border border-white/10 bg-slate-950/30 px-3 py-2 text-xs leading-6 text-white/60">
+            {event.classroomLink ? 'Classroom linked' : event.meetLink ? 'Meet linked' : `${event.resourceLinks.length} resource link${event.resourceLinks.length === 1 ? '' : 's'}`}
+          </p>
+        ) : null}
         {event.description ? <p className="rounded-2xl border border-white/10 bg-slate-950/30 px-3 py-2 text-xs leading-6 text-white/60">{event.description}</p> : null}
       </div>
       <div className="mt-4 flex flex-wrap gap-2">

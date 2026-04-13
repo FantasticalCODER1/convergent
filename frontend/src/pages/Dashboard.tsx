@@ -2,28 +2,42 @@ import { useMemo } from 'react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { EmptyStateCard } from '../components/EmptyStateCard';
+import { isProfileComplete } from '../domain/profile';
 import { EventCard } from '../components/EventCard';
 import { useAuth } from '../hooks/useAuth';
 import { useClubs } from '../hooks/useClubs';
 import { useEvents } from '../hooks/useEvents';
 import { useCertificates } from '../hooks/useCertificates';
+import { useSchedules } from '../hooks/useSchedules';
 
 const statCards = [
-  { key: 'clubs', label: 'Clubs', accent: 'from-indigo-500 to-purple-500' },
+  { key: 'clubs', label: 'My Clubs', accent: 'from-indigo-500 to-purple-500' },
   { key: 'events', label: 'Upcoming Events', accent: 'from-blue-500 to-cyan-500' },
-  { key: 'certificates', label: 'Your Certificates', accent: 'from-emerald-500 to-lime-500' }
+  { key: 'certificates', label: 'Your Certificates', accent: 'from-emerald-500 to-lime-500' },
+  { key: 'academic', label: 'Mapped Blocks', accent: 'from-amber-500 to-orange-500' }
 ] as const;
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { clubs, loading: clubsLoading } = useClubs();
+  const { clubs, loading: clubsLoading, membershipMap } = useClubs();
   const { events, loading: eventsLoading, toggleRsvp, rsvps } = useEvents();
   const { certificates, loading: certsLoading } = useCertificates();
+  const { entries: scheduleEntries, loading: schedulesLoading } = useSchedules();
+
+  const mappedAcademicEntries = scheduleEntries.filter((entry) => {
+    if (entry.scheduleType !== 'academic') return false;
+    const gradeMatches = !entry.grade || entry.grade.toLowerCase() === String(user?.grade ?? '').trim().toLowerCase();
+    const sectionMatches = !entry.section || entry.section.toLowerCase() === String(user?.section ?? '').trim().toLowerCase();
+    return gradeMatches && sectionMatches;
+  });
+  const myClubCount = clubs.filter((club) => membershipMap[club.id]?.status === 'approved' || (user?.clubsJoined ?? []).includes(club.id)).length;
 
   const counts = {
-    clubs: clubs.length,
+    clubs: myClubCount,
     events: events.length,
-    certificates: certificates.length
+    certificates: certificates.length,
+    academic: mappedAcademicEntries.length
   };
 
   const chartData = useMemo(() => {
@@ -44,16 +58,26 @@ export default function Dashboard() {
     [events]
   );
 
-  const loading = clubsLoading || eventsLoading || certsLoading;
+  const loading = clubsLoading || eventsLoading || certsLoading || schedulesLoading;
 
   return (
     <div className="space-y-6">
       <div>
         <p className="text-sm uppercase tracking-[0.3em] text-white/50">Overview</p>
         <h1 className="text-3xl font-semibold text-white">Welcome back, {user?.name ?? 'Student'}</h1>
+        <p className="mt-2 text-white/60">Convergent now treats calendar, timetable, meals, clubs, and communication as one operating system instead of isolated pages.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      {!isProfileComplete(user) ? (
+        <EmptyStateCard
+          eyebrow="Profile setup"
+          title="Finish grade and section mapping"
+          body="The new first-login foundation stores these fields on your user profile so timetable datasets and meal views can personalise correctly."
+          tone="warning"
+        />
+      ) : null}
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {statCards.map((card, index) => (
           <motion.div
             key={card.key}
@@ -74,7 +98,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.25em] text-white/50">Activity</p>
-              <h2 className="text-xl font-semibold text-white">Events per month</h2>
+              <h2 className="text-xl font-semibold text-white">Timed items per month</h2>
             </div>
             {!eventsLoading && chartData.length === 0 && <span className="text-sm text-white/60">No events yet</span>}
           </div>

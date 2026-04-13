@@ -16,10 +16,20 @@ Firestore  Storage  Cloud Functions
 
 ## Frontend
 - React 18 + Vite + Tailwind CSS
-- Route-level protected navigation with `RequireAuth` and `RequireRole`
-- Firestore client services for users, clubs, posts, events, RSVPs, and certificate lists
-- Cloud Functions client calls for public certificate verification and privileged admin/certificate actions
-- Google Classroom and Google Calendar integrations remain client-side API calls
+- Route-level protection with `RequireAuth` and `RequireRole`
+- Shared domain layer for categories, profile mapping, memberships, posts, events, and schedules
+- Firestore client services for users, groups, posts, events, timetable datasets, RSVPs, and certificate lists
+- Google Classroom remains client-side, but the core model now reserves Classroom and Meet links in posts, events, and groups
+
+## Navigation Structure
+- `/calendar` is the main operational page
+- `/dashboard` is the summary page
+- `/join-clubs` is the discovery and self-serve membership page
+- `/my-clubs` is the owned membership/workspace page
+- `/my-clubs/:id` is the group detail workspace
+- `/classes` combines timetable, meals, and Classroom foundations
+- `/certificates` remains user-facing
+- `/admin` remains restricted to admins
 
 ## Backend
 - Firebase Functions currently expose:
@@ -30,27 +40,18 @@ Firestore  Storage  Cloud Functions
   - `setClubMembership`
   - `setEventRsvp`
   - `applyEventImport`
-- Calendar dataset ingestion is server-side through `scripts/importCalendarData.ts`, which reads `data/calendar/datasetsRegistry.json` and writes normalized school calendar events into Firestore using the Admin SDK.
-- Firestore is the source of truth for:
-  - `users`
-  - `clubs`
-  - `clubs/{clubId}/memberships`
-  - `clubs/{clubId}/posts`
-  - `events`
-  - `eventRsvps`
-  - `certificates`
-- Storage now writes new certificate assets under `certificates/{clubId}/{userId}/...`
+- Cloud Functions still own aggregate-sensitive membership and RSVP writes.
+- Firestore rules now allow the richer user profile shape plus read access for timetable dataset collections.
+- Calendar dataset ingestion remains server-side through `scripts/importCalendarData.ts`.
 
-## Security Model
-- Only `@doonschool.com` accounts are accepted by the frontend auth flow and privileged Functions.
-- Canonical roles are `student`, `manager`, `master`, and `admin`.
-- `manager` and `master` are club-scoped roles derived from `clubs.managerIds`; `admin` is the only global privileged role.
-- Firestore rules now match the live collection layout and the callable-function-backed aggregate writes used by the frontend.
-- Storage rules restrict certificate uploads to admins or managers/masters of the target club.
-- Route guards remain a UI layer only; privileged changes must succeed through rules or Functions.
+## Domain Intent
+- `posts` are communication records and do not imply time.
+- `events` are timed records and carry source metadata plus author snapshots.
+- `scheduleEntries` are recurring structure records for academic blocks and meals.
+- `scheduleDatasets` advertise dataset readiness even when live entries do not exist yet.
+- `users` now store stable academic cohort fields so timetable mapping can happen without depending on volatile auth state.
 
 ## Operational Reality
-- CI is validation-only. It runs lint, tests, and the existing frontend build/typecheck workflow.
-- Emulator validation is repo-owned and runs through `npm run test:emulators`.
-- Attendance, logs, reports, and analytics are not implemented in the current backend.
-- The Dexie/local-provider code exists for experimentation and export only; it is not the production data path.
+- Most membership flows are still open/self-serve in the UI, but the schema now supports pending, approved, and rejected states.
+- Timetable and meal surfaces are intentionally placeholder-first until live datasets arrive.
+- Legacy `clubs` and `events` field names are preserved where necessary to avoid breaking the current stack during the refactor.

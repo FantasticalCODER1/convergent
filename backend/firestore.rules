@@ -54,6 +54,13 @@ service cloud.firestore {
           'role',
           'clubsJoined',
           'photoURL',
+          'grade',
+          'section',
+          'house',
+          'residency',
+          'scheduleAudienceKey',
+          'authProvider',
+          'profileCompletedAt',
           'lastLoginAt',
           'updatedAt',
           'createdAt'
@@ -70,6 +77,13 @@ service cloud.firestore {
           'role',
           'clubsJoined',
           'photoURL',
+          'grade',
+          'section',
+          'house',
+          'residency',
+          'scheduleAudienceKey',
+          'authProvider',
+          'profileCompletedAt',
           'lastLoginAt',
           'updatedAt',
           'createdAt'
@@ -87,6 +101,13 @@ service cloud.firestore {
           'role',
           'clubsJoined',
           'photoURL',
+          'grade',
+          'section',
+          'house',
+          'residency',
+          'scheduleAudienceKey',
+          'authProvider',
+          'profileCompletedAt',
           'lastLoginAt',
           'updatedAt',
           'createdAt'
@@ -97,13 +118,21 @@ service cloud.firestore {
       return isAdmin() || managesClub(clubId);
     }
 
+    function eventGroupId(data) {
+      return data.relatedGroupId is string && data.relatedGroupId.size() > 0
+        ? data.relatedGroupId
+        : data.clubId is string && data.clubId.size() > 0
+          ? data.clubId
+          : null;
+    }
+
     function isClubScopedEvent(data) {
-      return data.clubId is string && data.clubId.size() > 0;
+      return eventGroupId(data) != null;
     }
 
     function canCreateEvent() {
       return isAdmin()
-        || (isClubScopedEvent(request.resource.data) && userCanManageClub(request.resource.data.clubId));
+        || (isClubScopedEvent(request.resource.data) && userCanManageClub(eventGroupId(request.resource.data)));
     }
 
     function canUpdateExistingEvent() {
@@ -111,8 +140,8 @@ service cloud.firestore {
         || (
           isClubScopedEvent(resource.data)
           && isClubScopedEvent(request.resource.data)
-          && resource.data.clubId == request.resource.data.clubId
-          && userCanManageClub(request.resource.data.clubId)
+          && eventGroupId(resource.data) == eventGroupId(request.resource.data)
+          && userCanManageClub(eventGroupId(request.resource.data))
         );
     }
 
@@ -156,6 +185,16 @@ service cloud.firestore {
     match /eventRsvps/{rsvpId} {
       allow read: if hasAllowedEmail() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create, update, delete: if false;
+    }
+
+    match /scheduleEntries/{entryId} {
+      allow read: if hasAllowedEmail();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /scheduleDatasets/{datasetId} {
+      allow read: if hasAllowedEmail();
+      allow create, update, delete: if isAdmin();
     }
 
     match /certificates/{certId} {

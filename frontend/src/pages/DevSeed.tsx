@@ -3,22 +3,24 @@ import { useClubs } from '../hooks/useClubs';
 import { useEvents } from '../hooks/useEvents';
 
 const sampleClubs = [
-  { name: 'AI Society', description: 'Applied machine learning projects and talks.', category: 'Technology', mic: 'Dr. Rao', schedule: 'Wed 4 PM' },
-  { name: 'Eco Warriors', description: 'Campus sustainability and clean-up drives.', category: 'Service', mic: 'Ms. Flores', schedule: 'Sat 9 AM' },
-  { name: 'Design Collective', description: 'UI/UX critiques and hackathons.', category: 'Creative', mic: 'Mr. Nguyen', schedule: 'Fri 3 PM' }
+  { name: 'AI Society', description: 'Applied machine learning projects and talks.', category: 'society' as const, groupType: 'society' as const, mic: 'Dr. Rao', schedule: 'Wed 4 PM' },
+  { name: 'Eco Warriors', description: 'Campus sustainability and clean-up drives.', category: 'supw' as const, groupType: 'supw' as const, mic: 'Ms. Flores', schedule: 'Sat 9 AM' },
+  { name: 'Design Collective', description: 'UI/UX critiques and hackathons.', category: 'club' as const, groupType: 'club' as const, mic: 'Mr. Nguyen', schedule: 'Fri 3 PM' }
 ];
 
 const sampleEvents = [
   {
     title: 'AI Demo Day',
-    type: 'club' as const,
+    category: 'society' as const,
+    scope: 'group' as const,
     startTime: new Date().toISOString(),
     endTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
     location: 'Innovation Lab'
   },
   {
     title: 'Community Clean Up',
-    type: 'school' as const,
+    category: 'school_wide' as const,
+    scope: 'school' as const,
     startTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
     endTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString(),
     location: 'Riverside Park'
@@ -33,7 +35,7 @@ export default function DevSeed() {
   const seed = async () => {
     setStatus('Seeding data…');
     for (const club of sampleClubs) {
-      await createClub({ ...club, managerIds: [], logoUrl: undefined });
+      await createClub({ ...club, managerIds: [], logoUrl: undefined, resourceLinks: [] });
     }
     for (const event of sampleEvents) {
       await saveEvent({

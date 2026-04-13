@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Club, ClubPost } from '../types/Club';
+import type { MembershipRecord } from '../types/Membership';
+import type { PostRecord } from '../types/Post';
+import type { Club } from '../types/Club';
 import {
   addClubPost,
   createClub as createClubRecord,
@@ -7,16 +9,18 @@ import {
   joinClub as joinClubRecord,
   leaveClub as leaveClubRecord,
   listClubPosts,
-  listClubs
+  listClubs,
+  listMembershipsForUser
 } from '../services/clubsService';
 import type { CreateClubInput } from '../services/clubsService';
 import { useAuth } from './useAuth';
 
-type PostsState = Record<string, ClubPost[]>;
+type PostsState = Record<string, PostRecord[]>;
 
 export function useClubs(options: { autoLoad?: boolean } = { autoLoad: true }) {
   const { user, refreshProfile } = useAuth();
   const [clubs, setClubs] = useState<Club[]>([]);
+  const [memberships, setMemberships] = useState<MembershipRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [posts, setPosts] = useState<PostsState>({});
@@ -25,14 +29,18 @@ export function useClubs(options: { autoLoad?: boolean } = { autoLoad: true }) {
     setLoading(true);
     setError(null);
     try {
-      const list = await listClubs();
+      const [list, membershipRecords] = await Promise.all([
+        listClubs(),
+        user ? listMembershipsForUser(user.id) : Promise.resolve([])
+      ]);
       setClubs(list);
+      setMemberships(membershipRecords);
     } catch (err: any) {
       setError(err?.message ?? 'Failed to load clubs');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (options.autoLoad) {
@@ -96,9 +104,9 @@ export function useClubs(options: { autoLoad?: boolean } = { autoLoad: true }) {
   );
 
   const submitPost = useCallback(
-    async (clubId: string, text: string) => {
+    async (clubId: string, text: string, title?: string) => {
       const author = requireUser();
-      await addClubPost(clubId, text, author);
+      await addClubPost(clubId, text, author, title);
       await fetchPosts(clubId);
     },
     [fetchPosts, user]
@@ -116,9 +124,18 @@ export function useClubs(options: { autoLoad?: boolean } = { autoLoad: true }) {
     }, {});
   }, [clubs]);
 
+  const membershipMap = useMemo(() => {
+    return memberships.reduce<Record<string, MembershipRecord>>((acc, membership) => {
+      acc[membership.groupId] = membership;
+      return acc;
+    }, {});
+  }, [memberships]);
+
   return {
     clubs,
     clubMap,
+    memberships,
+    membershipMap,
     loading,
     error,
     refresh,

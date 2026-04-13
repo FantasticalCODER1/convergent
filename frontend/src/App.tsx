@@ -1,13 +1,15 @@
 import { Suspense, lazy, type ComponentType, useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Navigate, Outlet, Route, Routes, NavLink as RouterNavLink } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ProfileSetupGate } from './components/ProfileSetupGate';
 import { useAuth } from './hooks/useAuth';
 import RequireRole from './components/RequireRole';
 import RequireAuth from './components/RequireAuth';
-import { CalendarDays, Home, NotebookPen, Shield, Trophy, UsersRound } from 'lucide-react';
+import { CalendarDays, Home, NotebookPen, Shield, Trophy, UserRoundCheck, UsersRound } from 'lucide-react';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Clubs = lazy(() => import('./pages/Clubs'));
+const MyClubs = lazy(() => import('./pages/MyClubs'));
 const ClubDetail = lazy(() => import('./pages/ClubDetail'));
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
 const Certificates = lazy(() => import('./pages/Certificates'));
@@ -19,9 +21,10 @@ const DevSeed = lazy(() => import('./pages/DevSeed'));
 const DebugOAuth = lazy(() => import('./pages/DebugOAuth'));
 
 const navLinks = [
-  { to: '/dashboard', label: 'Dashboard', icon: Home },
-  { to: '/clubs', label: 'Clubs', icon: UsersRound },
   { to: '/calendar', label: 'Calendar', icon: CalendarDays },
+  { to: '/dashboard', label: 'Dashboard', icon: Home },
+  { to: '/join-clubs', label: 'Join Clubs', icon: UsersRound },
+  { to: '/my-clubs', label: 'My Clubs', icon: UserRoundCheck },
   { to: '/classes', label: 'Classes', icon: NotebookPen },
   { to: '/certificates', label: 'Certificates', icon: Trophy },
   { to: '/admin', label: 'Admin', icon: Shield }
@@ -41,9 +44,12 @@ function AppRoutes() {
             </RequireAuth>
           }
         >
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<Navigate to="/calendar" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/clubs" element={<Clubs />} />
+          <Route path="/join-clubs" element={<Clubs />} />
+          <Route path="/my-clubs" element={<MyClubs />} />
+          <Route path="/my-clubs/:id" element={<ClubDetail />} />
+          <Route path="/clubs" element={<Navigate to="/join-clubs" replace />} />
           <Route path="/clubs/:id" element={<ClubDetail />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/classes" element={<Classes />} />
@@ -70,7 +76,7 @@ function RouteFallback() {
 }
 
 function Shell() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshProfile } = useAuth();
   const visibleNavLinks = navLinks.filter((link) => link.to !== '/admin' || user?.role === 'admin');
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white">
@@ -78,9 +84,18 @@ function Shell() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-accent">Convergent</p>
-            <p className="text-lg font-semibold text-white/90">Unified co-curricular platform</p>
+            <p className="text-lg font-semibold text-white/90">The school&apos;s central time-and-structure platform</p>
           </div>
-          {user ? <ProfileDropdown userName={user.name} userEmail={user.email} userRole={user.role} onSignOut={logout} /> : null}
+          {user ? (
+            <ProfileDropdown
+              userName={user.name}
+              userEmail={user.email}
+              userRole={user.role}
+              userGrade={user.grade}
+              userSection={user.section}
+              onSignOut={logout}
+            />
+          ) : null}
         </div>
       </header>
       <div className="mx-auto flex w-full max-w-6xl gap-6 px-4 py-8 md:px-6">
@@ -93,11 +108,26 @@ function Shell() {
           <Outlet />
         </main>
       </div>
+      <ProfileSetupGate user={user} onComplete={refreshProfile} />
     </div>
   );
 }
 
-function ProfileDropdown({ userName, userEmail, userRole, onSignOut }: { userName: string; userEmail: string; userRole: string; onSignOut: () => Promise<void> | void }) {
+function ProfileDropdown({
+  userName,
+  userEmail,
+  userRole,
+  userGrade,
+  userSection,
+  onSignOut
+}: {
+  userName: string;
+  userEmail: string;
+  userRole: string;
+  userGrade?: string;
+  userSection?: string;
+  onSignOut: () => Promise<void> | void;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -120,7 +150,10 @@ function ProfileDropdown({ userName, userEmail, userRole, onSignOut }: { userNam
       >
         <div className="text-right leading-tight">
           <p className="font-semibold text-white">{userName}</p>
-          <p className="text-xs text-white/60">{userRole}</p>
+          <p className="text-xs text-white/60">
+            {userRole}
+            {userGrade || userSection ? ` · ${[userGrade, userSection].filter(Boolean).join(' / ')}` : ''}
+          </p>
         </div>
         <span aria-hidden className="text-white/60">
           ▾
@@ -130,6 +163,7 @@ function ProfileDropdown({ userName, userEmail, userRole, onSignOut }: { userNam
         <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-white/10 bg-slate-900/95 p-4 text-sm shadow-xl">
           <p className="font-semibold text-white">{userName}</p>
           <p className="text-white/60">{userEmail}</p>
+          <p className="mt-1 text-xs text-white/45">{userGrade && userSection ? `${userGrade} · ${userSection}` : 'Grade and section still needed for timetable mapping'}</p>
           <div className="mt-4 space-y-2">
             <button
               type="button"

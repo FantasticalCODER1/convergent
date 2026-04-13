@@ -5,29 +5,51 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import type { EventClickArg, EventContentArg } from '@fullcalendar/core';
 import { Link } from 'react-router-dom';
+import { EmptyStateCard } from '../components/EmptyStateCard';
 import { EventDetails } from '../components/EventDetails';
 import { EventEditor } from '../components/admin/EventEditor';
-import { EventCard } from '../components/EventCard';
-import { useEvents } from '../hooks/useEvents';
 import { useAuth } from '../hooks/useAuth';
 import { useClubs } from '../hooks/useClubs';
-import { formatDateTimeRange } from '../lib/formatters';
+import { useEvents } from '../hooks/useEvents';
+import { useSchedules } from '../hooks/useSchedules';
 import { canManageClub } from '../lib/policy';
+import { formatDateTimeRange } from '../lib/formatters';
 import type { EventRecord } from '../types/Event';
+
+const categoryTint: Record<string, string> = {
+  school_wide: '#38bdf8',
+  academic: '#f59e0b',
+  club: '#818cf8',
+  society: '#22c55e',
+  supw: '#f97316',
+  sta: '#ec4899',
+  centre_of_excellence: '#14b8a6',
+  meals: '#facc15'
+};
 
 export default function CalendarPage() {
   const { user } = useAuth();
   const { clubs } = useClubs();
   const { events, loading, toggleRsvp, rsvps, saveEvent } = useEvents();
+  const { entries: scheduleEntries } = useSchedules();
   const [selected, setSelected] = useState<EventRecord | null>(null);
   const [editingEvent, setEditingEvent] = useState<EventRecord | null>(null);
-  const schoolEvents = useMemo(() => events.filter((event) => !event.clubId), [events]);
+
+  const managedClubs = useMemo(() => clubs.filter((club) => canManageClub(user, club)), [clubs, user]);
+  const manageableClubIds = useMemo(() => new Set(managedClubs.map((club) => club.id)), [managedClubs]);
   const upcomingEvents = useMemo(
     () => events.filter((event) => new Date(event.startTime).getTime() >= Date.now()).slice(0, 6),
     [events]
   );
-  const managedClubs = useMemo(() => clubs.filter((club) => canManageClub(user, club)), [clubs, user]);
-  const manageableClubIds = useMemo(() => new Set(managedClubs.map((club) => club.id)), [managedClubs]);
+  const scheduleHighlights = useMemo(() => {
+    return scheduleEntries
+      .filter((entry) => {
+        const gradeMatches = !entry.grade || entry.grade.toLowerCase() === String(user?.grade ?? '').trim().toLowerCase();
+        const sectionMatches = !entry.section || entry.section.toLowerCase() === String(user?.section ?? '').trim().toLowerCase();
+        return gradeMatches && sectionMatches;
+      })
+      .slice(0, 5);
+  }, [scheduleEntries, user?.grade, user?.section]);
 
   const calendarEvents = useMemo(
     () =>
@@ -37,6 +59,8 @@ export default function CalendarPage() {
         start: event.allDay ? event.startTime.slice(0, 10) : event.startTime,
         end: event.allDay ? event.endTime.slice(0, 10) : event.endTime,
         allDay: event.allDay,
+        backgroundColor: categoryTint[event.category] ?? '#818cf8',
+        borderColor: categoryTint[event.category] ?? '#818cf8',
         extendedProps: event
       })),
     [events]
@@ -54,20 +78,30 @@ export default function CalendarPage() {
     </div>
   );
 
-  const canEditSelectedEvent = !!selected && (user?.role === 'admin' || (!!selected.clubId && manageableClubIds.has(selected.clubId)));
-  const canEditEditingEvent = !!editingEvent && (user?.role === 'admin' || (!!editingEvent.clubId && manageableClubIds.has(editingEvent.clubId)));
+  const canEditSelectedEvent =
+    !!selected && (user?.role === 'admin' || (!!selected.relatedGroupId && manageableClubIds.has(selected.relatedGroupId)));
+  const canEditEditingEvent =
+    !!editingEvent && (user?.role === 'admin' || (!!editingEvent.relatedGroupId && manageableClubIds.has(editingEvent.relatedGroupId)));
 
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-sm uppercase tracking-[0.25em] text-white/60">Schedule</p>
+        <p className="text-sm uppercase tracking-[0.25em] text-white/60">Operations</p>
         <h1 className="text-3xl font-semibold text-white">Calendar</h1>
-        <p className="text-white/60">Open any event for details, RSVP actions, and club-aware editing where you have permission.</p>
+        <p className="text-white/60">This is now the main operational page for school-wide timing, group events, and future timetable overlays.</p>
       </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="rounded-3xl border border-white/5 bg-white/5 p-4 shadow-glass">
           {loading ? (
             <div className="p-8 text-center text-white/70">Loading events…</div>
+          ) : events.length === 0 ? (
+            <EmptyStateCard
+              eyebrow="Calendar"
+              title="No timed items yet"
+              body="The event model now supports school-wide, academic, club, society, SUPW, STA, Centre of Excellence, and meal-linked records. Once live data arrives, this page can absorb it without another route rethink."
+              tone="accent"
+            />
           ) : (
             <FullCalendar
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -109,8 +143,25 @@ export default function CalendarPage() {
                   >
                     <p className="text-sm font-medium text-white">{event.title}</p>
                     <p className="mt-1 text-xs text-white/60">{formatDateTimeRange(event.startTime, event.endTime)}</p>
-                    <p className="mt-1 text-xs text-white/40">{event.location ?? (event.clubId ? 'Club event' : 'School-wide event')}</p>
+                    <p className="mt-1 text-xs text-white/40">{event.location ?? 'Location pending'}</p>
                   </button>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="rounded-3xl border border-white/10 bg-white/5 p-4 text-white shadow-glass">
+            <p className="text-xs uppercase tracking-[0.25em] text-white/50">Academic overlays</p>
+            <h2 className="mt-2 text-xl font-semibold text-white">Timetable + meals foundation</h2>
+            {scheduleHighlights.length === 0 ? (
+              <p className="mt-4 text-sm text-white/60">No schedule entries are mapped to your profile yet. The data model is ready for timetable and meals.</p>
+            ) : (
+              <div className="mt-4 space-y-2">
+                {scheduleHighlights.map((entry) => (
+                  <div key={entry.id} className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm">
+                    <div className="font-medium text-white">{entry.title}</div>
+                    <div className="mt-1 text-white/55">{entry.blockName} · {entry.startTime} - {entry.endTime}</div>
+                  </div>
                 ))}
               </div>
             )}
@@ -118,11 +169,11 @@ export default function CalendarPage() {
 
           {managedClubs.length > 0 ? (
             <section className="rounded-3xl border border-emerald-300/20 bg-emerald-500/5 p-4 text-white shadow-glass">
-              <p className="text-xs uppercase tracking-[0.25em] text-emerald-100">Managed clubs</p>
-              <h2 className="mt-2 text-xl font-semibold text-white">Create club events from the club page</h2>
+              <p className="text-xs uppercase tracking-[0.25em] text-emerald-100">Managed groups</p>
+              <h2 className="mt-2 text-xl font-semibold text-white">Open a group workspace</h2>
               <div className="mt-4 space-y-2">
                 {managedClubs.map((club) => (
-                  <Link key={club.id} to={`/clubs/${club.id}`} className="block rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-white transition hover:bg-white/10">
+                  <Link key={club.id} to={`/my-clubs/${club.id}`} className="block rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-white transition hover:bg-white/10">
                     <div className="font-medium">{club.name}</div>
                     <div className="mt-1 text-xs text-white/50">{club.schedule}</div>
                   </Link>
@@ -131,15 +182,20 @@ export default function CalendarPage() {
             </section>
           ) : null}
 
+          <section className="rounded-3xl border border-white/10 bg-white/5 p-4 text-white shadow-glass">
+            <p className="text-xs uppercase tracking-[0.25em] text-white/50">Placeholders</p>
+            <h2 className="mt-2 text-xl font-semibold text-white">Linked resources stay explicit</h2>
+            <p className="mt-2 text-sm text-white/70">Events now support Classroom links, Meet links, source metadata, and addable resource links even when live integrations are not ready yet.</p>
+          </section>
+
           {user?.role === 'admin' ? (
             <section className="rounded-3xl border border-indigo-300/20 bg-indigo-500/5 p-4 text-white shadow-glass">
-              <p className="text-xs uppercase tracking-[0.25em] text-indigo-100">School-wide controls</p>
-              <h2 className="mt-2 text-xl font-semibold text-white">Global events stay in Admin</h2>
-              <p className="mt-2 text-sm text-white/70">Use the admin panel for school-wide event creation and editing so club-scoped operations remain on club pages.</p>
+              <p className="text-xs uppercase tracking-[0.25em] text-indigo-100">Admin</p>
+              <h2 className="mt-2 text-xl font-semibold text-white">Global controls</h2>
+              <p className="mt-2 text-sm text-white/70">School-wide event creation remains in the admin surface so route ownership stays clear.</p>
               <Link to="/admin#school-events" className="mt-4 inline-flex rounded-2xl bg-indigo-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-600">
-                Open school event controls
+                Open admin controls
               </Link>
-              {schoolEvents.length > 0 ? <p className="mt-3 text-xs text-white/50">{schoolEvents.length} school-wide event{schoolEvents.length === 1 ? '' : 's'} currently scheduled.</p> : null}
             </section>
           ) : null}
         </aside>
@@ -149,15 +205,15 @@ export default function CalendarPage() {
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
           <EventEditor
             event={editingEvent}
-            allowedTypes={editingEvent.clubId ? ['club', 'competition'] : ['school']}
-            clubId={editingEvent.clubId}
-            title={editingEvent.clubId ? 'Edit club event' : 'Edit school-wide event'}
-            description={editingEvent.clubId ? 'Club-scoped updates are saved here and on the matching club page.' : 'School-wide events remain admin-only.'}
+            allowedCategories={editingEvent.relatedGroupId ? ['club', 'society', 'supw', 'sta', 'centre_of_excellence'] : ['school_wide', 'academic', 'meals']}
+            relatedGroupId={editingEvent.relatedGroupId}
+            title={editingEvent.relatedGroupId ? 'Edit group event' : 'Edit school-wide event'}
+            description={editingEvent.relatedGroupId ? 'Group-scoped event updates stay attached to the relevant workspace.' : 'School-wide operational timing remains admin-owned.'}
             onSave={async (payload) => {
               await saveEvent({
                 ...payload,
-                type: editingEvent.clubId ? payload.type : 'school',
-                clubId: editingEvent.clubId ?? undefined
+                scope: editingEvent.relatedGroupId ? 'group' : payload.scope,
+                relatedGroupId: editingEvent.relatedGroupId ?? undefined
               });
               setEditingEvent(null);
             }}
@@ -167,14 +223,15 @@ export default function CalendarPage() {
             <p className="text-xs uppercase tracking-[0.25em] text-white/50">Editing</p>
             <h2 className="mt-2 text-xl font-semibold text-white">{editingEvent.title}</h2>
             <p className="mt-2 text-sm text-white/70">{formatDateTimeRange(editingEvent.startTime, editingEvent.endTime)}</p>
-            {editingEvent.clubId ? (
-              <Link to={`/clubs/${editingEvent.clubId}`} className="mt-4 inline-flex rounded-2xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10">
-                Open club workspace
+            {editingEvent.relatedGroupId ? (
+              <Link to={`/my-clubs/${editingEvent.relatedGroupId}`} className="mt-4 inline-flex rounded-2xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10">
+                Open group workspace
               </Link>
             ) : null}
           </div>
         </section>
       ) : null}
+
       <EventDetails
         event={selected}
         open={!!selected}

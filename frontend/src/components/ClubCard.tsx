@@ -1,4 +1,5 @@
 import { UsersRound } from 'lucide-react';
+import { getCategoryMeta } from '../domain/categories';
 import { formatRelativeEventWindow } from '../lib/formatters';
 import type { EventRecord } from '../types/Event';
 import type { Club } from '../types/Club';
@@ -21,12 +22,13 @@ export function ClubCard({ club, joined, manageable, nextEvent, onJoin, onLeave,
       onJoin?.(club.id);
     }
   };
+  const category = getCategoryMeta(club.category);
 
   return (
     <div className="rounded-3xl border border-white/10 bg-white/5 p-5 text-white shadow-glass">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{club.category}</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{category.shortLabel}</p>
           <h3 className="text-xl font-semibold">{club.name}</h3>
         </div>
         <div className="flex items-center gap-1 text-sm text-white/70">
@@ -48,6 +50,12 @@ export function ClubCard({ club, joined, manageable, nextEvent, onJoin, onLeave,
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/30 px-3 py-2">
           <span>Schedule</span>
           <span className="text-right text-white">{club.schedule}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/30 px-3 py-2">
+          <span>Links</span>
+          <span className="text-right text-white">
+            {club.classroomLink || club.meetLink || club.resourceLinks.length > 0 ? 'Attached' : 'Placeholder ready'}
+          </span>
         </div>
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/30 px-3 py-2">
           <span>Next event</span>

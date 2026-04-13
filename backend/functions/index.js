@@ -63,8 +63,10 @@ async function getCallerContext(context) {
 
   const userSnap = await admin.firestore().doc(`users/${context.auth.uid}`).get();
   const role = normalizeRole(userSnap.exists ? userSnap.data()?.role : 'student');
+  const name = userSnap.exists ? userSnap.data()?.name || context.auth.token?.name || email : context.auth.token?.name || email;
   return {
     uid: context.auth.uid,
+    name,
     email,
     role,
     userRef: admin.firestore().doc(`users/${context.auth.uid}`)
@@ -110,6 +112,13 @@ function toAppUser(snapshot) {
     role: normalizeRole(data.role),
     clubsJoined: Array.isArray(data.clubsJoined) ? data.clubsJoined : [],
     photoURL: data.photoURL || undefined,
+    grade: data.grade || undefined,
+    section: data.section || undefined,
+    house: data.house || undefined,
+    residency: data.residency || undefined,
+    scheduleAudienceKey: data.scheduleAudienceKey || undefined,
+    authProvider: data.authProvider || undefined,
+    profileCompletedAt: timestampToIso(data.profileCompletedAt),
     lastLoginAt: timestampToIso(data.lastLoginAt),
     createdAt: timestampToIso(data.createdAt),
     updatedAt: timestampToIso(data.updatedAt)
@@ -176,7 +185,12 @@ exports.listClubUsers = functions.https.onCall(async (data, context) => {
 
   const membershipSnap = await admin.firestore().collection(`clubs/${clubId}/memberships`).get();
   const memberIds = new Set([
-    ...membershipSnap.docs.map((doc) => doc.id),
+    ...membershipSnap.docs
+      .filter((doc) => {
+        const status = doc.data()?.status;
+        return !status || status === 'approved';
+      })
+      .map((doc) => doc.id),
     ...(Array.isArray(clubSnap.data()?.managerIds) ? clubSnap.data().managerIds : [])
   ]);
 
@@ -215,22 +229,33 @@ exports.setClubMembership = functions.https.onCall(async (data, context) => {
   const userRef = admin.firestore().doc(`users/${caller.uid}`);
   const clubRef = admin.firestore().doc(`clubs/${clubId}`);
   const membershipSnap = await membershipRef.get();
+  const existingStatus = membershipSnap.exists ? membershipSnap.data()?.status : null;
   const batch = admin.firestore().batch();
 
   if (joined) {
-    if (!membershipSnap.exists) {
+    const membershipTimestamp = FieldValue.serverTimestamp();
+    if (!membershipSnap.exists || existingStatus !== 'approved') {
       batch.set(membershipRef, {
         userId: caller.uid,
-        joinedAt: FieldValue.serverTimestamp()
+        groupId: clubId,
+        status: 'approved',
+        memberRole: 'member',
+        approvedBy: caller.uid,
+        approvedAt: membershipTimestamp,
+        joinedAt: membershipTimestamp,
+        createdAt: membershipSnap.exists ? membershipSnap.data()?.createdAt || membershipTimestamp : membershipTimestamp,
+        updatedAt: membershipTimestamp
       }, { merge: true });
       batch.update(userRef, {
         clubsJoined: FieldValue.arrayUnion(clubId),
         updatedAt: FieldValue.serverTimestamp()
       });
-      batch.update(clubRef, {
-        memberCount: FieldValue.increment(1),
-        updatedAt: FieldValue.serverTimestamp()
-      });
+      if (!membershipSnap.exists || existingStatus !== 'approved') {
+        batch.update(clubRef, {
+          memberCount: FieldValue.increment(1),
+          updatedAt: FieldValue.serverTimestamp()
+        });
+      }
     }
   } else if (membershipSnap.exists) {
     batch.delete(membershipRef);
@@ -302,8 +327,9 @@ exports.listEventAttendance = functions.https.onCall(async (data, context) => {
   }
 
   const eventData = eventSnap.data() || {};
-  if (eventData.clubId) {
-    await assertClubAccess(caller, eventData.clubId);
+  const eventGroupId = eventData.relatedGroupId || eventData.clubId;
+  if (eventGroupId) {
+    await assertClubAccess(caller, eventGroupId);
   } else {
     assertRole(caller.role, ['admin']);
   }
@@ -370,7 +396,7 @@ exports.issueCertificate = functions.https.onCall(async (data, context) => {
 });
 
 function normalizeEventPayload(data, fallbackClubId) {
-  const clubId = normalizeRequiredString(data?.clubId || fallbackClubId, 'clubId');
+  const clubId = normalizeRequiredString(data?.relatedGroupId || data?.clubId || fallbackClubId, 'clubId');
   const title = normalizeRequiredString(data?.title, 'title');
   const startTime = parseIsoDate(data?.startTime, 'startTime');
   const endTime = parseIsoDate(data?.endTime || data?.startTime, 'endTime');
@@ -386,26 +412,59 @@ function normalizeEventPayload(data, fallbackClubId) {
     description: normalizeOptionalString(data?.description),
     startTime,
     endTime,
+    category: normalizeOptionalString(data?.category) || 'club',
+    scope: normalizeOptionalString(data?.scope) || 'group',
+    allDay: !!data?.allDay,
     location: normalizeOptionalString(data?.location),
+    classroomLink: normalizeOptionalString(data?.classroomLink),
+    classroomCourseId: normalizeOptionalString(data?.classroomCourseId),
+    meetLink: normalizeOptionalString(data?.meetLink),
+    resourceLinks: Array.isArray(data?.resourceLinks) ? data.resourceLinks : [],
+    attendanceEnabled: data?.attendanceEnabled !== false,
+    visibility: normalizeOptionalString(data?.visibility) || 'members',
     type,
+    relatedGroupId: clubId,
     clubId,
     source: normalizeOptionalString(data?.source) || 'admin-importer',
-    sourceId
+    sourceId,
+    sourceDataset: normalizeOptionalString(data?.sourceMetadata?.sourceDataset || data?.sourceDataset),
+    sourceTerm: normalizeOptionalString(data?.sourceMetadata?.sourceTerm || data?.sourceTerm),
+    sourceHash: normalizeOptionalString(data?.sourceMetadata?.sourceHash || data?.sourceHash)
   };
 }
 
-async function upsertImportedEvent(payload) {
+async function upsertImportedEvent(payload, caller) {
   const existing = await admin.firestore().collection('events').where('sourceId', '==', payload.sourceId).limit(1).get();
   const eventData = {
     title: payload.title,
     description: payload.description,
+    category: payload.category,
+    scope: payload.scope,
+    relatedGroupId: payload.relatedGroupId,
     startTime: Timestamp.fromDate(payload.startTime),
     endTime: Timestamp.fromDate(payload.endTime),
+    allDay: payload.allDay,
     location: payload.location,
+    classroomLink: payload.classroomLink,
+    classroomCourseId: payload.classroomCourseId,
+    meetLink: payload.meetLink,
+    resourceLinks: payload.resourceLinks,
+    attendanceEnabled: payload.attendanceEnabled,
+    visibility: payload.visibility,
     type: payload.type,
     clubId: payload.clubId,
     source: payload.source,
     sourceId: payload.sourceId,
+    sourceDataset: payload.sourceDataset,
+    sourceTerm: payload.sourceTerm,
+    sourceHash: payload.sourceHash,
+    sourceMetadata: {
+      source: payload.source,
+      sourceId: payload.sourceId,
+      sourceDataset: payload.sourceDataset,
+      sourceTerm: payload.sourceTerm,
+      sourceHash: payload.sourceHash
+    },
     updatedAt: FieldValue.serverTimestamp()
   };
 
@@ -421,6 +480,10 @@ async function upsertImportedEvent(payload) {
   const ref = await admin.firestore().collection('events').add({
     ...eventData,
     rsvpCount: 0,
+    createdByUid: caller.uid,
+    createdByNameSnapshot: caller.name,
+    createdByEmailSnapshot: caller.email,
+    createdByRoleSnapshot: caller.role,
     createdAt: FieldValue.serverTimestamp()
   });
   return { id: ref.id, status: 'created' };
@@ -443,7 +506,7 @@ exports.applyEventImport = functions.https.onCall(async (data, context) => {
   for (let index = 0; index < rawEvents.length; index += 1) {
     try {
       const payload = normalizeEventPayload(rawEvents[index], clubId);
-      const result = await upsertImportedEvent(payload);
+      const result = await upsertImportedEvent(payload, caller);
       if (result.status === 'created') created += 1;
       if (result.status === 'updated') updated += 1;
     } catch (error) {

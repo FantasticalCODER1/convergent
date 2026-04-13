@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { addToGoogleCalendar, canInsertIntoGoogleCalendar, downloadIcs } from '../services/Calendar';
+import { getCategoryMeta } from '../domain/categories';
 import { formatDateLabel, formatTimeLabel, formatTimestamp } from '../lib/formatters';
 import type { EventRecord } from '../types/Event';
 
@@ -27,6 +28,7 @@ export function EventDetails({ event, open, attending, onClose, onRsvp, canEdit,
   const start = event.startTime ? new Date(event.startTime) : null;
   const end = event.endTime ? new Date(event.endTime) : null;
   const canUseGoogleCalendar = canInsertIntoGoogleCalendar();
+  const category = getCategoryMeta(event.category);
 
   const handleCalendar = async () => {
     if (!event.startTime) return;
@@ -67,7 +69,7 @@ export function EventDetails({ event, open, attending, onClose, onRsvp, canEdit,
       <div className="w-full max-w-xl rounded-[32px] border border-white/10 bg-slate-900/90 p-6 shadow-glass">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-white/50">{event.type}</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-white/50">{category.label}</p>
             <h3 className="text-2xl font-semibold">{event.title}</h3>
           </div>
           <button type="button" onClick={onClose} className="text-white/60 transition hover:text-white">
@@ -104,6 +106,31 @@ export function EventDetails({ event, open, attending, onClose, onRsvp, canEdit,
             </div>
           )}
         </dl>
+        {event.classroomLink || event.meetLink || event.resourceLinks.length > 0 ? (
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            {event.classroomLink ? (
+              <a href={event.classroomLink} target="_blank" rel="noreferrer" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80 transition hover:bg-white/10">
+                Open Classroom
+              </a>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/20 px-4 py-3 text-sm text-white/45">Classroom link not attached</div>
+            )}
+            {event.meetLink ? (
+              <a href={event.meetLink} target="_blank" rel="noreferrer" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80 transition hover:bg-white/10">
+                Open Meet
+              </a>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/20 px-4 py-3 text-sm text-white/45">Meet link not attached</div>
+            )}
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
+              {event.resourceLinks.length > 0 ? `${event.resourceLinks.length} resource link${event.resourceLinks.length === 1 ? '' : 's'} attached` : 'Resource links not attached'}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-slate-950/20 px-4 py-3 text-sm text-white/45">
+            Classroom, Meet, and resource links can be added later without rewriting the event structure.
+          </div>
+        )}
         <div className="mt-6 flex flex-wrap gap-3">
           <button
             type="button"

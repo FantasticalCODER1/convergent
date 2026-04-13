@@ -54,13 +54,13 @@ export function ClubManagementPanel({
       </div>
 
       <EventEditor
-        clubId={club.id}
+        relatedGroupId={club.id}
         event={editingEvent}
-        allowedTypes={['club', 'competition']}
-        title="Create or edit club events"
-        description="Club pages are the primary workflow for scoped event management."
+        allowedCategories={['club', 'society', 'supw', 'sta', 'centre_of_excellence']}
+        title="Create or edit group events"
+        description="Group pages are the primary workflow for scoped event management."
         onSave={async (payload) => {
-          await onSaveEvent({ ...payload, clubId: club.id, type: payload.type === 'competition' ? 'competition' : 'club' });
+          await onSaveEvent({ ...payload, relatedGroupId: club.id, scope: 'group' });
           setEditingEvent(null);
           await onRefresh();
         }}

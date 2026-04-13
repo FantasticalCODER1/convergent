@@ -6,6 +6,7 @@ import { CalendarDays, ChevronLeft, FileBadge2, Info, MessageSquareText, UsersRo
 import { CertificateCard } from '../components/CertificateCard';
 import { ClubManagementPanel } from '../components/club/ClubManagementPanel';
 import { EventCard } from '../components/EventCard';
+import { getCategoryMeta } from '../domain/categories';
 import { useAuth } from '../hooks/useAuth';
 import { useCertificates } from '../hooks/useCertificates';
 import { useClubs } from '../hooks/useClubs';
@@ -16,8 +17,9 @@ import { listCertificatesForClub } from '../services/certificatesService';
 import { listEventAttendance, type EventAttendanceRecord } from '../services/eventsService';
 import { listClubUsers } from '../services/usersService';
 import type { CertificateRecord } from '../types/Certificate';
-import type { Club, ClubPost } from '../types/Club';
 import type { EventRecord } from '../types/Event';
+import type { PostRecord } from '../types/Post';
+import type { Club } from '../types/Club';
 import type { AppUser } from '../types/User';
 
 type ClubTab = 'about' | 'posts' | 'events' | 'members' | 'certificates';
@@ -33,7 +35,7 @@ const tabMeta: Array<{ id: ClubTab; label: string; icon: typeof Info }> = [
 export default function ClubDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { getClubById, joinClub, leaveClub, fetchPosts, submitPost, postsForClub } = useClubs();
+  const { getClubById, joinClub, leaveClub, fetchPosts, submitPost, postsForClub, membershipMap } = useClubs();
   const { events, refresh: refreshEvents, saveEvent, rsvps, toggleRsvp } = useEvents({ autoLoad: false });
   const { certificates: myCertificates } = useCertificates();
   const [activeTab, setActiveTab] = useState<ClubTab>('about');
@@ -68,10 +70,10 @@ export default function ClubDetail() {
 
   const posts = club ? postsForClub(club.id) : [];
   const manageable = canManageClub(user, club);
-  const joined = !!club && (user?.clubsJoined ?? []).includes(club.id);
+  const joined = !!club && ((user?.clubsJoined ?? []).includes(club.id) || membershipMap[club.id]?.status === 'approved');
   const clubEvents = useMemo(
     () =>
-      (club ? events.filter((event) => event.clubId === club.id) : []).sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')),
+      (club ? events.filter((event) => event.relatedGroupId === club.id || event.clubId === club.id) : []).sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')),
     [club, events]
   );
   const upcomingEvents = clubEvents.filter((event) => new Date(event.startTime).getTime() >= Date.now());
@@ -179,6 +181,8 @@ export default function ClubDetail() {
     return <StateCard title="Club unavailable" body="This club record no longer exists." />;
   }
 
+  const category = getCategoryMeta(club.category);
+
   const stats = [
     { label: 'Members', value: String(club.memberCount), hint: manageable ? `${clubUsers.length || club.memberCount} rostered profiles` : 'Live membership count' },
     { label: 'Upcoming', value: String(upcomingEvents.length), hint: upcomingEvents[0] ? formatRelativeEventWindow(upcomingEvents[0].startTime, upcomingEvents[0].endTime) : 'No upcoming event yet' },
@@ -193,12 +197,12 @@ export default function ClubDetail() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link to="/clubs" className="inline-flex items-center gap-2 text-sm text-white/60 transition hover:text-white">
+        <Link to="/my-clubs" className="inline-flex items-center gap-2 text-sm text-white/60 transition hover:text-white">
           <ChevronLeft className="size-4" />
-          Back to clubs
+          Back to My Clubs
         </Link>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.3em] text-white/60">{club.category}</span>
+          <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.3em] text-white/60">{category.label}</span>
           {manageable ? <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs uppercase tracking-[0.3em] text-emerald-100">Management active</span> : null}
           {joined ? <span className="rounded-full bg-indigo-500/20 px-3 py-1 text-xs uppercase tracking-[0.3em] text-indigo-100">Member</span> : null}
         </div>
@@ -208,13 +212,14 @@ export default function ClubDetail() {
         <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-3xl space-y-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">{club.category}</p>
+              <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">{category.label}</p>
               <h1 className="mt-2 text-4xl font-semibold text-white">{club.name}</h1>
               <p className="mt-3 max-w-2xl text-base text-white/75">{club.description || 'This club description has not been filled in yet.'}</p>
             </div>
             <div className="flex flex-wrap gap-2 text-sm text-white/65">
               <span className="rounded-full border border-white/10 px-3 py-2">MIC · {club.mic}</span>
               <span className="rounded-full border border-white/10 px-3 py-2">{club.schedule}</span>
+              <span className="rounded-full border border-white/10 px-3 py-2">{club.membershipMode === 'approval_required' ? 'Approval required' : 'Open membership'}</span>
               <span className="rounded-full border border-white/10 px-3 py-2">{club.managerIds.length || 0} coordinator{club.managerIds.length === 1 ? '' : 's'}</span>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -241,10 +246,10 @@ export default function ClubDetail() {
             </button>
             <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-sm text-white/70">
               {manageable
-                ? 'This club page is your operational workspace for events, attendance, imports, and certificate issuance.'
+                ? 'This group page is your operational workspace for posts, events, attendance, imports, and certificate issuance.'
                 : joined
-                  ? 'You are a member. Use the tabs below for the club timeline, events, and your certificate history.'
-                  : 'Membership is currently open. Join the club to keep it on your profile and RSVP from the calendar.'}
+                  ? 'You are a member. Use the tabs below for the group timeline, events, and your certificate history.'
+                  : 'Membership attaches this group to your profile and future timetable/resource routing.'}
             </div>
           </div>
         </div>
@@ -356,7 +361,7 @@ function AboutTab({
               </div>
               <div className="flex items-start justify-between gap-3">
                 <span className="text-white/45">Membership model</span>
-                <span className="text-right text-white">Open self-serve membership in this build</span>
+                <span className="text-right text-white">{club.membershipMode === 'approval_required' ? 'Approval workflow foundation added' : 'Open self-serve membership in this build'}</span>
               </div>
             </div>
           </div>
@@ -406,7 +411,7 @@ function AboutTab({
                     <p className="mt-1 text-sm text-white/60">{formatDateTimeRange(event.startTime, event.endTime)}</p>
                   </div>
                   <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.25em] text-white/60">
-                    {event.type}
+                    {event.category}
                   </span>
                 </div>
                 {event.description ? <p className="mt-3 text-sm text-white/70">{event.description}</p> : null}
@@ -426,7 +431,7 @@ function PostsTab({
   userName,
   onSubmit
 }: {
-  posts: ClubPost[];
+  posts: PostRecord[];
   posting: boolean;
   userName?: string;
   onSubmit: (text: string) => Promise<void> | void;
@@ -453,9 +458,10 @@ function PostsTab({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.03 }}
             >
-              <p className="text-sm leading-7 text-white/85">{post.text}</p>
+              <p className="text-sm font-medium text-white">{post.title}</p>
+              <p className="mt-2 text-sm leading-7 text-white/85">{post.content}</p>
               <div className="mt-3 text-xs text-white/50">
-                {post.authorName ?? 'Member'} • {formatTimestamp(post.createdAt, 'Just now')}
+                {post.postedByNameSnapshot ?? 'Member'} • {formatTimestamp(post.createdAt, 'Just now')}
               </div>
             </motion.div>
           ))}

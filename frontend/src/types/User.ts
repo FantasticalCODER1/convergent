@@ -1,4 +1,5 @@
 export type UserRole = 'student' | 'master' | 'manager' | 'admin';
+export type ResidencyStatus = 'boarding' | 'day';
 
 export interface AppUser {
   id: string;
@@ -7,6 +8,13 @@ export interface AppUser {
   role: UserRole;
   photoURL?: string;
   clubsJoined: string[];
+  grade?: string;
+  section?: string;
+  house?: string;
+  residency?: ResidencyStatus;
+  scheduleAudienceKey?: string;
+  authProvider?: string;
+  profileCompletedAt?: string;
   lastLoginAt?: string;
   createdAt?: string;
   updatedAt?: string;
