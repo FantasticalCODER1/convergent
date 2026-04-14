@@ -9,13 +9,16 @@ import {
   joinClub as joinClubRecord,
   leaveClub as leaveClubRecord,
   listClubPosts,
+  listClubMembershipRequests,
   listClubs,
-  listMembershipsForUser
+  listMembershipsForUser,
+  setClubMembershipStatus
 } from '../services/clubsService';
-import type { CreateClubInput } from '../services/clubsService';
+import type { ClubPostInput, CreateClubInput, MembershipRequestRecord } from '../services/clubsService';
 import { useAuth } from './useAuth';
 
 type PostsState = Record<string, PostRecord[]>;
+type RequestsState = Record<string, MembershipRequestRecord[]>;
 
 export function useClubs(options: { autoLoad?: boolean } = { autoLoad: true }) {
   const { user, refreshProfile } = useAuth();
@@ -24,6 +27,7 @@ export function useClubs(options: { autoLoad?: boolean } = { autoLoad: true }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [posts, setPosts] = useState<PostsState>({});
+  const [membershipRequests, setMembershipRequests] = useState<RequestsState>({});
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -104,9 +108,9 @@ export function useClubs(options: { autoLoad?: boolean } = { autoLoad: true }) {
   );
 
   const submitPost = useCallback(
-    async (clubId: string, text: string, title?: string) => {
+    async (clubId: string, input: ClubPostInput) => {
       const author = requireUser();
-      await addClubPost(clubId, text, author, title);
+      await addClubPost(clubId, input, author);
       await fetchPosts(clubId);
     },
     [fetchPosts, user]
@@ -115,6 +119,30 @@ export function useClubs(options: { autoLoad?: boolean } = { autoLoad: true }) {
   const postsForClub = useCallback(
     (clubId: string) => posts[clubId] ?? [],
     [posts]
+  );
+
+  const fetchMembershipRequests = useCallback(
+    async (clubId: string) => {
+      const requests = await listClubMembershipRequests(clubId);
+      setMembershipRequests((state) => ({ ...state, [clubId]: requests }));
+      return requests;
+    },
+    []
+  );
+
+  const membershipRequestsForClub = useCallback(
+    (clubId: string) => membershipRequests[clubId] ?? [],
+    [membershipRequests]
+  );
+
+  const reviewMembership = useCallback(
+    async (clubId: string, userId: string, status: 'approved' | 'rejected') => {
+      await setClubMembershipStatus(clubId, userId, status);
+      await refresh();
+      await refreshProfile?.();
+      await fetchMembershipRequests(clubId);
+    },
+    [fetchMembershipRequests, refresh, refreshProfile]
   );
 
   const clubMap = useMemo(() => {
@@ -145,6 +173,9 @@ export function useClubs(options: { autoLoad?: boolean } = { autoLoad: true }) {
     getClubById,
     fetchPosts,
     submitPost,
-    postsForClub
+    postsForClub,
+    fetchMembershipRequests,
+    membershipRequestsForClub,
+    reviewMembership
   };
 }

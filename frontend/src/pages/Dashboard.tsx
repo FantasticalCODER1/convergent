@@ -1,140 +1,191 @@
 import { useMemo } from 'react';
-import { format } from 'date-fns';
-import { motion } from 'framer-motion';
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Link } from 'react-router-dom';
 import { EmptyStateCard } from '../components/EmptyStateCard';
 import { isProfileComplete } from '../domain/profile';
-import { EventCard } from '../components/EventCard';
+import { getClubAccessState } from '../domain/memberships';
 import { useAuth } from '../hooks/useAuth';
-import { useClubs } from '../hooks/useClubs';
-import { useEvents } from '../hooks/useEvents';
-import { useCertificates } from '../hooks/useCertificates';
-import { useSchedules } from '../hooks/useSchedules';
-
-const statCards = [
-  { key: 'clubs', label: 'My Clubs', accent: 'from-indigo-500 to-purple-500' },
-  { key: 'events', label: 'Upcoming Events', accent: 'from-blue-500 to-cyan-500' },
-  { key: 'certificates', label: 'Your Certificates', accent: 'from-emerald-500 to-lime-500' },
-  { key: 'academic', label: 'Mapped Blocks', accent: 'from-amber-500 to-orange-500' }
-] as const;
+import { usePersonalCalendar } from '../hooks/usePersonalCalendar';
+import { formatDateTimeRange } from '../lib/formatters';
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { clubs, loading: clubsLoading, membershipMap } = useClubs();
-  const { events, loading: eventsLoading, toggleRsvp, rsvps } = useEvents();
-  const { certificates, loading: certsLoading } = useCertificates();
-  const { entries: scheduleEntries, loading: schedulesLoading } = useSchedules();
+  const {
+    clubs,
+    membershipMap,
+    upcomingItems,
+    nextAcademicItem,
+    nextMealItem,
+    nextGroupItem,
+    nextSchoolWideItem,
+    readiness,
+    loading
+  } = usePersonalCalendar();
 
-  const mappedAcademicEntries = scheduleEntries.filter((entry) => {
-    if (entry.scheduleType !== 'academic') return false;
-    const gradeMatches = !entry.grade || entry.grade.toLowerCase() === String(user?.grade ?? '').trim().toLowerCase();
-    const sectionMatches = !entry.section || entry.section.toLowerCase() === String(user?.section ?? '').trim().toLowerCase();
-    return gradeMatches && sectionMatches;
-  });
-  const myClubCount = clubs.filter((club) => membershipMap[club.id]?.status === 'approved' || (user?.clubsJoined ?? []).includes(club.id)).length;
-
-  const counts = {
-    clubs: myClubCount,
-    events: events.length,
-    certificates: certificates.length,
-    academic: mappedAcademicEntries.length
-  };
-
-  const chartData = useMemo(() => {
-    const buckets = new Map<string, number>();
-    events.forEach((event) => {
-      if (!event.startTime) return;
-      const key = format(new Date(event.startTime), 'MMM');
-      buckets.set(key, (buckets.get(key) ?? 0) + 1);
-    });
-    return Array.from(buckets.entries()).map(([month, value]) => ({ month, value }));
-  }, [events]);
-
-  const upcomingEvents = useMemo(
+  const myClubs = useMemo(
     () =>
-      events
-        .filter((event) => event.startTime && new Date(event.startTime).getTime() >= Date.now())
-        .slice(0, 3),
-    [events]
+      clubs.filter((club) => {
+        const accessState = getClubAccessState(user, club, membershipMap);
+        return accessState === 'manager' || accessState === 'approved_member';
+      }),
+    [clubs, membershipMap, user]
   );
 
-  const loading = clubsLoading || eventsLoading || certsLoading || schedulesLoading;
+  const pendingClubs = useMemo(
+    () =>
+      clubs.filter((club) => getClubAccessState(user, club, membershipMap) === 'pending_member'),
+    [clubs, membershipMap, user]
+  );
 
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm uppercase tracking-[0.3em] text-white/50">Overview</p>
-        <h1 className="text-3xl font-semibold text-white">Welcome back, {user?.name ?? 'Student'}</h1>
-        <p className="mt-2 text-white/60">Convergent now treats calendar, timetable, meals, clubs, and communication as one operating system instead of isolated pages.</p>
+        <p className="text-sm uppercase tracking-[0.3em] text-white/50">Dashboard</p>
+        <h1 className="text-3xl font-semibold text-white">Personal operations</h1>
+        <p className="mt-2 max-w-3xl text-white/60">
+          This surface now reads from the same personal calendar composition as the main calendar page, so your next class, meal, club meeting, and upcoming items stay consistent.
+        </p>
       </div>
 
       {!isProfileComplete(user) ? (
         <EmptyStateCard
           eyebrow="Profile setup"
           title="Finish grade and section mapping"
-          body="The new first-login foundation stores these fields on your user profile so timetable datasets and meal views can personalise correctly."
+          body="Timetable and meal blocks remain intentionally blank until your profile can be matched to a real cohort dataset."
           tone="warning"
         />
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {statCards.map((card, index) => (
-          <motion.div
-            key={card.key}
-            className="rounded-3xl border border-white/5 bg-white/5 p-5 shadow-glass"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 * index }}
-          >
-            <p className="text-sm text-white/60">{card.label}</p>
-            <p className="text-4xl font-semibold text-white">{loading ? '—' : counts[card.key as keyof typeof counts] ?? 0}</p>
-            <div className={`mt-3 h-1 rounded-full bg-gradient-to-r ${card.accent}`} />
-          </motion.div>
-        ))}
+        <FocusCard
+          label="Next class"
+          title={nextAcademicItem?.title ?? 'No class mapped'}
+          detail={nextAcademicItem ? formatDateTimeRange(nextAcademicItem.startTime, nextAcademicItem.endTime) : 'Timetable import still missing for your cohort.'}
+        />
+        <FocusCard
+          label="Next meal"
+          title={nextMealItem?.title ?? 'No meal mapped'}
+          detail={nextMealItem ? formatDateTimeRange(nextMealItem.startTime, nextMealItem.endTime) : 'Meal blocks appear once a schedule dataset is attached.'}
+        />
+        <FocusCard
+          label="Next club meeting"
+          title={nextGroupItem?.title ?? 'No approved group event'}
+          detail={nextGroupItem ? `${nextGroupItem.relatedGroup?.name ?? 'Group'} · ${formatDateTimeRange(nextGroupItem.startTime, nextGroupItem.endTime)}` : 'Approved memberships automatically feed this slot.'}
+        />
+        <FocusCard
+          label="School-wide"
+          title={nextSchoolWideItem?.title ?? 'No upcoming school item'}
+          detail={nextSchoolWideItem ? formatDateTimeRange(nextSchoolWideItem.startTime, nextSchoolWideItem.endTime) : 'School-wide events appear here when published.'}
+        />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-3xl border border-white/5 bg-white/5 p-6 shadow-glass">
-          <div className="flex items-center justify-between">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+        <section className="rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-glass">
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm uppercase tracking-[0.25em] text-white/50">Activity</p>
-              <h2 className="text-xl font-semibold text-white">Timed items per month</h2>
+              <p className="text-xs uppercase tracking-[0.3em] text-white/45">Upcoming</p>
+              <h2 className="mt-2 text-2xl font-semibold text-white">Your next personal items</h2>
             </div>
-            {!eventsLoading && chartData.length === 0 && <span className="text-sm text-white/60">No events yet</span>}
+            <Link to="/calendar" className="rounded-2xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10">
+              Open calendar
+            </Link>
           </div>
-          <div className="mt-4 h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorEvents" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#818cf8" stopOpacity={0.8} />
-                    <stop offset="95%" stopColor="#a5b4fc" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="month" stroke="#94a3b8" />
-                <YAxis allowDecimals={false} stroke="#94a3b8" />
-                <Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #1f2937', color: '#fff' }} />
-                <Area type="monotone" dataKey="value" stroke="#a5b4fc" fillOpacity={1} fill="url(#colorEvents)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-white/5 bg-white/5 p-6 shadow-glass">
-          <p className="text-sm uppercase tracking-[0.25em] text-white/50">Upcoming</p>
-          {eventsLoading ? (
-            <div className="py-10 text-white/60">Loading events…</div>
-          ) : upcomingEvents.length === 0 ? (
-            <div className="py-10 text-white/60">No upcoming events scheduled.</div>
+          {loading ? (
+            <div className="mt-4 text-white/60">Loading your queue…</div>
+          ) : upcomingItems.length === 0 ? (
+            <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-slate-950/30 p-4 text-sm text-white/60">
+              No personal items are scheduled yet.
+            </div>
           ) : (
             <div className="mt-4 space-y-3">
-              {upcomingEvents.map((event) => (
-                <EventCard key={event.id} event={event} attending={rsvps[event.id]} onRsvp={toggleRsvp} />
+              {upcomingItems.slice(0, 6).map((item) => (
+                <div key={item.id} className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-4 text-white">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-white">{item.title}</p>
+                      <p className="mt-1 text-xs text-white/60">{formatDateTimeRange(item.startTime, item.endTime)}</p>
+                    </div>
+                    <span className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-white/55">
+                      {item.relatedGroup?.name ?? item.category}
+                    </span>
+                  </div>
+                </div>
               ))}
             </div>
           )}
         </section>
+
+        <section className="space-y-4">
+          <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-glass">
+            <p className="text-xs uppercase tracking-[0.3em] text-white/45">My clubs</p>
+            <h2 className="mt-2 text-2xl font-semibold text-white">Approved memberships</h2>
+            {myClubs.length === 0 ? (
+              <p className="mt-4 text-sm text-white/60">No approved clubs yet.</p>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {myClubs.slice(0, 4).map((club) => (
+                  <Link
+                    key={club.id}
+                    to={`/my-clubs/${club.id}`}
+                    className="block rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-white transition hover:bg-white/10"
+                  >
+                    <div className="font-medium">{club.name}</div>
+                    <div className="mt-1 text-xs text-white/55">{club.schedule}</div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-glass">
+            <p className="text-xs uppercase tracking-[0.3em] text-white/45">Pending</p>
+            <h2 className="mt-2 text-2xl font-semibold text-white">Join requests</h2>
+            {pendingClubs.length === 0 ? (
+              <p className="mt-4 text-sm text-white/60">No pending club approvals.</p>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {pendingClubs.map((club) => (
+                  <div key={club.id} className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-white">
+                    <div className="font-medium">{club.name}</div>
+                    <div className="mt-1 text-xs text-white/55">Awaiting manager or master approval</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-glass">
+            <p className="text-xs uppercase tracking-[0.3em] text-white/45">Readiness</p>
+            <h2 className="mt-2 text-2xl font-semibold text-white">Data imports</h2>
+            <div className="mt-4 space-y-3 text-sm text-white/70">
+              <StatusRow label="Profile" value={readiness.profileReady ? 'Ready' : 'Needs grade + section'} />
+              <StatusRow label="Academic" value={`${readiness.academicStatus} · ${readiness.academicEntriesMatched} mapped`} />
+              <StatusRow label="Meals" value={`${readiness.mealStatus} · ${readiness.mealEntriesMatched} mapped`} />
+            </div>
+            <Link to="/classes" className="mt-4 inline-flex rounded-2xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10">
+              Open classes
+            </Link>
+          </div>
+        </section>
       </div>
+    </div>
+  );
+}
+
+function FocusCard({ label, title, detail }: { label: string; title: string; detail: string }) {
+  return (
+    <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 text-white shadow-glass">
+      <p className="text-xs uppercase tracking-[0.25em] text-white/45">{label}</p>
+      <h2 className="mt-3 text-2xl font-semibold text-white">{title}</h2>
+      <p className="mt-3 text-sm text-white/60">{detail}</p>
+    </div>
+  );
+}
+
+function StatusRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3">
+      <span className="text-white/50">{label}</span>
+      <span className="text-right text-white">{value}</span>
     </div>
   );
 }

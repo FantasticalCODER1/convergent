@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import clsx from 'clsx';
-import { motion } from 'framer-motion';
-import { CalendarDays, ChevronLeft, FileBadge2, Info, MessageSquareText, UsersRound } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ExternalLink, FileBadge2, Info, MessageSquareText, UsersRound } from 'lucide-react';
 import { CertificateCard } from '../components/CertificateCard';
 import { ClubManagementPanel } from '../components/club/ClubManagementPanel';
 import { EventCard } from '../components/EventCard';
 import { getCategoryMeta } from '../domain/categories';
+import {
+  canViewPrivateClubContent,
+  getClubAccessState,
+  getClubJoinActionLabel,
+  stripPrivateEventLinks,
+  stripPrivatePostLinks
+} from '../domain/memberships';
 import { useAuth } from '../hooks/useAuth';
 import { useCertificates } from '../hooks/useCertificates';
 import { useClubs } from '../hooks/useClubs';
@@ -35,7 +41,18 @@ const tabMeta: Array<{ id: ClubTab; label: string; icon: typeof Info }> = [
 export default function ClubDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { getClubById, joinClub, leaveClub, fetchPosts, submitPost, postsForClub, membershipMap } = useClubs();
+  const {
+    getClubById,
+    joinClub,
+    leaveClub,
+    fetchPosts,
+    submitPost,
+    postsForClub,
+    membershipMap,
+    fetchMembershipRequests,
+    membershipRequestsForClub,
+    reviewMembership
+  } = useClubs();
   const { events, refresh: refreshEvents, saveEvent, rsvps, toggleRsvp } = useEvents({ autoLoad: false });
   const { certificates: myCertificates } = useCertificates();
   const [activeTab, setActiveTab] = useState<ClubTab>('about');
@@ -47,7 +64,6 @@ export default function ClubDetail() {
   const [loading, setLoading] = useState(true);
   const [loadingManagement, setLoadingManagement] = useState(false);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
-  const [posting, setPosting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -68,19 +84,9 @@ export default function ClubDetail() {
     };
   }, [id, getClubById, fetchPosts, refreshEvents]);
 
-  const posts = club ? postsForClub(club.id) : [];
+  const accessState = getClubAccessState(user, club, membershipMap);
   const manageable = canManageClub(user, club);
-  const joined = !!club && ((user?.clubsJoined ?? []).includes(club.id) || membershipMap[club.id]?.status === 'approved');
-  const clubEvents = useMemo(
-    () =>
-      (club ? events.filter((event) => event.relatedGroupId === club.id || event.clubId === club.id) : []).sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')),
-    [club, events]
-  );
-  const upcomingEvents = clubEvents.filter((event) => new Date(event.startTime).getTime() >= Date.now());
-  const myClubCertificates = useMemo(
-    () => (club ? myCertificates.filter((certificate) => certificate.clubId === club.id) : []),
-    [club, myCertificates]
-  );
+  const canAccessPrivateContent = canViewPrivateClubContent(user, club, membershipMap);
 
   useEffect(() => {
     if (!manageable || !club) {
@@ -90,7 +96,7 @@ export default function ClubDetail() {
     }
     let cancelled = false;
     setLoadingManagement(true);
-    void Promise.all([listClubUsers(club.id), listCertificatesForClub(club.id)])
+    void Promise.all([listClubUsers(club.id), listCertificatesForClub(club.id), fetchMembershipRequests(club.id)])
       .then(([users, certificates]) => {
         if (!cancelled) {
           setClubUsers(users);
@@ -111,7 +117,36 @@ export default function ClubDetail() {
     return () => {
       cancelled = true;
     };
-  }, [club, manageable]);
+  }, [club, manageable, fetchMembershipRequests]);
+
+  const posts = club ? postsForClub(club.id) : [];
+  const membershipRequests = club ? membershipRequestsForClub(club.id) : [];
+  const clubEvents = useMemo(
+    () =>
+      (club ? events.filter((event) => event.relatedGroupId === club.id || event.clubId === club.id) : []).sort((a, b) => (a.startTime ?? '').localeCompare(b.startTime ?? '')),
+    [club, events]
+  );
+  const linkedEventsMap = useMemo(
+    () =>
+      clubEvents.reduce<Record<string, EventRecord>>((acc, event) => {
+        acc[event.id] = event;
+        return acc;
+      }, {}),
+    [clubEvents]
+  );
+  const visibleEvents = useMemo(
+    () => clubEvents.map((event) => stripPrivateEventLinks(event, canAccessPrivateContent)),
+    [canAccessPrivateContent, clubEvents]
+  );
+  const visiblePosts = useMemo(
+    () => posts.map((post) => stripPrivatePostLinks(post, canAccessPrivateContent)),
+    [canAccessPrivateContent, posts]
+  );
+  const upcomingEvents = visibleEvents.filter((event) => new Date(event.startTime).getTime() >= Date.now());
+  const myClubCertificates = useMemo(
+    () => (club ? myCertificates.filter((certificate) => certificate.clubId === club.id) : []),
+    [club, myCertificates]
+  );
 
   useEffect(() => {
     if (!manageable || clubEvents.length === 0) {
@@ -150,20 +185,10 @@ export default function ClubDetail() {
     };
   }, [attendanceEventId, manageable]);
 
-  const handlePost = async (text: string) => {
-    if (!club || !text.trim()) return;
-    setPosting(true);
-    try {
-      await submitPost(club.id, text.trim());
-    } finally {
-      setPosting(false);
-    }
-  };
-
   const refreshClubData = async () => {
-    await refreshEvents();
+    await Promise.all([fetchPosts(club?.id ?? ''), refreshEvents()]);
     if (club && manageable) {
-      const [users, certificates] = await Promise.all([listClubUsers(club.id), listCertificatesForClub(club.id)]);
+      const [users, certificates] = await Promise.all([listClubUsers(club.id), listCertificatesForClub(club.id), fetchMembershipRequests(club.id)]);
       setClubUsers(users);
       setClubCertificates(certificates);
     }
@@ -174,7 +199,7 @@ export default function ClubDetail() {
   }
 
   if (loading) {
-    return <StateCard title="Loading club" body="Pulling club details, posts, and events." />;
+    return <StateCard title="Loading club" body="Pulling club details, posts, events, and membership state." />;
   }
 
   if (!club) {
@@ -184,9 +209,9 @@ export default function ClubDetail() {
   const category = getCategoryMeta(club.category);
 
   const stats = [
-    { label: 'Members', value: String(club.memberCount), hint: manageable ? `${clubUsers.length || club.memberCount} rostered profiles` : 'Live membership count' },
+    { label: 'Members', value: String(club.memberCount), hint: manageable ? `${clubUsers.length || club.memberCount} approved profiles` : 'Approved member count' },
     { label: 'Upcoming', value: String(upcomingEvents.length), hint: upcomingEvents[0] ? formatRelativeEventWindow(upcomingEvents[0].startTime, upcomingEvents[0].endTime) : 'No upcoming event yet' },
-    { label: 'Posts', value: String(posts.length), hint: posts[0]?.createdAt ? `Latest ${formatTimestamp(posts[0].createdAt)}` : 'No timeline posts yet' },
+    { label: 'Posts', value: String(visiblePosts.length), hint: visiblePosts[0]?.createdAt ? `Latest ${formatTimestamp(visiblePosts[0].createdAt)}` : 'No timeline posts yet' },
     {
       label: 'Certificates',
       value: String(manageable ? clubCertificates.length : myClubCertificates.length),
@@ -197,14 +222,15 @@ export default function ClubDetail() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link to="/my-clubs" className="inline-flex items-center gap-2 text-sm text-white/60 transition hover:text-white">
+        <Link to={manageable || accessState === 'approved_member' ? '/my-clubs' : '/join-clubs'} className="inline-flex items-center gap-2 text-sm text-white/60 transition hover:text-white">
           <ChevronLeft className="size-4" />
-          Back to My Clubs
+          Back
         </Link>
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.3em] text-white/60">{category.label}</span>
-          {manageable ? <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs uppercase tracking-[0.3em] text-emerald-100">Management active</span> : null}
-          {joined ? <span className="rounded-full bg-indigo-500/20 px-3 py-1 text-xs uppercase tracking-[0.3em] text-indigo-100">Member</span> : null}
+          {manageable ? <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs uppercase tracking-[0.3em] text-emerald-100">Manager</span> : null}
+          {accessState === 'approved_member' ? <span className="rounded-full bg-indigo-500/20 px-3 py-1 text-xs uppercase tracking-[0.3em] text-indigo-100">Approved member</span> : null}
+          {accessState === 'pending_member' ? <span className="rounded-full bg-amber-500/20 px-3 py-1 text-xs uppercase tracking-[0.3em] text-amber-50">Pending approval</span> : null}
         </div>
       </div>
 
@@ -219,7 +245,9 @@ export default function ClubDetail() {
             <div className="flex flex-wrap gap-2 text-sm text-white/65">
               <span className="rounded-full border border-white/10 px-3 py-2">MIC · {club.mic}</span>
               <span className="rounded-full border border-white/10 px-3 py-2">{club.schedule}</span>
-              <span className="rounded-full border border-white/10 px-3 py-2">{club.membershipMode === 'approval_required' ? 'Approval required' : 'Open membership'}</span>
+              <span className="rounded-full border border-white/10 px-3 py-2">
+                {club.membershipMode === 'approval_required' ? 'Approval required' : club.membershipMode === 'invite_only' ? 'Invite only' : 'Open membership'}
+              </span>
               <span className="rounded-full border border-white/10 px-3 py-2">{club.managerIds.length || 0} coordinator{club.managerIds.length === 1 ? '' : 's'}</span>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -236,20 +264,27 @@ export default function ClubDetail() {
           <div className="flex w-full max-w-sm flex-col gap-3 xl:items-end">
             <button
               type="button"
-              onClick={() => (joined ? leaveClub(club.id) : joinClub(club.id))}
+              disabled={club.membershipMode === 'invite_only' && accessState !== 'approved_member' && !manageable}
+              onClick={() => (accessState === 'approved_member' || accessState === 'pending_member' ? leaveClub(club.id) : joinClub(club.id))}
               className={clsx(
                 'rounded-2xl px-5 py-3 text-sm font-medium transition',
-                joined ? 'bg-rose-500 text-white hover:bg-rose-600' : 'bg-indigo-500 text-white hover:bg-indigo-600'
+                club.membershipMode === 'invite_only' && accessState !== 'approved_member' && !manageable
+                  ? 'bg-white/10 text-white/45'
+                  : accessState === 'approved_member' || accessState === 'pending_member'
+                    ? 'bg-rose-500 text-white hover:bg-rose-600'
+                    : 'bg-indigo-500 text-white hover:bg-indigo-600'
               )}
             >
-              {joined ? 'Leave club' : 'Join club'}
+              {getClubJoinActionLabel(accessState, club.membershipMode)}
             </button>
             <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-sm text-white/70">
               {manageable
-                ? 'This group page is your operational workspace for posts, events, attendance, imports, and certificate issuance.'
-                : joined
-                  ? 'You are a member. Use the tabs below for the group timeline, events, and your certificate history.'
-                  : 'Membership attaches this group to your profile and future timetable/resource routing.'}
+                ? 'This group page is your operational workspace for approvals, posts, events, attendance, imports, and certificate issuance.'
+                : accessState === 'approved_member'
+                  ? 'Approved membership unlocks private event and post links here and feeds this group into your personal calendar automatically.'
+                  : accessState === 'pending_member'
+                    ? 'Your request is pending. Private links remain hidden until approval.'
+                    : 'You can browse the club and request to join here, but private meeting links remain hidden until approval.'}
             </div>
           </div>
         </div>
@@ -279,16 +314,27 @@ export default function ClubDetail() {
       <div className={clsx('grid gap-6', manageable ? 'xl:grid-cols-[minmax(0,1.5fr)_380px]' : 'grid-cols-1')}>
         <section className="space-y-4">
           {activeTab === 'about' ? (
-            <AboutTab club={club} joined={joined} upcomingEvents={upcomingEvents} manageable={manageable} />
+            <AboutTab club={club} accessState={accessState} canAccessPrivateContent={canAccessPrivateContent} upcomingEvents={upcomingEvents} />
           ) : null}
           {activeTab === 'posts' ? (
-            <PostsTab posts={posts} posting={posting} userName={user?.name} onSubmit={handlePost} />
+            <PostsTab
+              posts={visiblePosts}
+              linkedEventsMap={linkedEventsMap}
+              canAccessPrivateContent={canAccessPrivateContent}
+              manageable={manageable}
+            />
           ) : null}
           {activeTab === 'events' ? (
-            <EventsTab events={clubEvents} rsvps={rsvps} onRsvp={toggleRsvp} manageable={manageable} />
+            <EventsTab
+              events={visibleEvents}
+              rsvps={rsvps}
+              onRsvp={toggleRsvp}
+              manageable={manageable}
+              canAccessPrivateContent={canAccessPrivateContent}
+            />
           ) : null}
           {activeTab === 'members' ? (
-            <MembersTab club={club} users={clubUsers} manageable={manageable} loading={loadingManagement} />
+            <MembersTab club={club} users={clubUsers} manageable={manageable} loading={loadingManagement} membershipRequests={membershipRequests} />
           ) : null}
           {activeTab === 'certificates' ? (
             <CertificatesTab
@@ -309,8 +355,46 @@ export default function ClubDetail() {
             attendance={attendance}
             attendanceEventId={attendanceEventId}
             attendanceLoading={loadingAttendance}
+            membershipRequests={membershipRequests}
             onSelectAttendanceEvent={setAttendanceEventId}
             onSaveEvent={saveEvent}
+            onCreateContent={async (payload) => {
+              let linkedEvent: EventRecord | null = null;
+              if (payload.mode === 'event' || payload.mode === 'post_event') {
+                if (!payload.event) return;
+                linkedEvent = await saveEvent({
+                  title: payload.event.title,
+                  description: payload.event.description,
+                  category: payload.event.category,
+                  scope: 'group',
+                  relatedGroupId: club.id,
+                  startTime: new Date(`${payload.event.date}T${payload.event.startTime}`).toISOString(),
+                  endTime: new Date(`${payload.event.date}T${payload.event.endTime}`).toISOString(),
+                  location: payload.event.location,
+                  classroomLink: payload.event.classroomLink,
+                  meetLink: payload.event.meetLink,
+                  resourceLinks: payload.event.resourceLinks,
+                  attendanceEnabled: payload.event.attendanceEnabled
+                });
+              }
+              if (payload.mode === 'post' || payload.mode === 'post_event') {
+                await submitPost(club.id, {
+                  title: payload.title,
+                  content: payload.content,
+                  category: payload.category,
+                  linkedEventId: linkedEvent?.id ?? null,
+                  classroomLink: payload.event?.classroomLink ?? null,
+                  meetLink: payload.event?.meetLink ?? null,
+                  resourceLinks: payload.event?.resourceLinks ?? [],
+                  visibility: 'members'
+                });
+              }
+              await refreshClubData();
+            }}
+            onReviewMembership={async (userId, status) => {
+              await reviewMembership(club.id, userId, status);
+              await refreshClubData();
+            }}
             onRefresh={refreshClubData}
           />
         ) : null}
@@ -330,14 +414,14 @@ function StateCard({ title, body }: { title: string; body: string }) {
 
 function AboutTab({
   club,
-  joined,
-  upcomingEvents,
-  manageable
+  accessState,
+  canAccessPrivateContent,
+  upcomingEvents
 }: {
   club: Club;
-  joined: boolean;
+  accessState: ReturnType<typeof getClubAccessState>;
+  canAccessPrivateContent: boolean;
   upcomingEvents: EventRecord[];
-  manageable: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -349,43 +433,22 @@ function AboutTab({
             <p className="mt-3 text-sm leading-7 text-white/75">{club.description || 'A fuller club description has not been entered yet.'}</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
-            <h2 className="text-xl font-semibold text-white">Working rhythm</h2>
+            <h2 className="text-xl font-semibold text-white">Access and links</h2>
             <div className="mt-4 space-y-3 text-sm text-white/70">
               <div className="flex items-start justify-between gap-3 border-b border-white/5 pb-3">
-                <span className="text-white/45">Schedule</span>
-                <span className="text-right text-white">{club.schedule}</span>
+                <span className="text-white/45">Membership</span>
+                <span className="text-right text-white">{accessState.replace(/_/g, ' ')}</span>
               </div>
               <div className="flex items-start justify-between gap-3 border-b border-white/5 pb-3">
-                <span className="text-white/45">MIC</span>
-                <span className="text-right text-white">{club.mic}</span>
+                <span className="text-white/45">Private links</span>
+                <span className="text-right text-white">{canAccessPrivateContent ? 'Unlocked for approved members' : 'Hidden until approved'}</span>
               </div>
               <div className="flex items-start justify-between gap-3">
                 <span className="text-white/45">Membership model</span>
-                <span className="text-right text-white">{club.membershipMode === 'approval_required' ? 'Approval workflow foundation added' : 'Open self-serve membership in this build'}</span>
+                <span className="text-right text-white">{club.membershipMode === 'approval_required' ? 'Request then approval' : club.membershipMode === 'invite_only' ? 'Invite only' : 'Open self-serve'}</span>
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-white shadow-glass">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Membership</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">{joined ? 'You are in this club' : 'Join to stay attached to the club'}</h2>
-          <p className="mt-3 text-sm text-white/70">
-            {joined
-              ? 'Your profile already reflects this membership. Use the events tab to RSVP and the certificates tab to review issued records.'
-              : 'Joining adds the club to your profile immediately. Pending approval queues are not wired in this pass, so the UI stays truthful about that.'}
-          </p>
-        </div>
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-white shadow-glass">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">Operations</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">{manageable ? 'You manage this club here' : 'Club operations stay club-scoped'}</h2>
-          <p className="mt-3 text-sm text-white/70">
-            {manageable
-              ? 'Use the operations rail for event editing, attendance review, imports, and certificate issuance without leaving the club page.'
-              : 'Admin-only global tools exist elsewhere, but club-scoped workflows now live on this page rather than disappearing into the admin panel.'}
-          </p>
         </div>
       </section>
 
@@ -427,14 +490,14 @@ function AboutTab({
 
 function PostsTab({
   posts,
-  posting,
-  userName,
-  onSubmit
+  linkedEventsMap,
+  canAccessPrivateContent,
+  manageable
 }: {
   posts: PostRecord[];
-  posting: boolean;
-  userName?: string;
-  onSubmit: (text: string) => Promise<void> | void;
+  linkedEventsMap: Record<string, EventRecord>;
+  canAccessPrivateContent: boolean;
+  manageable: boolean;
 }) {
   return (
     <section className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-glass">
@@ -443,28 +506,64 @@ function PostsTab({
           <p className="text-xs uppercase tracking-[0.3em] text-white/50">Timeline</p>
           <h2 className="mt-2 text-2xl font-semibold text-white">Posts and updates</h2>
         </div>
-        <span className="text-sm text-white/60">{userName ? `Posting as ${userName}` : 'Sign in to post'}</span>
+        <span className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white/60">
+          {manageable ? 'Publish new items from the operations rail.' : 'Posts can link directly to a scheduled event.'}
+        </span>
       </div>
-      <PostComposer onSubmit={onSubmit} disabled={posting} />
       {posts.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-sm text-white/60">No updates yet. The first post here becomes the club timeline anchor.</div>
+        <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-sm text-white/60">No updates yet.</div>
       ) : (
         <div className="space-y-3">
-          {posts.map((post, index) => (
-            <motion.div
-              key={post.id}
-              className="rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-white"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.03 }}
-            >
-              <p className="text-sm font-medium text-white">{post.title}</p>
-              <p className="mt-2 text-sm leading-7 text-white/85">{post.content}</p>
-              <div className="mt-3 text-xs text-white/50">
-                {post.postedByNameSnapshot ?? 'Member'} • {formatTimestamp(post.createdAt, 'Just now')}
+          {posts.map((post) => {
+            const linkedEvent = post.linkedEventId ? linkedEventsMap[post.linkedEventId] : null;
+            const meta = getCategoryMeta(post.category);
+            const hasPrivateLinks = !canAccessPrivateContent && !!(post.classroomLink || post.meetLink || post.resourceLinks.length > 0);
+            return (
+              <div key={post.id} className="rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-white">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-white/70">{meta.label}</span>
+                  <span className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-white/45">
+                    {formatTimestamp(post.createdAt, 'Just now')}
+                  </span>
+                </div>
+                <h3 className="mt-3 text-lg font-semibold text-white">{post.title}</h3>
+                <p className="mt-2 text-sm leading-7 text-white/80">{post.content}</p>
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3 text-sm text-white/70">
+                  <p className="font-medium text-white">{post.postedByNameSnapshot}</p>
+                  <p className="text-xs text-white/50">{post.postedByEmailSnapshot}</p>
+                  <p className="mt-1 text-xs text-white/45">{post.postedByRoleSnapshot}</p>
+                </div>
+                {linkedEvent ? (
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-3 text-sm text-white/70">
+                    <p className="text-xs uppercase tracking-[0.2em] text-white/45">Linked event</p>
+                    <p className="mt-2 font-medium text-white">{linkedEvent.title}</p>
+                    <p className="mt-1 text-xs text-white/55">{formatDateTimeRange(linkedEvent.startTime, linkedEvent.endTime)}</p>
+                  </div>
+                ) : null}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {post.classroomLink ? (
+                    <a href={post.classroomLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10">
+                      Open Classroom
+                      <ExternalLink className="size-4" />
+                    </a>
+                  ) : null}
+                  {post.meetLink ? (
+                    <a href={post.meetLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10">
+                      Open Meet
+                      <ExternalLink className="size-4" />
+                    </a>
+                  ) : null}
+                  {post.resourceLinks.map((link) => (
+                    <a key={`${post.id}:${link.url}`} href={link.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10">
+                      {link.label}
+                      <ExternalLink className="size-4" />
+                    </a>
+                  ))}
+                </div>
+                {hasPrivateLinks ? <p className="mt-4 text-xs text-white/45">Private links are hidden until your membership is approved.</p> : null}
               </div>
-            </motion.div>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>
@@ -475,12 +574,14 @@ function EventsTab({
   events,
   rsvps,
   onRsvp,
-  manageable
+  manageable,
+  canAccessPrivateContent
 }: {
   events: EventRecord[];
   rsvps: Record<string, boolean>;
   onRsvp: (eventId: string, attending: boolean) => Promise<void>;
   manageable: boolean;
+  canAccessPrivateContent: boolean;
 }) {
   return (
     <section className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-glass">
@@ -490,7 +591,7 @@ function EventsTab({
           <h2 className="mt-2 text-2xl font-semibold text-white">Club calendar and activity</h2>
         </div>
         <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white/60">
-          {manageable ? 'Edit and attendance tools stay in the operations rail.' : 'RSVP here or use the full calendar for a wider view.'}
+          {manageable ? 'Create and edit from the operations rail.' : 'Private links appear only after approval.'}
         </div>
       </div>
       {events.length === 0 ? (
@@ -498,7 +599,12 @@ function EventsTab({
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {events.map((event) => (
-            <EventCard key={event.id} event={event} attending={rsvps[event.id]} onRsvp={onRsvp} />
+            <div key={event.id} className="space-y-2">
+              <EventCard event={event} attending={rsvps[event.id]} onRsvp={onRsvp} />
+              {!canAccessPrivateContent && (event.classroomLink || event.meetLink || event.resourceLinks.length > 0) ? (
+                <p className="text-xs text-white/45">Private links are hidden until membership approval.</p>
+              ) : null}
+            </div>
           ))}
         </div>
       )}
@@ -510,20 +616,22 @@ function MembersTab({
   club,
   users,
   manageable,
-  loading
+  loading,
+  membershipRequests
 }: {
   club: Club;
   users: AppUser[];
   manageable: boolean;
   loading: boolean;
+  membershipRequests: Array<{ userId: string; user: AppUser | null }>;
 }) {
   if (!manageable) {
     return (
       <section className="rounded-3xl border border-white/10 bg-white/5 p-6 text-white shadow-glass">
         <p className="text-xs uppercase tracking-[0.3em] text-white/50">Members</p>
-        <h2 className="mt-2 text-2xl font-semibold text-white">Membership is live, directory access is scoped</h2>
+        <h2 className="mt-2 text-2xl font-semibold text-white">Membership visibility is scoped</h2>
         <p className="mt-3 text-sm text-white/70">
-          This club currently has {club.memberCount} member{club.memberCount === 1 ? '' : 's'}. The full roster is visible on the management side of the page for club coordinators and admins.
+          This club currently has {club.memberCount} approved member{club.memberCount === 1 ? '' : 's'}. The full roster and approval queue are visible to club coordinators and admins only.
         </p>
       </section>
     );
@@ -537,13 +645,13 @@ function MembersTab({
           <h2 className="mt-2 text-2xl font-semibold text-white">Club roster</h2>
         </div>
         <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white/60">
-          Open membership is live. Approval queues are not wired.
+          {membershipRequests.length} pending request{membershipRequests.length === 1 ? '' : 's'}
         </div>
       </div>
       {loading ? (
         <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-sm text-white/60">Loading roster…</div>
       ) : users.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-sm text-white/60">No member profiles are available yet.</div>
+        <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-sm text-white/60">No approved member profiles are available yet.</div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {users.map((member) => (
@@ -556,7 +664,7 @@ function MembersTab({
                 <span className="rounded-full bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.25em] text-white/70">{member.role}</span>
               </div>
               <p className="mt-3 text-xs text-white/45">
-                {member.clubsJoined.includes(club.id) ? 'Active member profile' : 'Club management access'}
+                {member.clubsJoined.includes(club.id) ? 'Approved member' : 'Club management access'}
               </p>
             </div>
           ))}
@@ -604,35 +712,5 @@ function CertificatesTab({
         </div>
       )}
     </section>
-  );
-}
-
-function PostComposer({ onSubmit, disabled }: { onSubmit: (text: string) => Promise<void> | void; disabled: boolean }) {
-  const [value, setValue] = useState('');
-  return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/30 p-4 md:flex-row">
-      <textarea
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        placeholder="Share an update with the club timeline"
-        className="min-h-24 flex-1 rounded-2xl border border-white/10 bg-transparent px-3 py-3 text-white outline-none focus:border-accent"
-      />
-      <button
-        type="button"
-        disabled={!value.trim() || disabled}
-        onClick={async () => {
-          const nextValue = value.trim();
-          if (!nextValue) return;
-          await onSubmit(nextValue);
-          setValue('');
-        }}
-        className={clsx(
-          'rounded-2xl px-4 py-3 font-medium transition md:self-start',
-          disabled || !value.trim() ? 'bg-white/10 text-white/50' : 'bg-indigo-500 text-white hover:bg-indigo-600'
-        )}
-      >
-        {disabled ? 'Posting…' : 'Post update'}
-      </button>
-    </div>
   );
 }

@@ -17,7 +17,7 @@ Firestore  Storage  Cloud Functions
 ## Frontend
 - React 18 + Vite + Tailwind CSS
 - Route-level protection with `RequireAuth` and `RequireRole`
-- Shared domain layer for categories, profile mapping, memberships, posts, events, and schedules
+- Shared domain layer for categories, profile mapping, memberships, posts, events, schedules, and derived personal calendar composition
 - Firestore client services for users, groups, posts, events, timetable datasets, RSVPs, and certificate lists
 - Google Classroom remains client-side, but the core model now reserves Classroom and Meet links in posts, events, and groups
 
@@ -38,7 +38,10 @@ Firestore  Storage  Cloud Functions
   - `updateUserRole`
   - `listClubUsers`
   - `setClubMembership`
+  - `listClubMembershipRequests`
+  - `setClubMembershipStatus`
   - `setEventRsvp`
+  - `listEventAttendance`
   - `applyEventImport`
 - Cloud Functions still own aggregate-sensitive membership and RSVP writes.
 - Firestore rules now allow the richer user profile shape plus read access for timetable dataset collections.
@@ -50,8 +53,10 @@ Firestore  Storage  Cloud Functions
 - `scheduleEntries` are recurring structure records for academic blocks and meals.
 - `scheduleDatasets` advertise dataset readiness even when live entries do not exist yet.
 - `users` now store stable academic cohort fields so timetable mapping can happen without depending on volatile auth state.
+- the personal calendar is a derived read model composed from school-wide events, approved group events, timetable recurrences, and meals
 
 ## Operational Reality
-- Most membership flows are still open/self-serve in the UI, but the schema now supports pending, approved, and rejected states.
+- Membership approval now exists end-to-end for clubs that use `approval_required`, while open clubs still remain self-serve.
+- The main calendar intentionally uses a calm overview layer and a separate detailed day view rather than rendering every timetable block directly into month cells.
 - Timetable and meal surfaces are intentionally placeholder-first until live datasets arrive.
 - Legacy `clubs` and `events` field names are preserved where necessary to avoid breaking the current stack during the refactor.

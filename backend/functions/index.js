@@ -223,7 +223,8 @@ exports.setClubMembership = functions.https.onCall(async (data, context) => {
   const caller = await getCallerContext(context);
   const clubId = normalizeRequiredString(data?.clubId, 'clubId');
   const joined = !!data?.joined;
-  await getClubSnapshot(clubId);
+  const clubSnap = await getClubSnapshot(clubId);
+  const membershipMode = clubSnap.data()?.membershipMode || 'open';
 
   const membershipRef = admin.firestore().doc(`clubs/${clubId}/memberships/${caller.uid}`);
   const userRef = admin.firestore().doc(`users/${caller.uid}`);
@@ -233,8 +234,26 @@ exports.setClubMembership = functions.https.onCall(async (data, context) => {
   const batch = admin.firestore().batch();
 
   if (joined) {
+    if (membershipMode === 'invite_only') {
+      throw new functions.https.HttpsError('permission-denied', 'This club is invite only.');
+    }
+
     const membershipTimestamp = FieldValue.serverTimestamp();
-    if (!membershipSnap.exists || existingStatus !== 'approved') {
+    if (membershipMode === 'approval_required') {
+      if (existingStatus !== 'approved' && (!membershipSnap.exists || existingStatus !== 'pending')) {
+        batch.set(membershipRef, {
+          userId: caller.uid,
+          groupId: clubId,
+          status: 'pending',
+          memberRole: 'member',
+          approvedBy: null,
+          approvedAt: null,
+          joinedAt: membershipSnap.exists ? membershipSnap.data()?.joinedAt || membershipTimestamp : membershipTimestamp,
+          createdAt: membershipSnap.exists ? membershipSnap.data()?.createdAt || membershipTimestamp : membershipTimestamp,
+          updatedAt: membershipTimestamp
+        }, { merge: true });
+      }
+    } else if (!membershipSnap.exists || existingStatus !== 'approved') {
       batch.set(membershipRef, {
         userId: caller.uid,
         groupId: clubId,
@@ -246,10 +265,10 @@ exports.setClubMembership = functions.https.onCall(async (data, context) => {
         createdAt: membershipSnap.exists ? membershipSnap.data()?.createdAt || membershipTimestamp : membershipTimestamp,
         updatedAt: membershipTimestamp
       }, { merge: true });
-      batch.update(userRef, {
+      batch.set(userRef, {
         clubsJoined: FieldValue.arrayUnion(clubId),
         updatedAt: FieldValue.serverTimestamp()
-      });
+      }, { merge: true });
       if (!membershipSnap.exists || existingStatus !== 'approved') {
         batch.update(clubRef, {
           memberCount: FieldValue.increment(1),
@@ -259,18 +278,115 @@ exports.setClubMembership = functions.https.onCall(async (data, context) => {
     }
   } else if (membershipSnap.exists) {
     batch.delete(membershipRef);
-    batch.update(userRef, {
-      clubsJoined: FieldValue.arrayRemove(clubId),
-      updatedAt: FieldValue.serverTimestamp()
+    if (existingStatus === 'approved') {
+      batch.set(userRef, {
+        clubsJoined: FieldValue.arrayRemove(clubId),
+        updatedAt: FieldValue.serverTimestamp()
+      }, { merge: true });
+      batch.update(clubRef, {
+        memberCount: FieldValue.increment(-1),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+    }
+  }
+
+  await batch.commit();
+  return {
+    ok: true,
+    joined,
+    status: joined
+      ? membershipMode === 'approval_required'
+        ? existingStatus === 'approved' ? 'approved' : 'pending'
+        : 'approved'
+      : 'removed'
+  };
+});
+
+exports.listClubMembershipRequests = functions.https.onCall(async (data, context) => {
+  const caller = await getCallerContext(context);
+  const clubId = normalizeRequiredString(data?.clubId, 'clubId');
+  await assertClubAccess(caller, clubId);
+
+  const membershipSnap = await admin.firestore().collection(`clubs/${clubId}/memberships`).where('status', '==', 'pending').get();
+  const requests = await Promise.all(
+    membershipSnap.docs.map(async (membershipDoc) => {
+      const membership = membershipDoc.data() || {};
+      const userSnap = await admin.firestore().doc(`users/${membership.userId || membershipDoc.id}`).get();
+      const user = userSnap.exists ? toAppUser(userSnap) : null;
+      return {
+        id: membershipDoc.id,
+        userId: membership.userId || membershipDoc.id,
+        groupId: membership.groupId || clubId,
+        clubId,
+        status: membership.status || 'pending',
+        memberRole: membership.memberRole || 'member',
+        approvedBy: membership.approvedBy || undefined,
+        approvedAt: timestampToIso(membership.approvedAt),
+        createdAt: timestampToIso(membership.createdAt),
+        updatedAt: timestampToIso(membership.updatedAt),
+        user
+      };
+    })
+  );
+
+  return requests.sort((a, b) => String(a.user?.name || '').localeCompare(String(b.user?.name || '')));
+});
+
+exports.setClubMembershipStatus = functions.https.onCall(async (data, context) => {
+  const caller = await getCallerContext(context);
+  const clubId = normalizeRequiredString(data?.clubId, 'clubId');
+  const userId = normalizeRequiredString(data?.userId, 'userId');
+  const status = normalizeRequiredString(data?.status, 'status');
+  if (!['approved', 'rejected'].includes(status)) {
+    throw new functions.https.HttpsError('invalid-argument', 'status must be approved or rejected.');
+  }
+
+  await assertClubAccess(caller, clubId);
+
+  const membershipRef = admin.firestore().doc(`clubs/${clubId}/memberships/${userId}`);
+  const membershipSnap = await membershipRef.get();
+  if (!membershipSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Membership request not found.');
+  }
+
+  const existingStatus = membershipSnap.data()?.status || 'pending';
+  const userRef = admin.firestore().doc(`users/${userId}`);
+  const clubRef = admin.firestore().doc(`clubs/${clubId}`);
+  const timestamp = FieldValue.serverTimestamp();
+  const batch = admin.firestore().batch();
+
+  batch.set(membershipRef, {
+    status,
+    memberRole: membershipSnap.data()?.memberRole || 'member',
+    approvedBy: status === 'approved' ? caller.uid : null,
+    approvedAt: status === 'approved' ? timestamp : null,
+    updatedAt: timestamp
+  }, { merge: true });
+
+  if (status === 'approved' && existingStatus !== 'approved') {
+    batch.set(userRef, {
+      clubsJoined: FieldValue.arrayUnion(clubId),
+      updatedAt: timestamp
+    }, { merge: true });
+    batch.update(clubRef, {
+      memberCount: FieldValue.increment(1),
+      updatedAt: timestamp
     });
+  }
+
+  if (status === 'rejected' && existingStatus === 'approved') {
+    batch.set(userRef, {
+      clubsJoined: FieldValue.arrayRemove(clubId),
+      updatedAt: timestamp
+    }, { merge: true });
     batch.update(clubRef, {
       memberCount: FieldValue.increment(-1),
-      updatedAt: FieldValue.serverTimestamp()
+      updatedAt: timestamp
     });
   }
 
   await batch.commit();
-  return { ok: true, joined };
+  return { ok: true, status };
 });
 
 exports.setEventRsvp = functions.https.onCall(async (data, context) => {
