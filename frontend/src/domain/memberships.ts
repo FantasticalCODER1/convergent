@@ -42,6 +42,8 @@ export function stripPrivateEventLinks(event: EventRecord, allowPrivateLinks: bo
   return {
     ...event,
     classroomLink: null,
+    classroomCourseId: null,
+    classroomPostLink: null,
     meetLink: null,
     resourceLinks: []
   };

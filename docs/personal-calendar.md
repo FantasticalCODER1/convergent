@@ -22,6 +22,7 @@ The system derives the calendar at read time. It does not duplicate every shared
 
 - always visible on the personal calendar
 - retain their direct links and metadata
+- legacy imported events without modern group metadata still fall back to school-wide visibility instead of disappearing
 
 ### Group items
 
@@ -29,12 +30,16 @@ The system derives the calendar at read time. It does not duplicate every shared
   - an approved member, or
   - a club manager/master/admin for that group
 - pending or rejected memberships do not feed group events into the personal calendar
+- legacy membership documents without `status` still count as approved
+- legacy membership documents that rely on the membership document id instead of a stored `userId` are now recovered by the client query layer
+- legacy group events without explicit `visibility` now default to `members`, not `school`
 
 ### Academic and meal items
 
 - matched by `grade` and `section` on the user profile
 - expanded from recurring `scheduleEntries` into dated instances over the visible calendar window
 - left empty on purpose when no real dataset is attached
+- shown with readiness-aware empty states so missing datasets do not make the calendar look broken
 
 ## Overview vs Expanded Day View
 
@@ -44,7 +49,8 @@ The calendar now has two interaction levels.
 
 - month-based, calm, and readable
 - school-wide and group events appear as individual items
-- academic timetable blocks are condensed into daily academic summary markers instead of flooding the month grid
+- academic timetable blocks are condensed into daily summary markers instead of flooding the month grid
+- meal schedule items are also condensed in overview mode
 - filters support:
   - all
   - academic
@@ -62,6 +68,7 @@ Clicking a day or event opens a full day sheet with:
 - classes by block
 - meals
 - meetings and school events
+- overnight and multi-day items remain visible on every day they overlap
 - category badges
 - author metadata where available
 - linked resources where the viewer is allowed to see them
@@ -80,6 +87,7 @@ Effects:
 - approved memberships automatically expose that group's events in the personal calendar
 - private club links stay hidden in discovery mode and for pending memberships
 - managers and admins can approve or reject requests from the club management rail
+- private Classroom references, Meet links, Classroom post links, and resource links remain hidden for non-members on private group content
 
 ## Join Clubs vs My Clubs
 
@@ -103,3 +111,30 @@ If timetable or meal imports do not exist yet, the product should show:
 - intentional empty states
 
 It should not generate fake demo periods or fake meal schedules.
+
+## Legacy Fallbacks
+
+- events fall back from `relatedGroupId` to legacy `clubId`
+- missing event author snapshots fall back to older `author*` aliases where available
+- posts fall back from `content` to legacy `text`
+- multi-day items now appear in later day views based on overlap, not only start date
+
+## Classroom Attachment Model
+
+Clubs now support:
+
+- `classroomLink`
+- `classroomCode`
+- `classroomCourseId`
+- `defaultMeetLink`
+- `resourceLinks`
+
+Events now support:
+
+- `classroomLink`
+- `classroomCourseId`
+- `classroomPostLink`
+- `meetLink`
+- `resourceLinks`
+
+Convergent remains the source of truth. These are attached references, not a Classroom-owned scheduling model.

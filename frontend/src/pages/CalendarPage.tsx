@@ -37,7 +37,7 @@ type OverviewCalendarEvent = {
   backgroundColor: string;
   borderColor: string;
   extendedProps: {
-    kind: 'item' | 'academic_summary';
+    kind: 'item' | 'schedule_summary';
     itemId?: string;
     dateKey: string;
     summaryCount?: number;
@@ -45,13 +45,14 @@ type OverviewCalendarEvent = {
 };
 
 function buildOverviewEvents(items: PersonalCalendarItem[]) {
-  const academicBuckets = new Map<string, PersonalCalendarItem[]>();
+  const scheduleBuckets = new Map<string, PersonalCalendarItem[]>();
   const calendarEvents: OverviewCalendarEvent[] = [];
 
   items.forEach((item) => {
     const dateKey = item.startTime.slice(0, 10);
-    if (item.source === 'academic_schedule') {
-      academicBuckets.set(dateKey, [...(academicBuckets.get(dateKey) ?? []), item]);
+    if (item.source === 'academic_schedule' || item.source === 'meal_schedule') {
+      const bucketKey = `${dateKey}:${item.source}`;
+      scheduleBuckets.set(bucketKey, [...(scheduleBuckets.get(bucketKey) ?? []), item]);
       return;
     }
 
@@ -71,18 +72,21 @@ function buildOverviewEvents(items: PersonalCalendarItem[]) {
     });
   });
 
-  academicBuckets.forEach((bucket, dateKey) => {
+  scheduleBuckets.forEach((bucket, bucketKey) => {
     if (bucket.length === 0) return;
+    const [dateKey] = bucketKey.split(':');
+    const source = bucket[0].source;
+    const isMeals = source === 'meal_schedule';
     calendarEvents.push({
-      id: `academic-summary:${dateKey}`,
-      title: bucket.length === 1 ? bucket[0].title : `Academic · ${bucket.length} blocks`,
+      id: `${source}-summary:${dateKey}`,
+      title: bucket.length === 1 ? bucket[0].title : `${isMeals ? 'Meals' : 'Academic'} · ${bucket.length} items`,
       start: bucket[0].startTime,
       end: bucket[bucket.length - 1].endTime,
       allDay: false,
-      backgroundColor: categoryTint.academic,
-      borderColor: categoryTint.academic,
+      backgroundColor: isMeals ? categoryTint.meals : categoryTint.academic,
+      borderColor: isMeals ? categoryTint.meals : categoryTint.academic,
       extendedProps: {
-        kind: 'academic_summary',
+        kind: 'schedule_summary',
         dateKey,
         summaryCount: bucket.length
       }
@@ -100,6 +104,25 @@ function matchesOverviewFilter(item: PersonalCalendarItem, activeFilter: Overvie
   if (activeFilter === 'school_wide') return item.source === 'school_event';
   if (activeFilter === 'meals') return item.source === 'meal_schedule';
   return true;
+}
+
+function getCalendarEmptyState(readiness: ReturnType<typeof usePersonalCalendar>['readiness']) {
+  if (!readiness.profileReady) {
+    return {
+      title: 'Finish your profile mapping first',
+      body: 'Grade and section are still missing, so timetable and meal items cannot be derived yet. School-wide and approved club events will appear as soon as they exist.'
+    };
+  }
+  if (readiness.academicStatus === 'missing' && readiness.mealStatus === 'missing') {
+    return {
+      title: 'Waiting on timetable and meal datasets',
+      body: 'No cohort schedule datasets are published yet. The calendar will still show school-wide and approved club events as they are created.'
+    };
+  }
+  return {
+    title: 'Nothing is mapped yet',
+    body: 'No school-wide events, approved group activity, or matched schedule items are available in the current window yet.'
+  };
 }
 
 export default function CalendarPage() {
@@ -192,9 +215,9 @@ export default function CalendarPage() {
     const props = arg.event.extendedProps as OverviewCalendarEvent['extendedProps'];
     return (
       <div className="min-w-0 overflow-hidden px-1.5 py-0.5 text-[11px] leading-tight">
-        {props.kind === 'academic_summary' ? (
+        {props.kind === 'schedule_summary' ? (
           <>
-            <div className="truncate font-medium text-white/80">{props.summaryCount} mapped blocks</div>
+            <div className="truncate font-medium text-white/80">{props.summaryCount} mapped items</div>
             <div className="truncate font-semibold text-white">{arg.event.title}</div>
           </>
         ) : (
@@ -206,6 +229,8 @@ export default function CalendarPage() {
       </div>
     );
   };
+
+  const emptyState = getCalendarEmptyState(readiness);
 
   return (
     <div className="space-y-6">
@@ -270,8 +295,8 @@ export default function CalendarPage() {
           ) : items.length === 0 ? (
             <EmptyStateCard
               eyebrow="Personal calendar"
-              title="Nothing is mapped yet"
-              body="This page waits for real school events, approved group membership, timetable imports, and meal datasets. It stays empty on purpose until those sources exist."
+              title={emptyState.title}
+              body={emptyState.body}
               tone="accent"
             />
           ) : (

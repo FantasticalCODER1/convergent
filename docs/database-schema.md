@@ -46,6 +46,9 @@ This document describes the current Convergent foundation schema after the time-
 - `meetingLocation`
 - `logoUrl`
 - `classroomLink`
+- `classroomCode`
+- `classroomCourseId`
+- `defaultMeetLink`
 - `meetLink`
 - `resourceLinks`
 - `membershipMode`
@@ -75,6 +78,10 @@ This document describes the current Convergent foundation schema after the time-
 - `classroomLink`
 - `meetLink`
 - `resourceLinks`
+- `authorId`
+- `authorName`
+- `authorEmail`
+- `authorRole`
 - `postedByUid`
 - `postedByNameSnapshot`
 - `postedByEmailSnapshot`
@@ -95,6 +102,7 @@ This document describes the current Convergent foundation schema after the time-
 - `location`
 - `classroomLink`
 - `classroomCourseId`
+- `classroomPostLink`
 - `meetLink`
 - `resourceLinks`
 - `attendanceEnabled`
@@ -147,6 +155,57 @@ This document describes the current Convergent foundation schema after the time-
 - `notes`
 - `updatedAt`
 
+### `inboundMessages/{messageId}`
+- `sender`
+- `subject`
+- `receivedAt`
+- `rawText`
+- `htmlUrl`
+- `parsedAnnouncementIds`
+- `createdAt`
+- `updatedAt`
+
+### `parsedAnnouncements/{announcementId}`
+- `sourceMessageId`
+- `sender`
+- `subject`
+- `receivedAt`
+- `parsedType`
+- `summary`
+- `confidence`
+- `affectedEventIds`
+- `createdAt`
+- `updatedAt`
+
+### `proposedCalendarChanges/{proposalId}`
+- `sourceMessageId`
+- `sender`
+- `subject`
+- `receivedAt`
+- `parsedType`
+- `affectedEventIds`
+- `oldValues`
+- `proposedValues`
+- `confidence`
+- `status`
+- `reviewedBy`
+- `reviewedAt`
+- `createdAt`
+- `updatedAt`
+
+### `changeLogs/{changeLogId}`
+- `proposalId`
+- `sourceMessageId`
+- `decision`
+- `sender`
+- `subject`
+- `affectedEventIds`
+- `oldValues`
+- `proposedValues`
+- `reviewedBy`
+- `reviewedAt`
+- `createdAt`
+
 ### `certificates/{certificateId}`
 - `clubId`
 - `userId`
@@ -164,5 +223,7 @@ This document describes the current Convergent foundation schema after the time-
 - `clubs` remains the backing collection name for now, but the document shape is intended to support broader group-like units, not only traditional clubs.
 - Membership is approval-ready in the schema even though most current UI flows are still open/self-serve.
 - Events and posts both support Classroom, Meet, and resource links, but posts are intentionally non-timed communication records.
+- Legacy events and posts still render when newer metadata fields are absent because the client now falls back safely for category, scope, visibility, group aliases, membership state, and author snapshots.
 - Timetable and meal data now have reserved collections even when datasets are missing.
 - Legacy `clubId` and `type` fields remain on events for backward compatibility with existing rules, tests, and seeded data.
+- Inbox intake remains review-first. Proposed changes are stored separately and only affect live events after admin approval.

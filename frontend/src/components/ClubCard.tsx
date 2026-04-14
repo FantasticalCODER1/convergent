@@ -73,7 +73,7 @@ export function ClubCard({ club, joined, manageable, membershipState = joined ? 
           <span>Links</span>
           <span className="text-right text-white">
             {joined || manageable
-              ? club.classroomLink || club.meetLink || club.resourceLinks.length > 0
+              ? club.classroomLink || club.classroomCode || club.classroomCourseId || club.defaultMeetLink || club.meetLink || club.resourceLinks.length > 0
                 ? 'Attached'
                 : 'Placeholder ready'
               : 'Hidden until approved'}

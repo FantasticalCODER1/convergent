@@ -8,6 +8,7 @@ import {
 import { normalizeCategory } from '../domain/categories';
 import type { ScheduleDataset, ScheduleEntry } from '../types/Schedule';
 import { firestore } from '../firebase/firestore';
+import { mapResourceLinks, normalizeString } from './recordMappers';
 
 const scheduleEntriesRef = collection(firestore, 'scheduleEntries');
 const scheduleDatasetsRef = collection(firestore, 'scheduleDatasets');
@@ -16,26 +17,6 @@ function toIso(value?: Timestamp | null | string) {
   if (!value) return undefined;
   if (typeof value === 'string') return value;
   return value.toDate().toISOString();
-}
-
-function normalizeString(value?: unknown) {
-  if (typeof value !== 'string') return undefined;
-  const normalized = value.trim();
-  return normalized || undefined;
-}
-
-function mapResourceLinks(input: unknown) {
-  if (!Array.isArray(input)) return [];
-  return input
-    .map((entry) => {
-      if (!entry || typeof entry !== 'object') return null;
-      const label = normalizeString((entry as { label?: unknown }).label);
-      const url = normalizeString((entry as { url?: unknown }).url);
-      const kind = normalizeString((entry as { kind?: unknown }).kind);
-      if (!label || !url) return null;
-      return { label, url, kind: kind as 'resource' | 'classroom' | 'meet' | 'reference' | undefined };
-    })
-    .filter((entry): entry is NonNullable<typeof entry> => !!entry);
 }
 
 function mapScheduleEntry(snapshot: any): ScheduleEntry {

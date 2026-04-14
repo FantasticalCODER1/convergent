@@ -372,6 +372,8 @@ export default function ClubDetail() {
                   endTime: new Date(`${payload.event.date}T${payload.event.endTime}`).toISOString(),
                   location: payload.event.location,
                   classroomLink: payload.event.classroomLink,
+                  classroomCourseId: payload.event.classroomCourseId,
+                  classroomPostLink: payload.event.classroomPostLink,
                   meetLink: payload.event.meetLink,
                   resourceLinks: payload.event.resourceLinks,
                   attendanceEnabled: payload.event.attendanceEnabled
@@ -447,6 +449,34 @@ function AboutTab({
                 <span className="text-white/45">Membership model</span>
                 <span className="text-right text-white">{club.membershipMode === 'approval_required' ? 'Request then approval' : club.membershipMode === 'invite_only' ? 'Invite only' : 'Open self-serve'}</span>
               </div>
+            </div>
+            <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-sm text-white/70">
+              <div className="flex items-start justify-between gap-3">
+                <span className="text-white/45">Classroom course id</span>
+                <span className="text-right text-white">{club.classroomCourseId ?? 'Not attached'}</span>
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <span className="text-white/45">Classroom code</span>
+                <span className="text-right text-white">{club.classroomCode ?? 'Not attached'}</span>
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <span className="text-white/45">Resource links</span>
+                <span className="text-right text-white">{club.resourceLinks.length} attached</span>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {canAccessPrivateContent && club.classroomLink ? (
+                <a href={club.classroomLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10">
+                  Open Classroom
+                  <ExternalLink className="size-4" />
+                </a>
+              ) : null}
+              {canAccessPrivateContent && (club.defaultMeetLink ?? club.meetLink) ? (
+                <a href={club.defaultMeetLink ?? club.meetLink ?? ''} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10">
+                  Open Default Meet
+                  <ExternalLink className="size-4" />
+                </a>
+              ) : null}
             </div>
           </div>
         </div>
@@ -601,7 +631,7 @@ function EventsTab({
           {events.map((event) => (
             <div key={event.id} className="space-y-2">
               <EventCard event={event} attending={rsvps[event.id]} onRsvp={onRsvp} />
-              {!canAccessPrivateContent && (event.classroomLink || event.meetLink || event.resourceLinks.length > 0) ? (
+              {!canAccessPrivateContent && (event.classroomLink || event.classroomPostLink || event.meetLink || event.resourceLinks.length > 0) ? (
                 <p className="text-xs text-white/45">Private links are hidden until membership approval.</p>
               ) : null}
             </div>

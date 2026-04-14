@@ -14,6 +14,7 @@ test('backend verification and issuance are Function-backed', () => {
   assert.match(functionsFile, /exports\.applyEventImport = functions\.https\.onCall/);
   assert.match(functionsFile, /exports\.setClubMembership = functions\.https\.onCall/);
   assert.match(functionsFile, /exports\.setEventRsvp = functions\.https\.onCall/);
+  assert.match(functionsFile, /exports\.reviewProposedCalendarChange = functions\.https\.onCall/);
 });
 
 test('firestore rules and indexes target the live schema', () => {
@@ -23,6 +24,8 @@ test('firestore rules and indexes target the live schema', () => {
   assert.match(rules, /match \/memberships\/\{userId\}/);
   assert.match(rules, /match \/posts\/\{postId\}/);
   assert.match(rules, /match \/eventRsvps\/\{rsvpId\}/);
+  assert.match(rules, /match \/proposedCalendarChanges\/\{proposalId\}/);
+  assert.match(rules, /match \/changeLogs\/\{changeLogId\}/);
   assert.match(indexes, /"startTime"/);
   assert.match(indexes, /"userId"/);
   assert.match(indexes, /"verifierId"/);

@@ -12,6 +12,9 @@ export interface Club {
   meetingLocation?: string;
   logoUrl?: string;
   classroomLink?: string | null;
+  classroomCode?: string | null;
+  classroomCourseId?: string | null;
+  defaultMeetLink?: string | null;
   meetLink?: string | null;
   resourceLinks: ResourceLink[];
   membershipMode?: 'open' | 'approval_required' | 'invite_only';

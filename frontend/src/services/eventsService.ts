@@ -11,54 +11,17 @@ import {
   updateDoc,
   where
 } from 'firebase/firestore';
-import { callFunction } from '../firebase/functions';
-import { normalizeCategory } from '../domain/categories';
 import type { EventRecord, EventScope } from '../types/Event';
 import type { AppUser } from '../types/User';
+import { callFunction } from '../firebase/functions';
 import { firestore } from '../firebase/firestore';
+import { mapEventData, normalizeString } from './recordMappers';
 
 const eventsRef = collection(firestore, 'events');
 const rsvpsRef = collection(firestore, 'eventRsvps');
 
 function mapEvent(snapshot: any): EventRecord {
-  const data = snapshot.data();
-  const startTime = toIso(data.startTime) ?? toIso(data.createdAt) ?? new Date(0).toISOString();
-  const endTime = toIso(data.endTime) ?? startTime;
-  const relatedGroupId = normalizeString(data.relatedGroupId) ?? normalizeString(data.clubId);
-  const scope = (normalizeString(data.scope) as EventScope | undefined) ?? (relatedGroupId ? 'group' : 'school');
-  return {
-    id: snapshot.id,
-    title: data.title ?? 'Untitled event',
-    description: data.description,
-    category: normalizeCategory(data.category, relatedGroupId ? 'club' : 'school_wide'),
-    scope,
-    relatedGroupId,
-    startTime,
-    endTime,
-    allDay: !!data.allDay,
-    location: data.location,
-    classroomLink: normalizeString(data.classroomLink) ?? null,
-    classroomCourseId: normalizeString(data.classroomCourseId) ?? null,
-    meetLink: normalizeString(data.meetLink) ?? null,
-    resourceLinks: mapResourceLinks(data.resourceLinks),
-    attendanceEnabled: data.attendanceEnabled !== false,
-    createdByUid: normalizeString(data.createdByUid),
-    createdByNameSnapshot: normalizeString(data.createdByNameSnapshot),
-    createdByEmailSnapshot: normalizeString(data.createdByEmailSnapshot),
-    createdByRoleSnapshot: normalizeString(data.createdByRoleSnapshot),
-    visibility: (normalizeString(data.visibility) as EventRecord['visibility']) ?? 'school',
-    sourceMetadata: {
-      source: normalizeString(data.sourceMetadata?.source) ?? normalizeString(data.source),
-      sourceId: normalizeString(data.sourceMetadata?.sourceId) ?? normalizeString(data.sourceId),
-      sourceDataset: normalizeString(data.sourceMetadata?.sourceDataset) ?? normalizeString(data.sourceDataset),
-      sourceTerm: normalizeString(data.sourceMetadata?.sourceTerm) ?? normalizeString(data.sourceTerm),
-      sourceHash: normalizeString(data.sourceMetadata?.sourceHash) ?? normalizeString(data.sourceHash)
-    },
-    clubId: relatedGroupId,
-    rsvpCount: data.rsvpCount ?? 0,
-    createdAt: toIso(data.createdAt),
-    updatedAt: toIso(data.updatedAt)
-  };
+  return mapEventData(snapshot.id, snapshot.data());
 }
 
 function toIso(value?: Timestamp | null | string) {
@@ -70,26 +33,6 @@ function toIso(value?: Timestamp | null | string) {
 function toTimestamp(value: string | Date) {
   if (value instanceof Date) return Timestamp.fromDate(value);
   return Timestamp.fromDate(new Date(value));
-}
-
-function normalizeString(value?: unknown) {
-  if (typeof value !== 'string') return undefined;
-  const normalized = value.trim();
-  return normalized || undefined;
-}
-
-function mapResourceLinks(input: unknown) {
-  if (!Array.isArray(input)) return [];
-  return input
-    .map((entry) => {
-      if (!entry || typeof entry !== 'object') return null;
-      const label = normalizeString((entry as { label?: unknown }).label);
-      const url = normalizeString((entry as { url?: unknown }).url);
-      const kind = normalizeString((entry as { kind?: unknown }).kind);
-      if (!label || !url) return null;
-      return { label, url, kind: kind as 'resource' | 'classroom' | 'meet' | 'reference' | undefined };
-    })
-    .filter((entry): entry is NonNullable<typeof entry> => !!entry);
 }
 
 export type EventInput = {
@@ -105,6 +48,7 @@ export type EventInput = {
   location?: string;
   classroomLink?: string;
   classroomCourseId?: string;
+  classroomPostLink?: string;
   meetLink?: string;
   resourceLinks?: EventRecord['resourceLinks'];
   attendanceEnabled?: boolean;
@@ -128,7 +72,7 @@ export async function saveEvent(input: EventInput, author?: AppUser) {
   const payload = {
     title: input.title,
     description: input.description ?? null,
-    category: normalizeCategory(input.category),
+    category: input.category,
     scope: input.scope,
     relatedGroupId: relatedGroupId ?? null,
     clubId: relatedGroupId ?? null,
@@ -138,6 +82,7 @@ export async function saveEvent(input: EventInput, author?: AppUser) {
     location: input.location ?? null,
     classroomLink: input.classroomLink ?? null,
     classroomCourseId: input.classroomCourseId ?? null,
+    classroomPostLink: input.classroomPostLink ?? null,
     meetLink: input.meetLink ?? null,
     resourceLinks: input.resourceLinks ?? [],
     attendanceEnabled: input.attendanceEnabled ?? true,

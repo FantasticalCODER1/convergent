@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { CalendarImporter } from '../admin/CalendarImporter';
 import { CertificateUploader } from '../admin/CertificateUploader';
+import { ClubEditor } from '../admin/ClubEditor';
 import { EventEditor } from '../admin/EventEditor';
 import { ClubContentComposer } from './ClubContentComposer';
 import { formatDateTimeRange, formatRoleLabel, formatTimestamp } from '../../lib/formatters';
@@ -36,6 +37,8 @@ type Props = {
       endTime: string;
       location?: string;
       classroomLink?: string;
+      classroomCourseId?: string;
+      classroomPostLink?: string;
       meetLink?: string;
       resourceLinks: EventRecord['resourceLinks'];
       attendanceEnabled: boolean;
@@ -80,6 +83,13 @@ export function ClubManagementPanel({
       </div>
 
       <ClubContentComposer defaultCategory={club.category} onSubmit={onCreateContent} />
+
+      <ClubEditor
+        club={club}
+        onCreated={() => {
+          void onRefresh();
+        }}
+      />
 
       {editingEvent ? (
         <EventEditor

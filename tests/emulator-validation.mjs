@@ -363,6 +363,63 @@ test('role-protected event writes enforce club scope and admin-only school event
   assert.equal(schoolEvent.data()?.type, 'school');
 });
 
+test('club posts can be created standalone or linked to events with legacy-safe author fields', async () => {
+  const manager = await createClientSession('manager-posts', USERS.manager.email);
+
+  const postOnlyRef = await addDoc(collection(manager.firestore, `clubs/${CLUBS.alpha.id}/posts`), {
+    clubId: CLUBS.alpha.id,
+    relatedGroupId: CLUBS.alpha.id,
+    title: 'Manager post only',
+    content: 'Standalone club update',
+    category: 'club',
+    authorId: USERS.manager.uid,
+    authorName: USERS.manager.name,
+    postedByUid: USERS.manager.uid,
+    postedByNameSnapshot: USERS.manager.name,
+    postedByEmailSnapshot: USERS.manager.email,
+    postedByRoleSnapshot: 'manager',
+    visibility: 'members',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+
+  const linkedEventRef = await addDoc(collection(manager.firestore, 'events'), {
+    title: 'Linked manager event',
+    startTime: new Date('2026-04-12T10:00:00.000Z'),
+    endTime: new Date('2026-04-12T11:00:00.000Z'),
+    type: 'club',
+    clubId: CLUBS.alpha.id,
+    relatedGroupId: CLUBS.alpha.id,
+    scope: 'group',
+    visibility: 'members',
+    source: 'manual',
+    sourceId: 'linked-manager-event',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+
+  const linkedPostRef = await addDoc(collection(manager.firestore, `clubs/${CLUBS.alpha.id}/posts`), {
+    clubId: CLUBS.alpha.id,
+    relatedGroupId: CLUBS.alpha.id,
+    title: 'Linked manager post',
+    content: 'Club update linked to an event',
+    category: 'club',
+    linkedEventId: linkedEventRef.id,
+    authorId: USERS.manager.uid,
+    authorName: USERS.manager.name,
+    postedByUid: USERS.manager.uid,
+    postedByNameSnapshot: USERS.manager.name,
+    postedByEmailSnapshot: USERS.manager.email,
+    postedByRoleSnapshot: 'manager',
+    visibility: 'members',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+
+  assert.equal((await getDoc(postOnlyRef)).exists(), true);
+  assert.equal((await getDoc(linkedPostRef)).data()?.linkedEventId, linkedEventRef.id);
+});
+
 test('club membership and RSVP callable flows update aggregate state end to end', async () => {
   const student = await createClientSession('student-membership', USERS.student.email);
 
@@ -514,4 +571,90 @@ test('role-protected functions and import apply are restricted and idempotent', 
     ]
   });
   assert.equal(adminSchoolEvent.created, 1);
+});
+
+test('reviewProposedCalendarChange applies approved event updates and logs rejected proposals without mutating events', async () => {
+  const adminSession = await createClientSession('admin-review', USERS.admin.email);
+
+  await adminDb.doc('events/review-event').set({
+    title: 'Review pending event',
+    startTime: new Date('2026-04-25T10:00:00.000Z'),
+    endTime: new Date('2026-04-25T11:00:00.000Z'),
+    type: 'school',
+    visibility: 'school',
+    source: 'manual',
+    sourceId: 'review-event',
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp()
+  });
+
+  await adminDb.doc('proposedCalendarChanges/proposal-approve').set({
+    sourceMessageId: 'msg-approve',
+    sender: 'staff@doonschool.com',
+    subject: 'Assembly moved later',
+    receivedAt: FieldValue.serverTimestamp(),
+    parsedType: 'calendar_update',
+    affectedEventIds: ['review-event'],
+    oldValues: { title: 'Review pending event' },
+    proposedValues: {
+      title: 'Reviewed event approved',
+      location: 'Main Hall',
+      classroomPostLink: 'https://classroom.google.com/c/post-approved'
+    },
+    confidence: 0.94,
+    status: 'pending_review',
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp()
+  });
+
+  const approvalResult = await adminSession.call('reviewProposedCalendarChange', {
+    proposalId: 'proposal-approve',
+    decision: 'approved'
+  });
+  assert.equal(approvalResult.status, 'approved');
+  const approvedEvent = await adminDb.doc('events/review-event').get();
+  assert.equal(approvedEvent.data()?.title, 'Reviewed event approved');
+  assert.equal(approvedEvent.data()?.classroomPostLink, 'https://classroom.google.com/c/post-approved');
+  assert.equal((await adminDb.doc('proposedCalendarChanges/proposal-approve').get()).data()?.status, 'approved');
+
+  await adminDb.doc('events/reject-event').set({
+    title: 'Reject me',
+    startTime: new Date('2026-04-26T10:00:00.000Z'),
+    endTime: new Date('2026-04-26T11:00:00.000Z'),
+    type: 'school',
+    visibility: 'school',
+    source: 'manual',
+    sourceId: 'reject-event',
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp()
+  });
+
+  await adminDb.doc('proposedCalendarChanges/proposal-reject').set({
+    sourceMessageId: 'msg-reject',
+    sender: 'staff@doonschool.com',
+    subject: 'Do not apply this',
+    receivedAt: FieldValue.serverTimestamp(),
+    parsedType: 'calendar_update',
+    affectedEventIds: ['reject-event'],
+    oldValues: { title: 'Reject me' },
+    proposedValues: { title: 'Should not change' },
+    confidence: 0.51,
+    status: 'pending_review',
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp()
+  });
+
+  const rejectionResult = await adminSession.call('reviewProposedCalendarChange', {
+    proposalId: 'proposal-reject',
+    decision: 'rejected'
+  });
+  assert.equal(rejectionResult.status, 'rejected');
+  const rejectedEvent = await adminDb.doc('events/reject-event').get();
+  assert.equal(rejectedEvent.data()?.title, 'Reject me');
+  assert.equal((await adminDb.doc('proposedCalendarChanges/proposal-reject').get()).data()?.status, 'rejected');
+
+  const changeLogs = await adminDb.collection('changeLogs').get();
+  const decisions = changeLogs.docs.map((docSnap) => docSnap.data().decision);
+  assert.ok(decisions.includes('approved'));
+  assert.ok(decisions.includes('rejected'));
 });

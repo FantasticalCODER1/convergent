@@ -50,6 +50,37 @@ function parseIsoDate(value, field) {
   return parsed;
 }
 
+function parseOptionalIsoDate(value, field) {
+  const normalized = normalizeOptionalString(value);
+  if (!normalized) return null;
+  return parseIsoDate(normalized, field);
+}
+
+function normalizeStringArray(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => normalizeOptionalString(entry))
+    .filter(Boolean);
+}
+
+function normalizeResourceLinks(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object') return null;
+      const label = normalizeOptionalString(entry.label);
+      const url = normalizeOptionalString(entry.url);
+      const kind = normalizeOptionalString(entry.kind);
+      if (!url) return null;
+      return {
+        label: label || 'Resource',
+        url,
+        kind: kind || 'resource'
+      };
+    })
+    .filter(Boolean);
+}
+
 async function getCallerContext(context) {
   if (!context.auth?.uid) {
     throw new functions.https.HttpsError('unauthenticated', 'Authentication required.');
@@ -534,8 +565,9 @@ function normalizeEventPayload(data, fallbackClubId) {
     location: normalizeOptionalString(data?.location),
     classroomLink: normalizeOptionalString(data?.classroomLink),
     classroomCourseId: normalizeOptionalString(data?.classroomCourseId),
+    classroomPostLink: normalizeOptionalString(data?.classroomPostLink),
     meetLink: normalizeOptionalString(data?.meetLink),
-    resourceLinks: Array.isArray(data?.resourceLinks) ? data.resourceLinks : [],
+    resourceLinks: normalizeResourceLinks(data?.resourceLinks),
     attendanceEnabled: data?.attendanceEnabled !== false,
     visibility: normalizeOptionalString(data?.visibility) || 'members',
     type,
@@ -563,6 +595,7 @@ async function upsertImportedEvent(payload, caller) {
     location: payload.location,
     classroomLink: payload.classroomLink,
     classroomCourseId: payload.classroomCourseId,
+    classroomPostLink: payload.classroomPostLink,
     meetLink: payload.meetLink,
     resourceLinks: payload.resourceLinks,
     attendanceEnabled: payload.attendanceEnabled,
@@ -646,4 +679,160 @@ exports.applyEventImport = functions.https.onCall(async (data, context) => {
     skipped: errors.length,
     errors
   };
+});
+
+function buildReviewedEventUpdates(affectedEventIds, proposedValues) {
+  const eventUpdates = proposedValues && typeof proposedValues.eventUpdates === 'object' && !Array.isArray(proposedValues.eventUpdates)
+    ? proposedValues.eventUpdates
+    : null;
+
+  if (eventUpdates) {
+    return Object.entries(eventUpdates)
+      .filter(([eventId]) => !affectedEventIds.length || affectedEventIds.includes(eventId))
+      .map(([eventId, values]) => ({ eventId, values }));
+  }
+
+  return affectedEventIds.map((eventId) => ({ eventId, values: proposedValues }));
+}
+
+function sanitizeSourceMetadata(value) {
+  if (!value || typeof value !== 'object') return null;
+  return {
+    source: normalizeOptionalString(value.source),
+    sourceId: normalizeOptionalString(value.sourceId),
+    sourceDataset: normalizeOptionalString(value.sourceDataset),
+    sourceTerm: normalizeOptionalString(value.sourceTerm),
+    sourceHash: normalizeOptionalString(value.sourceHash)
+  };
+}
+
+function sanitizeEventUpdate(values) {
+  if (!values || typeof values !== 'object') return {};
+
+  const update = {};
+  const assignString = (field) => {
+    if (Object.prototype.hasOwnProperty.call(values, field)) {
+      update[field] = normalizeOptionalString(values[field]);
+    }
+  };
+
+  [
+    'title',
+    'description',
+    'category',
+    'scope',
+    'location',
+    'classroomLink',
+    'classroomCourseId',
+    'classroomPostLink',
+    'meetLink',
+    'visibility',
+    'source',
+    'sourceId',
+    'sourceDataset',
+    'sourceTerm',
+    'sourceHash'
+  ].forEach(assignString);
+
+  if (Object.prototype.hasOwnProperty.call(values, 'allDay') && typeof values.allDay === 'boolean') {
+    update.allDay = values.allDay;
+  }
+  if (Object.prototype.hasOwnProperty.call(values, 'attendanceEnabled') && typeof values.attendanceEnabled === 'boolean') {
+    update.attendanceEnabled = values.attendanceEnabled;
+  }
+  if (Object.prototype.hasOwnProperty.call(values, 'resourceLinks')) {
+    update.resourceLinks = normalizeResourceLinks(values.resourceLinks);
+  }
+  if (Object.prototype.hasOwnProperty.call(values, 'sourceMetadata')) {
+    update.sourceMetadata = sanitizeSourceMetadata(values.sourceMetadata);
+  }
+  if (Object.prototype.hasOwnProperty.call(values, 'startTime')) {
+    const parsed = parseOptionalIsoDate(values.startTime, 'startTime');
+    update.startTime = parsed ? Timestamp.fromDate(parsed) : null;
+  }
+  if (Object.prototype.hasOwnProperty.call(values, 'endTime')) {
+    const parsed = parseOptionalIsoDate(values.endTime, 'endTime');
+    update.endTime = parsed ? Timestamp.fromDate(parsed) : null;
+  }
+
+  const relatedGroupId = Object.prototype.hasOwnProperty.call(values, 'relatedGroupId')
+    ? normalizeOptionalString(values.relatedGroupId)
+    : undefined;
+  const clubId = Object.prototype.hasOwnProperty.call(values, 'clubId')
+    ? normalizeOptionalString(values.clubId)
+    : undefined;
+  if (relatedGroupId !== undefined || clubId !== undefined) {
+    const normalizedGroupId = relatedGroupId !== undefined ? relatedGroupId : clubId;
+    update.relatedGroupId = normalizedGroupId;
+    update.clubId = normalizedGroupId;
+  }
+
+  return update;
+}
+
+exports.reviewProposedCalendarChange = functions.https.onCall(async (data, context) => {
+  const caller = await getCallerContext(context);
+  assertRole(caller.role, ['admin']);
+
+  const proposalId = normalizeRequiredString(data?.proposalId, 'proposalId');
+  const decision = normalizeRequiredString(data?.decision, 'decision');
+  if (!['approved', 'rejected'].includes(decision)) {
+    throw new functions.https.HttpsError('invalid-argument', 'decision must be approved or rejected.');
+  }
+
+  const proposalRef = admin.firestore().doc(`proposedCalendarChanges/${proposalId}`);
+  const proposalSnap = await proposalRef.get();
+  if (!proposalSnap.exists) {
+    throw new functions.https.HttpsError('not-found', 'Proposed calendar change not found.');
+  }
+
+  const proposal = proposalSnap.data() || {};
+  if (proposal.status && proposal.status !== 'pending_review') {
+    throw new functions.https.HttpsError('failed-precondition', 'This proposal has already been reviewed.');
+  }
+
+  const affectedEventIds = normalizeStringArray(proposal.affectedEventIds);
+  const proposedValues = proposal.proposedValues && typeof proposal.proposedValues === 'object' ? proposal.proposedValues : {};
+  const batch = admin.firestore().batch();
+  const reviewedAt = FieldValue.serverTimestamp();
+
+  if (decision === 'approved') {
+    const updates = buildReviewedEventUpdates(affectedEventIds, proposedValues);
+    for (const { eventId, values } of updates) {
+      const eventRef = admin.firestore().doc(`events/${eventId}`);
+      const eventSnap = await eventRef.get();
+      if (!eventSnap.exists) {
+        throw new functions.https.HttpsError('not-found', `Affected event ${eventId} was not found.`);
+      }
+      batch.set(eventRef, {
+        ...sanitizeEventUpdate(values),
+        updatedAt: reviewedAt
+      }, { merge: true });
+    }
+  }
+
+  batch.set(proposalRef, {
+    status: decision,
+    reviewedBy: caller.uid,
+    reviewedAt,
+    updatedAt: reviewedAt
+  }, { merge: true });
+
+  const changeLogRef = admin.firestore().collection('changeLogs').doc();
+  batch.set(changeLogRef, {
+    proposalId,
+    sourceMessageId: normalizeOptionalString(proposal.sourceMessageId),
+    decision,
+    sender: normalizeOptionalString(proposal.sender) || '',
+    subject: normalizeOptionalString(proposal.subject) || '',
+    affectedEventIds,
+    oldValues: proposal.oldValues && typeof proposal.oldValues === 'object' ? proposal.oldValues : {},
+    proposedValues,
+    reviewedBy: caller.uid,
+    reviewedAt,
+    createdAt: reviewedAt
+  });
+
+  await batch.commit();
+  return { ok: true, status: decision };
 });

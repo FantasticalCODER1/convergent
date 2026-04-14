@@ -11,6 +11,14 @@ import { useEvents } from '../hooks/useEvents';
 import { useSchedules } from '../hooks/useSchedules';
 import { formatDateTimeRange } from '../lib/formatters';
 import type { EventRecord } from '../types/Event';
+import type { ProposedCalendarChangeRecord } from '../types/Review';
+import {
+  listChangeLogs,
+  listInboundMessages,
+  listParsedAnnouncements,
+  listProposedCalendarChanges,
+  reviewProposedCalendarChange
+} from '../services/adminReviewService';
 
 export default function AdminPanel() {
   return (
@@ -24,7 +32,12 @@ function AdminInner() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [roleStatus, setRoleStatus] = useState<string | null>(null);
+  const [reviewStatus, setReviewStatus] = useState<string | null>(null);
   const [editingSchoolEvent, setEditingSchoolEvent] = useState<EventRecord | null>(null);
+  const [inboundCount, setInboundCount] = useState(0);
+  const [parsedCount, setParsedCount] = useState(0);
+  const [changeLogCount, setChangeLogCount] = useState(0);
+  const [proposals, setProposals] = useState<ProposedCalendarChangeRecord[]>([]);
   const { clubs, refresh: refreshClubs } = useClubs();
   const { events, saveEvent } = useEvents();
   const { datasets } = useSchedules();
@@ -37,8 +50,22 @@ function AdminInner() {
     setLoading(false);
   };
 
+  const loadReviewScaffolding = async () => {
+    const [messages, announcements, pendingProposals, changeLogs] = await Promise.all([
+      listInboundMessages(),
+      listParsedAnnouncements(),
+      listProposedCalendarChanges(),
+      listChangeLogs()
+    ]);
+    setInboundCount(messages.length);
+    setParsedCount(announcements.length);
+    setProposals(pendingProposals);
+    setChangeLogCount(changeLogs.length);
+  };
+
   useEffect(() => {
     void loadUsers();
+    void loadReviewScaffolding();
   }, []);
 
   const changeRole = async (id: string, role: UserRole) => {
@@ -46,6 +73,15 @@ function AdminInner() {
     await updateUserRole(id, role);
     await loadUsers();
     setRoleStatus('Role updated.');
+  };
+
+  const pendingProposals = proposals.filter((proposal) => proposal.status === 'pending_review');
+
+  const handleReviewDecision = async (proposalId: string, decision: 'approved' | 'rejected') => {
+    setReviewStatus(decision === 'approved' ? 'Approving change…' : 'Rejecting change…');
+    await reviewProposedCalendarChange(proposalId, decision);
+    await Promise.all([loadReviewScaffolding(), refreshClubs()]);
+    setReviewStatus(decision === 'approved' ? 'Change approved.' : 'Change rejected.');
   };
 
   return (
@@ -61,6 +97,69 @@ function AdminInner() {
         <Metric label="Clubs" value={String(clubs.length)} hint="Global club directory" />
         <Metric label="School events" value={String(schoolEvents.length)} hint="Admin-owned schedule" />
       </div>
+
+      <section className="space-y-4 rounded-3xl border border-white/5 bg-white/5 p-6 shadow-glass">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-white/50">Inbox review</p>
+            <h2 className="mt-2 text-xl font-semibold text-white">School email change proposals</h2>
+            <p className="text-sm text-white/60">The review surface is live. External inbox ingestion and parsing remain scaffolded until a server-side intake path is wired.</p>
+          </div>
+          {reviewStatus ? <p className="text-sm text-white/60">{reviewStatus}</p> : null}
+        </div>
+        <div className="grid gap-4 md:grid-cols-4">
+          <Metric label="Inbound" value={String(inboundCount)} hint="Stored source messages" />
+          <Metric label="Parsed" value={String(parsedCount)} hint="Structured announcements" />
+          <Metric label="Pending" value={String(pendingProposals.length)} hint="Awaiting admin review" />
+          <Metric label="Logs" value={String(changeLogCount)} hint="Recorded review actions" />
+        </div>
+        {pendingProposals.length === 0 ? (
+          <EmptyStateCard
+            eyebrow="Review queue"
+            title="No pending proposals yet"
+            body="The review-first architecture is in place, but no inbound inbox integration is live in this repo yet. When proposal docs are added, they will appear here for approval or rejection before any calendar change is applied."
+          />
+        ) : (
+          <div className="grid gap-4">
+            {pendingProposals.map((proposal) => (
+              <div key={proposal.id} className="rounded-3xl border border-white/10 bg-slate-950/30 p-5 text-white">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.25em] text-white/45">{proposal.parsedType}</p>
+                    <h3 className="mt-2 text-lg font-semibold text-white">{proposal.subject}</h3>
+                    <p className="mt-1 text-sm text-white/60">{proposal.sender}</p>
+                  </div>
+                  <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.25em] text-white/60">
+                    Confidence {proposal.confidence?.toFixed(2) ?? 'n/a'}
+                  </span>
+                </div>
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-white/45">Current values</p>
+                    <pre className="mt-3 overflow-x-auto whitespace-pre-wrap text-xs text-white/70">{JSON.stringify(proposal.oldValues, null, 2)}</pre>
+                  </div>
+                  <div className="rounded-2xl border border-emerald-300/20 bg-emerald-500/5 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-emerald-100">Proposed values</p>
+                    <pre className="mt-3 overflow-x-auto whitespace-pre-wrap text-xs text-white/80">{JSON.stringify(proposal.proposedValues, null, 2)}</pre>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-white/60">
+                  <span>Source message: {proposal.sourceMessageId}</span>
+                  <span>Affected events: {proposal.affectedEventIds.length ? proposal.affectedEventIds.join(', ') : 'none attached'}</span>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <button type="button" onClick={() => void handleReviewDecision(proposal.id, 'approved')} className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-600">
+                    Approve and apply
+                  </button>
+                  <button type="button" onClick={() => void handleReviewDecision(proposal.id, 'rejected')} className="rounded-2xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10">
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <ClubEditor

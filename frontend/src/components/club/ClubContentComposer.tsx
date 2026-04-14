@@ -18,6 +18,8 @@ type Submission = {
     endTime: string;
     location?: string;
     classroomLink?: string;
+    classroomCourseId?: string;
+    classroomPostLink?: string;
     meetLink?: string;
     resourceLinks: Array<{ label: string; url: string; kind: 'resource' }>;
     attendanceEnabled: boolean;
@@ -51,6 +53,8 @@ export function ClubContentComposer({ defaultCategory, onSubmit }: Props) {
   const [endTime, setEndTime] = useState('17:00');
   const [location, setLocation] = useState('');
   const [classroomLink, setClassroomLink] = useState('');
+  const [classroomCourseId, setClassroomCourseId] = useState('');
+  const [classroomPostLink, setClassroomPostLink] = useState('');
   const [meetLink, setMeetLink] = useState('');
   const [resourceLinks, setResourceLinks] = useState('');
   const [attendanceEnabled, setAttendanceEnabled] = useState(true);
@@ -68,6 +72,8 @@ export function ClubContentComposer({ defaultCategory, onSubmit }: Props) {
     setEndTime('17:00');
     setLocation('');
     setClassroomLink('');
+    setClassroomCourseId('');
+    setClassroomPostLink('');
     setMeetLink('');
     setResourceLinks('');
     setAttendanceEnabled(true);
@@ -152,6 +158,17 @@ export function ClubContentComposer({ defaultCategory, onSubmit }: Props) {
               <input value={classroomLink} onChange={(event) => setClassroomLink(event.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" placeholder="Optional" />
             </label>
             <label className="space-y-1 text-sm">
+              <span>Classroom course id</span>
+              <input value={classroomCourseId} onChange={(event) => setClassroomCourseId(event.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" placeholder="Optional" />
+            </label>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="space-y-1 text-sm">
+              <span>Classroom post link</span>
+              <input value={classroomPostLink} onChange={(event) => setClassroomPostLink(event.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" placeholder="Optional" />
+            </label>
+            <label className="space-y-1 text-sm">
               <span>Meet link</span>
               <input value={meetLink} onChange={(event) => setMeetLink(event.target.value)} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" placeholder="Optional" />
             </label>
@@ -192,6 +209,8 @@ export function ClubContentComposer({ defaultCategory, onSubmit }: Props) {
                       endTime,
                       location: location.trim() || undefined,
                       classroomLink: classroomLink.trim() || undefined,
+                      classroomCourseId: classroomCourseId.trim() || undefined,
+                      classroomPostLink: classroomPostLink.trim() || undefined,
                       meetLink: meetLink.trim() || undefined,
                       resourceLinks: parseResourceLinks(resourceLinks),
                       attendanceEnabled

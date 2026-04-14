@@ -7,6 +7,12 @@ import { useAuth } from '../hooks/useAuth';
 import { usePersonalCalendar } from '../hooks/usePersonalCalendar';
 import { formatDateTimeRange } from '../lib/formatters';
 
+function getUpcomingEmptyState(profileReady: boolean, academicStatus: string, mealStatus: string) {
+  if (!profileReady) return 'Finish grade and section mapping to unlock timetable and meals. School-wide and approved club events will still appear here when available.';
+  if (academicStatus === 'missing' && mealStatus === 'missing') return 'No timetable or meal datasets are attached yet. School-wide and approved club events will appear here as soon as they are published.';
+  return 'No school-wide events, approved club activity, or matched schedule items are queued right now.';
+}
+
 export default function Dashboard() {
   const { user } = useAuth();
   const {
@@ -93,7 +99,7 @@ export default function Dashboard() {
             <div className="mt-4 text-white/60">Loading your queue…</div>
           ) : upcomingItems.length === 0 ? (
             <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-slate-950/30 p-4 text-sm text-white/60">
-              No personal items are scheduled yet.
+              {getUpcomingEmptyState(readiness.profileReady, readiness.academicStatus, readiness.mealStatus)}
             </div>
           ) : (
             <div className="mt-4 space-y-3">

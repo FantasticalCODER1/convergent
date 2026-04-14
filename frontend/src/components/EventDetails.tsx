@@ -106,14 +106,21 @@ export function EventDetails({ event, open, attending, onClose, onRsvp, canEdit,
             </div>
           )}
         </dl>
-        {event.classroomLink || event.meetLink || event.resourceLinks.length > 0 ? (
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        {event.classroomLink || event.classroomPostLink || event.meetLink || event.resourceLinks.length > 0 ? (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {event.classroomLink ? (
               <a href={event.classroomLink} target="_blank" rel="noreferrer" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80 transition hover:bg-white/10">
                 Open Classroom
               </a>
             ) : (
               <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/20 px-4 py-3 text-sm text-white/45">Classroom link not attached</div>
+            )}
+            {event.classroomPostLink ? (
+              <a href={event.classroomPostLink} target="_blank" rel="noreferrer" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80 transition hover:bg-white/10">
+                Open Classroom Post
+              </a>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/20 px-4 py-3 text-sm text-white/45">Classroom post not attached</div>
             )}
             {event.meetLink ? (
               <a href={event.meetLink} target="_blank" rel="noreferrer" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80 transition hover:bg-white/10">

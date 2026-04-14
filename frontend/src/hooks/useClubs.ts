@@ -78,6 +78,16 @@ export function useClubs(options: { autoLoad?: boolean } = { autoLoad: true }) {
     [refresh, refreshProfile, user]
   );
 
+  const saveClub = useCallback(
+    async (input: CreateClubInput & { id?: string }) => {
+      const author = requireUser();
+      await createClubRecord(input, author);
+      await refresh();
+      await refreshProfile?.();
+    },
+    [refresh, refreshProfile, user]
+  );
+
   const joinClub = useCallback(
     async (clubId: string) => {
       const current = requireUser();
@@ -168,6 +178,7 @@ export function useClubs(options: { autoLoad?: boolean } = { autoLoad: true }) {
     error,
     refresh,
     createClub,
+    saveClub,
     joinClub,
     leaveClub,
     getClubById,

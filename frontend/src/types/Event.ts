@@ -24,6 +24,7 @@ export interface EventRecord {
   location?: string;
   classroomLink?: string | null;
   classroomCourseId?: string | null;
+  classroomPostLink?: string | null;
   meetLink?: string | null;
   resourceLinks: ResourceLink[];
   attendanceEnabled: boolean;

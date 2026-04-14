@@ -283,6 +283,17 @@ export function PersonalDaySheet({ date, focusedItemId, items, onClose, open, on
                       <ExternalLink className="size-4" />
                     </a>
                   ) : null}
+                  {focusedItem.classroomPostLink ? (
+                    <a
+                      href={focusedItem.classroomPostLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80 transition hover:bg-white/10"
+                    >
+                      Open Classroom Post
+                      <ExternalLink className="size-4" />
+                    </a>
+                  ) : null}
                   {focusedItem.meetLink ? (
                     <a
                       href={focusedItem.meetLink}

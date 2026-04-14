@@ -21,6 +21,8 @@ export type PersonalCalendarItem = {
   allDay: boolean;
   location?: string;
   classroomLink?: string | null;
+  classroomCourseId?: string | null;
+  classroomPostLink?: string | null;
   meetLink?: string | null;
   resourceLinks: ResourceLink[];
   hiddenPrivateLinks: boolean;

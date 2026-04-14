@@ -8,7 +8,6 @@ import {
   parseISO,
   startOfDay
 } from 'date-fns';
-import { isProfileComplete } from '../domain/profile';
 import type { Club } from '../types/Club';
 import type { EventRecord } from '../types/Event';
 import type { MembershipRecord } from '../types/Membership';
@@ -19,7 +18,6 @@ import type {
 } from '../types/PersonalCalendar';
 import type { ScheduleDataset, ScheduleEntry } from '../types/Schedule';
 import type { AppUser } from '../types/User';
-import { canManageClub } from '../lib/policy';
 
 type MembershipMap = Record<string, MembershipRecord | undefined>;
 
@@ -38,8 +36,34 @@ function normalizeKey(value?: string | null) {
   return String(value ?? '').trim().toLowerCase();
 }
 
+function isProfileComplete(user?: Pick<AppUser, 'grade' | 'section'> | null) {
+  return !!String(user?.grade ?? '').trim() && !!String(user?.section ?? '').trim();
+}
+
+function canManageClub(
+  user: { id: string; role: AppUser['role'] } | null | undefined,
+  club: { managerIds?: string[] } | null | undefined
+) {
+  if (!user || !club) return false;
+  if (user.role === 'admin') return true;
+  if (!['manager', 'master'].includes(user.role)) return false;
+  return (club.managerIds ?? []).includes(user.id);
+}
+
 function parseDate(value: string) {
   return parseISO(value);
+}
+
+function overlapsWindow(start: string, end: string, rangeStart: Date, rangeEnd: Date) {
+  const parsedStart = parseDate(start);
+  const parsedEnd = parseDate(end);
+  return !isAfter(parsedStart, rangeEnd) && !isBefore(parsedEnd, rangeStart);
+}
+
+function occursOnDay(item: Pick<PersonalCalendarItem, 'startTime' | 'endTime'>, day: Date) {
+  const dayStart = startOfDay(day);
+  const dayEnd = endOfDay(day);
+  return overlapsWindow(item.startTime, item.endTime, dayStart, dayEnd);
 }
 
 function toOccurrenceIso(date: Date, time: string) {
@@ -103,6 +127,8 @@ function toPersonalEventItem(
     allDay: !!event.allDay,
     location: event.location,
     classroomLink: privateLinksHidden ? null : event.classroomLink ?? null,
+    classroomCourseId: privateLinksHidden ? null : event.classroomCourseId ?? null,
+    classroomPostLink: privateLinksHidden ? null : event.classroomPostLink ?? null,
     meetLink: privateLinksHidden ? null : event.meetLink ?? null,
     resourceLinks: privateLinksHidden ? [] : event.resourceLinks,
     hiddenPrivateLinks: privateLinksHidden,
@@ -166,6 +192,8 @@ function expandScheduleEntries(
         allDay: false,
         location: entry.location,
         classroomLink: null,
+        classroomCourseId: null,
+        classroomPostLink: null,
         meetLink: null,
         resourceLinks: entry.resourceLinks,
         hiddenPrivateLinks: false,
@@ -215,10 +243,7 @@ export function composePersonalCalendar({
   }, {});
 
   const visibleEvents = events.filter((event) => {
-    const eventStart = parseDate(event.startTime);
-    const eventEnd = parseDate(event.endTime);
-    const overlapsRange = !isAfter(eventStart, rangeEnd) && !isBefore(eventEnd, rangeStart);
-    if (!overlapsRange) return false;
+    if (!overlapsWindow(event.startTime, event.endTime, rangeStart, rangeEnd)) return false;
     if (event.scope === 'academic' || event.category === 'academic') return matchesProfile(user, {
       id: event.id,
       scheduleType: 'academic',
@@ -267,5 +292,5 @@ export function composePersonalCalendar({
 }
 
 export function getItemsForDay(items: PersonalCalendarItem[], day: Date) {
-  return items.filter((item) => isSameDay(parseDate(item.startTime), day));
+  return items.filter((item) => occursOnDay(item, day));
 }
