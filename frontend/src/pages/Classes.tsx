@@ -54,7 +54,7 @@ export default function Classes() {
       <div>
         <p className="text-sm uppercase tracking-[0.25em] text-white/50">Academic structure</p>
         <h1 className="text-3xl font-semibold text-white">Classes</h1>
-        <p className="text-white/60">Timetable datasets, meal structure, and Classroom links now sit on one foundation so this page can grow into the full academic operating surface.</p>
+        <p className="text-white/60">This page combines timetable datasets, meal structure, and attached Classroom links. It is still a partial academic surface rather than a complete school operating system.</p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.95fr)]">
@@ -178,7 +178,7 @@ export default function Classes() {
                 <EmptyStateCard
                   eyebrow="Classroom links"
                   title="Live Classroom access is not available yet"
-                  body="The data model already supports Classroom course ids and links on posts, events, and group records, so live mappings can be attached later without another structural refactor."
+                  body="The data model can store Classroom references on clubs, events, and posts, but the live Classroom experience here is still limited and environment-dependent."
                 />
               </div>
             )}
@@ -215,7 +215,7 @@ export default function Classes() {
               <EmptyStateCard
                 eyebrow="Section mapping"
                 title="Course links and timetable mapping stay separate"
-                body="Grade and section decide timetable datasets. Classroom remains an attached service layer and can be linked course-by-course once live mappings are available."
+                body="Grade and section decide timetable datasets. Classroom is still an attached service layer here, not the source of truth for scheduling or club operations."
               />
             )}
           </div>

@@ -1,15 +1,11 @@
 import {
-  addDoc,
   collection,
   collectionGroup,
   documentId,
   doc,
   getDoc,
   getDocs,
-  orderBy,
   query,
-  serverTimestamp,
-  setDoc,
   where
 } from 'firebase/firestore';
 import type { MembershipRecord } from '../types/Membership';
@@ -20,26 +16,17 @@ import { callFunction } from '../firebase/functions';
 import { firestore } from '../firebase/firestore';
 import {
   mapClubData,
-  mapMembershipData,
-  mapPostData
+  mapMembershipData
 } from './recordMappers';
 
 const clubsRef = collection(firestore, 'clubs');
-
-const postsCollection = (clubId: string) => collection(firestore, `clubs/${clubId}/posts`);
 
 function mapClub(snapshot: any): Club {
   return mapClubData(snapshot.id, snapshot.data());
 }
 
-function mapPost(snapshot: any, fallbackGroupId?: string): PostRecord {
-  return mapPostData(snapshot.id, snapshot.data(), fallbackGroupId);
-}
-
 export async function listClubs(): Promise<Club[]> {
-  const q = query(clubsRef, orderBy('name'));
-  const snap = await getDocs(q);
-  return snap.docs.map((docSnap) => mapClub(docSnap));
+  return callFunction<undefined, Club[]>('listVisibleClubs', undefined);
 }
 
 export async function getClub(id: string): Promise<Club | null> {
@@ -57,8 +44,9 @@ export type CreateClubInput = Omit<Club, 'id' | 'memberCount' | 'resourceLinks'>
   resourceLinks?: Club['resourceLinks'];
 };
 
-export async function saveClub(input: CreateClubInput & { id?: string }, author?: AppUser) {
-  const payload = {
+export async function saveClub(input: Record<string, unknown> & { id?: string }, author?: AppUser) {
+  return callFunction<Record<string, unknown> & { id?: string }, Club>('saveClubMetadata', {
+    id: input.id,
     name: input.name,
     description: input.description,
     category: input.category,
@@ -76,27 +64,22 @@ export async function saveClub(input: CreateClubInput & { id?: string }, author?
     membershipMode: input.membershipMode ?? 'open',
     visibility: input.visibility ?? 'school',
     managerIds: input.managerIds ?? (author ? [author.id] : []),
-    memberCount: input.memberCount ?? 0,
-    updatedAt: serverTimestamp()
-  };
-  const clubRef = input.id ? doc(clubsRef, input.id) : doc(clubsRef);
-  await setDoc(clubRef, input.id ? payload : { ...payload, createdAt: serverTimestamp() }, { merge: true });
-  const snap = await getDoc(clubRef);
-  return mapClub(snap);
+    memberCount: input.memberCount ?? 0
+  });
 }
 
 export async function createClub(input: CreateClubInput, author?: AppUser) {
   return saveClub(input, author);
 }
 
-export async function joinClub(clubId: string, user: AppUser) {
+export async function joinClub(clubId: string, _user: AppUser) {
   return callFunction<{ clubId: string; joined: boolean }, { ok: true; joined: boolean; status: 'approved' | 'pending' | 'removed' }>('setClubMembership', {
     clubId,
     joined: true
   });
 }
 
-export async function leaveClub(clubId: string, user: AppUser) {
+export async function leaveClub(clubId: string, _user: AppUser) {
   return callFunction<{ clubId: string; joined: boolean }, { ok: true; joined: boolean; status: 'approved' | 'pending' | 'removed' }>('setClubMembership', {
     clubId,
     joined: false
@@ -104,9 +87,7 @@ export async function leaveClub(clubId: string, user: AppUser) {
 }
 
 export async function listClubPosts(clubId: string): Promise<PostRecord[]> {
-  const q = query(postsCollection(clubId), orderBy('createdAt', 'desc'));
-  const snap = await getDocs(q);
-  return snap.docs.map((docSnap) => mapPost(docSnap, clubId));
+  return callFunction<{ clubId: string }, PostRecord[]>('listClubPosts', { clubId });
 }
 
 export type ClubPostInput = {
@@ -120,10 +101,22 @@ export type ClubPostInput = {
   visibility?: PostRecord['visibility'];
 };
 
-export async function addClubPost(clubId: string, input: ClubPostInput, author: AppUser) {
-  await addDoc(postsCollection(clubId), {
+export async function addClubPost(clubId: string, input: ClubPostInput, _author: AppUser) {
+  return callFunction<
+    {
+      clubId: string;
+      title?: string;
+      content: string;
+      category?: PostRecord['category'];
+      linkedEventId?: string | null;
+      classroomLink?: string | null;
+      meetLink?: string | null;
+      resourceLinks?: PostRecord['resourceLinks'];
+      visibility?: PostRecord['visibility'];
+    },
+    PostRecord
+  >('createClubPost', {
     clubId,
-    relatedGroupId: clubId,
     title: input.title ?? 'Club update',
     content: input.content,
     category: input.category ?? 'club',
@@ -131,17 +124,7 @@ export async function addClubPost(clubId: string, input: ClubPostInput, author: 
     meetLink: input.meetLink ?? null,
     resourceLinks: input.resourceLinks ?? [],
     linkedEventId: input.linkedEventId ?? null,
-    authorId: author.id,
-    authorName: author.name,
-    authorEmail: author.email,
-    authorRole: author.role,
-    postedByUid: author.id,
-    postedByNameSnapshot: author.name,
-    postedByEmailSnapshot: author.email,
-    postedByRoleSnapshot: author.role,
-    visibility: input.visibility ?? 'members',
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    visibility: input.visibility ?? 'members'
   });
 }
 

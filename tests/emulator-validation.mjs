@@ -70,7 +70,8 @@ const USERS = {
 
 const CLUBS = {
   alpha: { id: 'club-alpha', name: 'Alpha Club', managerIds: [USERS.manager.uid, USERS.master.uid] },
-  beta: { id: 'club-beta', name: 'Beta Club', managerIds: [] }
+  beta: { id: 'club-beta', name: 'Beta Club', managerIds: [] },
+  gamma: { id: 'club-gamma', name: 'Gamma Club', managerIds: [USERS.manager.uid] }
 };
 
 const clientApps = [];
@@ -224,13 +225,35 @@ before(async () => {
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp()
   });
+  await adminDb.doc(`clubs/${CLUBS.gamma.id}`).set({
+    name: CLUBS.gamma.name,
+    description: 'Gamma private club',
+    category: 'Tech',
+    mic: 'Teacher C',
+    schedule: 'Fri 17:00',
+    visibility: 'private',
+    membershipMode: 'approval_required',
+    classroomLink: 'https://classroom.google.com/private',
+    meetLink: 'https://meet.google.com/private-room',
+    managerIds: CLUBS.gamma.managerIds,
+    memberCount: 1,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp()
+  });
 
   await adminDb.doc(`clubs/${CLUBS.alpha.id}/memberships/${USERS.manager.uid}`).set({
     userId: USERS.manager.uid,
+    status: 'approved',
     joinedAt: FieldValue.serverTimestamp()
   });
   await adminDb.doc(`clubs/${CLUBS.alpha.id}/memberships/${USERS.student.uid}`).set({
     userId: USERS.student.uid,
+    status: 'approved',
+    joinedAt: FieldValue.serverTimestamp()
+  });
+  await adminDb.doc(`clubs/${CLUBS.gamma.id}/memberships/${USERS.manager.uid}`).set({
+    userId: USERS.manager.uid,
+    status: 'approved',
     joinedAt: FieldValue.serverTimestamp()
   });
 
@@ -245,6 +268,35 @@ before(async () => {
     source: 'seed',
     sourceId: 'seeded-event',
     rsvpCount: 0,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp()
+  });
+  await adminDb.doc('events/event-private').set({
+    title: 'Private Club Event',
+    description: 'Gamma only',
+    startTime: FieldValue.serverTimestamp(),
+    endTime: FieldValue.serverTimestamp(),
+    type: 'club',
+    clubId: CLUBS.gamma.id,
+    relatedGroupId: CLUBS.gamma.id,
+    visibility: 'members',
+    attendanceEnabled: false,
+    source: 'seed',
+    sourceId: 'private-event',
+    rsvpCount: 0,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp()
+  });
+  await adminDb.doc(`clubs/${CLUBS.gamma.id}/posts/private-post`).set({
+    clubId: CLUBS.gamma.id,
+    relatedGroupId: CLUBS.gamma.id,
+    title: 'Private update',
+    content: 'Gamma members only',
+    visibility: 'members',
+    postedByUid: USERS.manager.uid,
+    postedByNameSnapshot: USERS.manager.name,
+    postedByEmailSnapshot: USERS.manager.email,
+    postedByRoleSnapshot: USERS.manager.role,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp()
   });
@@ -363,24 +415,45 @@ test('role-protected event writes enforce club scope and admin-only school event
   assert.equal(schoolEvent.data()?.type, 'school');
 });
 
-test('club posts can be created standalone or linked to events with legacy-safe author fields', async () => {
-  const manager = await createClientSession('manager-posts', USERS.manager.email);
+test('private club reads are blocked for non-members across clubs, posts, events, and memberships', async () => {
+  const manager = await createClientSession('manager-private-reads', USERS.manager.email);
+  const student = await createClientSession('student-private-reads', USERS.student.email);
 
-  const postOnlyRef = await addDoc(collection(manager.firestore, `clubs/${CLUBS.alpha.id}/posts`), {
+  await expectPermissionDenied(getDoc(doc(student.firestore, 'clubs', CLUBS.gamma.id)));
+  await expectPermissionDenied(getDoc(doc(student.firestore, `clubs/${CLUBS.gamma.id}/posts`, 'private-post')));
+  await expectPermissionDenied(getDoc(doc(student.firestore, 'events', 'event-private')));
+  await expectPermissionDenied(getDoc(doc(student.firestore, `clubs/${CLUBS.alpha.id}/memberships`, USERS.manager.uid)));
+
+  assert.equal((await getDoc(doc(manager.firestore, 'clubs', CLUBS.gamma.id))).exists(), true);
+  assert.equal((await getDoc(doc(manager.firestore, `clubs/${CLUBS.gamma.id}/posts`, 'private-post'))).exists(), true);
+  assert.equal((await getDoc(doc(manager.firestore, 'events', 'event-private'))).exists(), true);
+  assert.equal((await getDoc(doc(manager.firestore, `clubs/${CLUBS.gamma.id}/memberships`, USERS.manager.uid))).exists(), true);
+});
+
+test('club posts can only be published through the callable path', async () => {
+  const manager = await createClientSession('manager-posts', USERS.manager.email);
+  const student = await createClientSession('student-posts', USERS.student.email);
+
+  await expectPermissionDenied(
+    addDoc(collection(manager.firestore, `clubs/${CLUBS.alpha.id}/posts`), {
+      clubId: CLUBS.alpha.id,
+      relatedGroupId: CLUBS.alpha.id,
+      title: 'Forged manager post',
+      content: 'This should be rejected by rules.',
+      authorId: USERS.manager.uid,
+      postedByUid: USERS.manager.uid,
+      visibility: 'members',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    })
+  );
+
+  const postOnly = await manager.call('createClubPost', {
     clubId: CLUBS.alpha.id,
-    relatedGroupId: CLUBS.alpha.id,
     title: 'Manager post only',
     content: 'Standalone club update',
     category: 'club',
-    authorId: USERS.manager.uid,
-    authorName: USERS.manager.name,
-    postedByUid: USERS.manager.uid,
-    postedByNameSnapshot: USERS.manager.name,
-    postedByEmailSnapshot: USERS.manager.email,
-    postedByRoleSnapshot: 'manager',
-    visibility: 'members',
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    visibility: 'members'
   });
 
   const linkedEventRef = await addDoc(collection(manager.firestore, 'events'), {
@@ -398,26 +471,79 @@ test('club posts can be created standalone or linked to events with legacy-safe 
     updatedAt: serverTimestamp()
   });
 
-  const linkedPostRef = await addDoc(collection(manager.firestore, `clubs/${CLUBS.alpha.id}/posts`), {
+  const linkedPost = await manager.call('createClubPost', {
     clubId: CLUBS.alpha.id,
-    relatedGroupId: CLUBS.alpha.id,
     title: 'Linked manager post',
     content: 'Club update linked to an event',
     category: 'club',
     linkedEventId: linkedEventRef.id,
-    authorId: USERS.manager.uid,
-    authorName: USERS.manager.name,
-    postedByUid: USERS.manager.uid,
-    postedByNameSnapshot: USERS.manager.name,
-    postedByEmailSnapshot: USERS.manager.email,
-    postedByRoleSnapshot: 'manager',
-    visibility: 'members',
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
+    visibility: 'members'
   });
 
-  assert.equal((await getDoc(postOnlyRef)).exists(), true);
-  assert.equal((await getDoc(linkedPostRef)).data()?.linkedEventId, linkedEventRef.id);
+  await expectPermissionDenied(
+    student.call('createClubPost', {
+      clubId: CLUBS.alpha.id,
+      title: 'Student post',
+      content: 'Nope'
+    })
+  );
+
+  assert.equal((await getDoc(doc(manager.firestore, `clubs/${CLUBS.alpha.id}/posts`, postOnly.id))).exists(), true);
+  assert.equal(linkedPost.linkedEventId, linkedEventRef.id);
+});
+
+test('club metadata writes are admin-owned except for the manager basics whitelist', async () => {
+  const adminSession = await createClientSession('admin-club-metadata', USERS.admin.email);
+  const manager = await createClientSession('manager-club-metadata', USERS.manager.email);
+
+  await expectPermissionDenied(
+    updateDoc(doc(manager.firestore, 'clubs', CLUBS.alpha.id), {
+      description: 'Direct manager edit should fail.'
+    })
+  );
+
+  const managerUpdate = await manager.call('saveClubMetadata', {
+    id: CLUBS.alpha.id,
+    description: 'Manager-safe description update.',
+    schedule: 'Wed 17:00',
+    meetingLocation: 'Library'
+  });
+  assert.equal(managerUpdate.description, 'Manager-safe description update.');
+  assert.equal(managerUpdate.schedule, 'Wed 17:00');
+  assert.equal(managerUpdate.meetingLocation, 'Library');
+  assert.deepEqual(managerUpdate.managerIds, CLUBS.alpha.managerIds);
+
+  await expectPermissionDenied(
+    manager.call('saveClubMetadata', {
+      id: CLUBS.alpha.id,
+      description: 'Still okay',
+      schedule: 'Wed 18:00',
+      visibility: 'private'
+    })
+  );
+
+  const adminUpdate = await adminSession.call('saveClubMetadata', {
+    id: CLUBS.alpha.id,
+    name: CLUBS.alpha.name,
+    description: 'Admin-updated description.',
+    category: 'club',
+    groupType: 'club',
+    mic: 'Teacher A',
+    schedule: 'Wed 18:00',
+    meetingLocation: 'Auditorium',
+    classroomLink: 'https://classroom.google.com/admin-club',
+    classroomCode: 'alpha-code',
+    classroomCourseId: 'alpha-course',
+    defaultMeetLink: 'https://meet.google.com/admin-alpha',
+    resourceLinks: [{ label: 'Handbook', url: 'https://example.com/handbook', kind: 'resource' }],
+    membershipMode: 'approval_required',
+    visibility: 'members',
+    managerIds: [USERS.manager.uid],
+    memberCount: 7
+  });
+  assert.equal(adminUpdate.visibility, 'members');
+  assert.equal(adminUpdate.memberCount, 7);
+  assert.deepEqual(adminUpdate.managerIds, [USERS.manager.uid]);
 });
 
 test('club membership and RSVP callable flows update aggregate state end to end', async () => {
@@ -441,6 +567,14 @@ test('club membership and RSVP callable flows update aggregate state end to end'
   await student.call('setEventRsvp', { eventId: 'event-seeded', attending: false });
   assert.equal((await adminDb.doc(`eventRsvps/event-seeded_${USERS.student.uid}`).get()).exists, false);
   assert.equal((await adminDb.doc('events/event-seeded').get()).data()?.rsvpCount, 0);
+
+  await expectPermissionDenied(student.call('setEventRsvp', { eventId: 'event-private', attending: true }));
+
+  const manager = await createClientSession('manager-rsvp-disabled', USERS.manager.email);
+  await assert.rejects(
+    manager.call('setEventRsvp', { eventId: 'event-private', attending: true }),
+    /failed-precondition|Attendance tracking is disabled/i
+  );
 });
 
 test('certificate upload, issuance, and verification stay club-scoped', async () => {

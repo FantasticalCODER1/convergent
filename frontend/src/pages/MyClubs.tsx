@@ -86,16 +86,21 @@ export default function MyClubs() {
       ) : (
         <div className="grid gap-4 xl:grid-cols-2">
           {mine.map((club) => (
-            <ClubCard
-              key={club.id}
-              club={club}
-              joined
-              membershipState={getClubAccessState(user, club, membershipMap)}
-              manageable={getClubAccessState(user, club, membershipMap) === 'manager'}
-              nextEvent={nextEventsByClubId.get(club.id)}
-              onLeave={(id) => leaveClub(id)}
-              onOpen={(targetClub) => navigate(`/my-clubs/${targetClub.id}`)}
-            />
+            (() => {
+              const accessState = getClubAccessState(user, club, membershipMap);
+              return (
+                <ClubCard
+                  key={club.id}
+                  club={club}
+                  joined={accessState === 'approved_member'}
+                  membershipState={accessState}
+                  manageable={accessState === 'manager'}
+                  nextEvent={nextEventsByClubId.get(club.id)}
+                  onLeave={(id) => leaveClub(id)}
+                  onOpen={(targetClub) => navigate(`/my-clubs/${targetClub.id}`)}
+                />
+              );
+            })()
           ))}
         </div>
       )}

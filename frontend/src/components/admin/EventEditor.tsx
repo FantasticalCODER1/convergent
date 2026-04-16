@@ -48,6 +48,7 @@ type Props = {
     attendanceEnabled?: boolean;
   }) => Promise<void> | void;
   relatedGroupId?: string;
+  lockedScope?: EventRecord['scope'];
   onCancelEdit?: () => void;
 };
 
@@ -99,6 +100,7 @@ export function EventEditor({
   onSave,
   event,
   relatedGroupId,
+  lockedScope,
   onCancelEdit,
   title = 'Event manager',
   description = 'Create or update events for this management scope.',
@@ -126,7 +128,7 @@ export function EventEditor({
       title: values.title,
       description: values.description || undefined,
       category: values.category,
-      scope: values.scope,
+      scope: lockedScope ?? values.scope,
       relatedGroupId,
       startTime: startIso,
       endTime: endIso,
@@ -182,14 +184,23 @@ export function EventEditor({
             ))}
           </select>
         </label>
-        <label className="space-y-1 text-sm">
-          <span>Scope</span>
-          <select {...register('scope')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-white">
-            <option value="school">School-wide</option>
-            <option value="group">Group scoped</option>
-            <option value="academic">Academic</option>
-          </select>
-        </label>
+        {lockedScope ? (
+          <div className="space-y-1 text-sm">
+            <span>Scope</span>
+            <div className="rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-white/75">
+              {lockedScope === 'group' ? 'Group scoped' : lockedScope === 'school' ? 'School-wide' : 'Academic'}
+            </div>
+          </div>
+        ) : (
+          <label className="space-y-1 text-sm">
+            <span>Scope</span>
+            <select {...register('scope')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2 text-white">
+              <option value="school">School-wide</option>
+              <option value="group">Group scoped</option>
+              <option value="academic">Academic</option>
+            </select>
+          </label>
+        )}
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <label className="space-y-1 text-sm">

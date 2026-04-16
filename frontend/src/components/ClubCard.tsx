@@ -19,6 +19,7 @@ type Props = {
 
 export function ClubCard({ club, joined, manageable, membershipState = joined ? 'approved_member' : 'not_joined', nextEvent, onJoin, onLeave, onOpen }: Props) {
   const handleAction = () => {
+    if (manageable) return;
     if (joined || membershipState === 'pending_member') {
       onLeave?.(club.id);
     } else {
@@ -51,7 +52,7 @@ export function ClubCard({ club, joined, manageable, membershipState = joined ? 
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         {manageable ? <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-emerald-100">Managing</span> : null}
-        {joined ? <span className="rounded-full bg-indigo-500/20 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-indigo-100">Member</span> : null}
+        {joined && !manageable ? <span className="rounded-full bg-indigo-500/20 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-indigo-100">Member</span> : null}
         {membershipState === 'pending_member' ? <span className="rounded-full bg-amber-500/20 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-amber-50">Pending approval</span> : null}
         {!joined && !manageable && membershipState !== 'pending_member' ? (
           <span className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-white/60">
@@ -94,7 +95,7 @@ export function ClubCard({ club, joined, manageable, membershipState = joined ? 
             Open club
           </button>
         )}
-        {(onJoin || onLeave) && (
+        {(onJoin || onLeave) && !manageable && (
           <button
             type="button"
             disabled={club.membershipMode === 'invite_only' && !joined}

@@ -148,7 +148,7 @@ function toPersonalEventItem(
     },
     metadata: {
       sourceDataset: event.sourceMetadata?.sourceDataset,
-      visibilityReason: privateLinksHidden ? 'Links unlock after membership approval.' : undefined
+      visibilityReason: privateLinksHidden ? 'Links become readable only after membership approval.' : undefined
     }
   };
 }

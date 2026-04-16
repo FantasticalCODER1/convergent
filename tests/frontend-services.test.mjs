@@ -20,6 +20,10 @@ test('membership, RSVP, and import writes use callable Functions for privileged 
   const clubsService = readFileSync(new URL('../frontend/src/services/clubsService.ts', import.meta.url), 'utf8');
   const eventsService = readFileSync(new URL('../frontend/src/services/eventsService.ts', import.meta.url), 'utf8');
   assert.match(clubsService, /'setClubMembership'/);
+  assert.match(clubsService, /'createClubPost'/);
+  assert.match(clubsService, /'saveClubMetadata'/);
+  assert.doesNotMatch(clubsService, /addDoc\(.*posts/);
+  assert.doesNotMatch(clubsService, /setDoc\(/);
   assert.match(eventsService, /'setEventRsvp'/);
   assert.match(eventsService, /'applyEventImport'/);
 });

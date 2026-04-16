@@ -60,7 +60,8 @@ export function stripPrivatePostLinks(post: PostRecord, allowPrivateLinks: boole
 }
 
 export function getClubJoinActionLabel(accessState: ClubAccessState, membershipMode?: Club['membershipMode']) {
-  if (accessState === 'manager' || accessState === 'approved_member') return 'Leave club';
+  if (accessState === 'manager') return 'Managing club';
+  if (accessState === 'approved_member') return 'Leave club';
   if (accessState === 'pending_member') return 'Cancel request';
   if (membershipMode === 'approval_required') return 'Request to join';
   if (membershipMode === 'invite_only') return 'Invite only';

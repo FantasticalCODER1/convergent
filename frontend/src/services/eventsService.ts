@@ -5,7 +5,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  orderBy,
   query,
   serverTimestamp,
   updateDoc,
@@ -17,17 +16,10 @@ import { callFunction } from '../firebase/functions';
 import { firestore } from '../firebase/firestore';
 import { mapEventData, normalizeString } from './recordMappers';
 
-const eventsRef = collection(firestore, 'events');
 const rsvpsRef = collection(firestore, 'eventRsvps');
 
 function mapEvent(snapshot: any): EventRecord {
   return mapEventData(snapshot.id, snapshot.data());
-}
-
-function toIso(value?: Timestamp | null | string) {
-  if (!value) return undefined;
-  if (typeof value === 'string') return value;
-  return value.toDate().toISOString();
 }
 
 function toTimestamp(value: string | Date) {
@@ -57,9 +49,7 @@ export type EventInput = {
 };
 
 export async function listEvents(): Promise<EventRecord[]> {
-  const q = query(eventsRef, orderBy('startTime'));
-  const snap = await getDocs(q);
-  return snap.docs.map((docSnap) => mapEvent(docSnap));
+  return callFunction<undefined, EventRecord[]>('listVisibleEvents', undefined);
 }
 
 function buildLegacyEventType(input: EventInput) {
@@ -103,13 +93,13 @@ export async function saveEvent(input: EventInput, author?: AppUser) {
     updatedAt: serverTimestamp()
   };
   if (input.id) {
-    const eventRef = doc(eventsRef, input.id);
+    const eventRef = doc(firestore, 'events', input.id);
     await updateDoc(eventRef, payload);
     const snap = await getDoc(eventRef);
     return mapEvent(snap);
   }
 
-  const docRef = await addDoc(eventsRef, {
+  const docRef = await addDoc(collection(firestore, 'events'), {
     ...payload,
     rsvpCount: 0,
     createdByUid: author?.id ?? null,
@@ -153,7 +143,7 @@ export async function upsertImportedEvents(clubId: string, events: ImportedEvent
   });
 }
 
-export async function rsvpToEvent(eventId: string, user: AppUser, attending: boolean) {
+export async function rsvpToEvent(eventId: string, _user: AppUser, attending: boolean) {
   await callFunction<{ eventId: string; attending: boolean }, { ok: true; attending: boolean }>('setEventRsvp', {
     eventId,
     attending

@@ -14,6 +14,7 @@ import type { MembershipRequestRecord } from '../../services/clubsService';
 
 type Props = {
   club: Club;
+  editorMode?: 'admin' | 'manager';
   users: AppUser[];
   events: EventRecord[];
   certificates: CertificateRecord[];
@@ -50,6 +51,7 @@ type Props = {
 
 export function ClubManagementPanel({
   club,
+  editorMode = 'manager',
   users,
   events,
   certificates,
@@ -78,7 +80,7 @@ export function ClubManagementPanel({
         <p className="text-xs uppercase tracking-[0.3em] text-emerald-200">Club operations</p>
         <h2 className="mt-2 text-2xl font-semibold text-white">Manage {club.name}</h2>
         <p className="mt-2 text-sm text-white/70">
-          Membership approvals, official posts, events, attendance, imports, and certificate issuance stay inside the club workspace.
+          Membership approvals, official posts, events, attendance review, import guidance, and certificate issuance stay inside the club workspace.
         </p>
       </div>
 
@@ -86,6 +88,7 @@ export function ClubManagementPanel({
 
       <ClubEditor
         club={club}
+        mode={editorMode}
         onCreated={() => {
           void onRefresh();
         }}
@@ -94,6 +97,7 @@ export function ClubManagementPanel({
       {editingEvent ? (
         <EventEditor
           relatedGroupId={club.id}
+          lockedScope="group"
           event={editingEvent}
           allowedCategories={['club', 'society', 'supw', 'sta', 'centre_of_excellence']}
           title="Edit selected event"

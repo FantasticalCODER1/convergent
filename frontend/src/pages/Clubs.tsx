@@ -71,13 +71,13 @@ export default function Clubs() {
             </Link>
           </div>
           <p className="mt-3 text-sm text-white/65">
-            Only approved memberships feed private club links and your personal calendar. Approval-required clubs stay visible here, but their internal links remain hidden until managers approve you.
+            Only school-visible clubs appear in discovery. Approved memberships feed private club links and your personal calendar, while private clubs stay unreadable until you have real access.
           </p>
         </div>
         <EmptyStateCard
           eyebrow="Visibility"
-          title="Private links stay private"
-          body="Classroom links, Meet rooms, and members-only resource links exist in the model, but they are intentionally withheld in discovery mode until membership approval is complete."
+          title="Private clubs stay private"
+          body="Discovery only shows clubs your account can actually read. Classroom links, Meet rooms, and members-only resources are enforced by backend access rules instead of cosmetic hiding alone."
           tone="accent"
         />
       </section>

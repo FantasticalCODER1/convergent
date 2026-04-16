@@ -44,6 +44,115 @@ service cloud.firestore {
       return hasAllowedEmail() && request.auth.uid in resource.data.managerIds;
     }
 
+    function managesClubData(data) {
+      return isClubScopedRole()
+        && data.managerIds is list
+        && request.auth.uid in data.managerIds;
+    }
+
+    function clubVisibility(data) {
+      return data.visibility is string ? data.visibility : 'school';
+    }
+
+    function postVisibility(data) {
+      return data.visibility is string ? data.visibility : 'members';
+    }
+
+    function eventVisibility(data) {
+      return data.visibility is string ? data.visibility : (
+        isClubScopedEvent(data)
+          ? 'members'
+          : 'school'
+      );
+    }
+
+    function clubHasGatedContent(data) {
+      return (
+        (data.classroomLink is string && data.classroomLink.size() > 0)
+        || (data.classroomCode is string && data.classroomCode.size() > 0)
+        || (data.classroomCourseId is string && data.classroomCourseId.size() > 0)
+        || (data.defaultMeetLink is string && data.defaultMeetLink.size() > 0)
+        || (data.meetLink is string && data.meetLink.size() > 0)
+        || (data.resourceLinks is list && data.resourceLinks.size() > 0)
+      );
+    }
+
+    function membershipExists(clubId, uid) {
+      return exists(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(uid));
+    }
+
+    function membershipData(clubId, uid) {
+      return get(/databases/$(database)/documents/clubs/$(clubId)/memberships/$(uid)).data;
+    }
+
+    function hasApprovedMembership(clubId, uid) {
+      return hasAllowedEmail()
+        && membershipExists(clubId, uid)
+        && (
+          !(membershipData(clubId, uid).status is string)
+          || membershipData(clubId, uid).status == 'approved'
+        );
+    }
+
+    function canReadClubData(clubId, data) {
+      return hasAllowedEmail()
+        && (
+          isAdmin()
+          || managesClubData(data)
+          || (
+            clubVisibility(data) == 'school'
+            && !clubHasGatedContent(data)
+          )
+          || (
+            clubVisibility(data) in ['school', 'members', 'private']
+            && hasApprovedMembership(clubId, request.auth.uid)
+          )
+        );
+    }
+
+    function canReadClub(clubId) {
+      return canReadClubData(clubId, clubDoc(clubId).data);
+    }
+
+    function canReadPostData(clubId, data) {
+      return canReadClub(clubId)
+        && (
+          isAdmin()
+          || managesClub(clubId)
+          || postVisibility(data) == 'school'
+          || (
+            postVisibility(data) in ['members', 'private']
+            && hasApprovedMembership(clubId, request.auth.uid)
+          )
+        );
+    }
+
+    function isAcademicEvent(data) {
+      return (data.scope is string && data.scope == 'academic')
+        || (data.category is string && data.category == 'academic')
+        || (data.type is string && data.type == 'academic');
+    }
+
+    function canReadEventData(data) {
+      return hasAllowedEmail()
+        && (
+          isAdmin()
+          || isAcademicEvent(data)
+          || !isClubScopedEvent(data)
+          || (
+            canReadClub(eventGroupId(data))
+            && (
+              managesClub(eventGroupId(data))
+              || eventVisibility(data) == 'school'
+              || (
+                eventVisibility(data) in ['members', 'private']
+                && hasApprovedMembership(eventGroupId(data), request.auth.uid)
+              )
+            )
+          )
+        );
+    }
+
     function createsOnlySafeUserFields(uid) {
       return request.resource.data.email == request.auth.token.email
         && request.resource.data.email.matches('.*@doonschool\\.com$')
@@ -153,35 +262,28 @@ service cloud.firestore {
     }
 
     match /clubs/{clubId} {
-      allow read: if hasAllowedEmail();
+      allow read: if canReadClubData(clubId, resource.data);
       allow create: if isAdmin();
-      allow update, delete: if isAdmin() || isClubManager();
+      allow update, delete: if isAdmin();
 
       match /memberships/{userId} {
-        allow read: if hasAllowedEmail();
+        allow read: if hasAllowedEmail() && (
+          isAdmin()
+          || userId == request.auth.uid
+          || managesClub(clubId)
+        );
         allow create, delete: if false;
         allow update: if false;
       }
 
       match /posts/{postId} {
-        allow read: if hasAllowedEmail();
-        allow create: if hasAllowedEmail()
-          && (
-            request.resource.data.authorId == request.auth.uid
-            || request.resource.data.postedByUid == request.auth.uid
-          );
-        allow update, delete: if hasAllowedEmail()
-          && (
-            resource.data.authorId == request.auth.uid
-            || resource.data.postedByUid == request.auth.uid
-            || isAdmin()
-            || userCanManageClub(clubId)
-          );
+        allow read: if canReadPostData(clubId, resource.data);
+        allow create, update, delete: if false;
       }
     }
 
     match /events/{eventId} {
-      allow read: if hasAllowedEmail();
+      allow read: if canReadEventData(resource.data);
       allow create: if hasAllowedEmail() && canCreateEvent();
       allow update, delete: if hasAllowedEmail() && canUpdateExistingEvent();
     }

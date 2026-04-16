@@ -50,9 +50,14 @@ export function useEvents(options: Options = { autoLoad: true }) {
   const toggleRsvp = useCallback(
     async (eventId: string, attending: boolean) => {
       if (!user) throw new Error('Sign in to RSVP');
-      await rsvpToEvent(eventId, user, attending);
-      setRsvps((prev) => ({ ...prev, [eventId]: attending }));
-      await refresh();
+      try {
+        setError(null);
+        await rsvpToEvent(eventId, user, attending);
+        setRsvps((prev) => ({ ...prev, [eventId]: attending }));
+        await refresh();
+      } catch (err: any) {
+        setError(err?.message ?? 'Unable to update RSVP');
+      }
     },
     [user, refresh]
   );

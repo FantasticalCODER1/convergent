@@ -30,6 +30,11 @@ import type { AppUser } from '../types/User';
 
 type ClubTab = 'about' | 'posts' | 'events' | 'members' | 'certificates';
 
+function isPermissionDenied(error: unknown) {
+  const message = String((error as { code?: string; message?: string } | null)?.code ?? (error as { message?: string } | null)?.message ?? '');
+  return /permission-denied|permission denied|insufficient permissions|missing or insufficient permissions/i.test(message);
+}
+
 const tabMeta: Array<{ id: ClubTab; label: string; icon: typeof Info }> = [
   { id: 'about', label: 'About', icon: Info },
   { id: 'posts', label: 'Posts', icon: MessageSquareText },
@@ -53,7 +58,7 @@ export default function ClubDetail() {
     membershipRequestsForClub,
     reviewMembership
   } = useClubs();
-  const { events, refresh: refreshEvents, saveEvent, rsvps, toggleRsvp } = useEvents({ autoLoad: false });
+  const { events, refresh: refreshEvents, saveEvent, rsvps, toggleRsvp, error: eventsError } = useEvents({ autoLoad: false });
   const { certificates: myCertificates } = useCertificates();
   const [activeTab, setActiveTab] = useState<ClubTab>('about');
   const [club, setClub] = useState<Club | null>(null);
@@ -64,18 +69,31 @@ export default function ClubDetail() {
   const [loading, setLoading] = useState(true);
   const [loadingManagement, setLoadingManagement] = useState(false);
   const [loadingAttendance, setLoadingAttendance] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
     setLoading(true);
+    setAccessDenied(false);
     void (async () => {
-      const doc = await getClubById(id);
+      let doc: Club | null = null;
+      let denied = false;
       try {
-        await Promise.all([fetchPosts(id), refreshEvents()]);
+        doc = await getClubById(id);
+      } catch (error) {
+        if (isPermissionDenied(error)) {
+          denied = true;
+        } else {
+          throw error;
+        }
+      }
+      try {
+        await Promise.all([denied ? Promise.resolve([]) : fetchPosts(id), refreshEvents()]);
       } catch {}
       if (!cancelled) {
         setClub(doc ?? null);
+        setAccessDenied(denied);
         setLoading(false);
       }
     })();
@@ -203,6 +221,14 @@ export default function ClubDetail() {
   }
 
   if (!club) {
+    if (accessDenied) {
+      return (
+        <StateCard
+          title="Private club"
+          body="This club is not readable from your account. Private clubs are hidden entirely until you have approved membership or club management access."
+        />
+      );
+    }
     return <StateCard title="Club unavailable" body="This club record no longer exists." />;
   }
 
@@ -262,29 +288,35 @@ export default function ClubDetail() {
           </div>
 
           <div className="flex w-full max-w-sm flex-col gap-3 xl:items-end">
-            <button
-              type="button"
-              disabled={club.membershipMode === 'invite_only' && accessState !== 'approved_member' && !manageable}
-              onClick={() => (accessState === 'approved_member' || accessState === 'pending_member' ? leaveClub(club.id) : joinClub(club.id))}
-              className={clsx(
-                'rounded-2xl px-5 py-3 text-sm font-medium transition',
-                club.membershipMode === 'invite_only' && accessState !== 'approved_member' && !manageable
-                  ? 'bg-white/10 text-white/45'
-                  : accessState === 'approved_member' || accessState === 'pending_member'
-                    ? 'bg-rose-500 text-white hover:bg-rose-600'
-                    : 'bg-indigo-500 text-white hover:bg-indigo-600'
-              )}
-            >
-              {getClubJoinActionLabel(accessState, club.membershipMode)}
-            </button>
+            {!manageable ? (
+              <button
+                type="button"
+                disabled={club.membershipMode === 'invite_only' && accessState !== 'approved_member'}
+                onClick={() => (accessState === 'approved_member' || accessState === 'pending_member' ? leaveClub(club.id) : joinClub(club.id))}
+                className={clsx(
+                  'rounded-2xl px-5 py-3 text-sm font-medium transition',
+                  club.membershipMode === 'invite_only' && accessState !== 'approved_member'
+                    ? 'bg-white/10 text-white/45'
+                    : accessState === 'approved_member' || accessState === 'pending_member'
+                      ? 'bg-rose-500 text-white hover:bg-rose-600'
+                      : 'bg-indigo-500 text-white hover:bg-indigo-600'
+                )}
+              >
+                {getClubJoinActionLabel(accessState, club.membershipMode)}
+              </button>
+            ) : (
+              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-3 text-sm font-medium text-emerald-100">
+                You manage this club.
+              </div>
+            )}
             <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-sm text-white/70">
               {manageable
-                ? 'This group page is your operational workspace for approvals, posts, events, attendance, imports, and certificate issuance.'
+                ? 'This club workspace is visible because you manage it. Private membership access and private links are enforced in backend reads, not just hidden in the UI.'
                 : accessState === 'approved_member'
-                  ? 'Approved membership unlocks private event and post links here and feeds this group into your personal calendar automatically.'
-                  : accessState === 'pending_member'
-                    ? 'Your request is pending. Private links remain hidden until approval.'
-                    : 'You can browse the club and request to join here, but private meeting links remain hidden until approval.'}
+                  ? 'Approved membership makes private event and post links readable here and feeds this club into your personal calendar automatically.'
+                : accessState === 'pending_member'
+                    ? 'Your request is pending. Private content stays unreadable until approval is granted.'
+                    : 'Only school-visible clubs are browseable here. Private clubs are not readable until you have approved access.'}
             </div>
           </div>
         </div>
@@ -331,6 +363,7 @@ export default function ClubDetail() {
               onRsvp={toggleRsvp}
               manageable={manageable}
               canAccessPrivateContent={canAccessPrivateContent}
+              error={eventsError}
             />
           ) : null}
           {activeTab === 'members' ? (
@@ -398,6 +431,7 @@ export default function ClubDetail() {
               await refreshClubData();
             }}
             onRefresh={refreshClubData}
+            editorMode={user?.role === 'admin' ? 'admin' : 'manager'}
           />
         ) : null}
       </div>
@@ -443,7 +477,7 @@ function AboutTab({
               </div>
               <div className="flex items-start justify-between gap-3 border-b border-white/5 pb-3">
                 <span className="text-white/45">Private links</span>
-                <span className="text-right text-white">{canAccessPrivateContent ? 'Unlocked for approved members' : 'Hidden until approved'}</span>
+                <span className="text-right text-white">{canAccessPrivateContent ? 'Readable for approved members' : 'Not readable until approved'}</span>
               </div>
               <div className="flex items-start justify-between gap-3">
                 <span className="text-white/45">Membership model</span>
@@ -465,13 +499,13 @@ function AboutTab({
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              {canAccessPrivateContent && club.classroomLink ? (
+                  {canAccessPrivateContent && club.classroomLink ? (
                 <a href={club.classroomLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10">
                   Open Classroom
                   <ExternalLink className="size-4" />
                 </a>
               ) : null}
-              {canAccessPrivateContent && (club.defaultMeetLink ?? club.meetLink) ? (
+                  {canAccessPrivateContent && (club.defaultMeetLink ?? club.meetLink) ? (
                 <a href={club.defaultMeetLink ?? club.meetLink ?? ''} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10">
                   Open Default Meet
                   <ExternalLink className="size-4" />
@@ -590,7 +624,7 @@ function PostsTab({
                     </a>
                   ))}
                 </div>
-                {hasPrivateLinks ? <p className="mt-4 text-xs text-white/45">Private links are hidden until your membership is approved.</p> : null}
+                {hasPrivateLinks ? <p className="mt-4 text-xs text-white/45">Private links are not readable until your membership is approved.</p> : null}
               </div>
             );
           })}
@@ -605,13 +639,15 @@ function EventsTab({
   rsvps,
   onRsvp,
   manageable,
-  canAccessPrivateContent
+  canAccessPrivateContent,
+  error
 }: {
   events: EventRecord[];
   rsvps: Record<string, boolean>;
   onRsvp: (eventId: string, attending: boolean) => Promise<void>;
   manageable: boolean;
   canAccessPrivateContent: boolean;
+  error?: string | null;
 }) {
   return (
     <section className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-glass">
@@ -621,18 +657,20 @@ function EventsTab({
           <h2 className="mt-2 text-2xl font-semibold text-white">Club calendar and activity</h2>
         </div>
         <div className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-2 text-sm text-white/60">
-          {manageable ? 'Create and edit from the operations rail.' : 'Private links appear only after approval.'}
+          {manageable ? 'Create and edit from the operations rail.' : 'Private links become readable only after approval.'}
         </div>
       </div>
+      {error ? <div className="rounded-2xl border border-rose-300/20 bg-rose-500/5 p-4 text-sm text-rose-100">{error}</div> : null}
       {events.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-sm text-white/60">No club events have been created yet.</div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {events.map((event) => (
             <div key={event.id} className="space-y-2">
-              <EventCard event={event} attending={rsvps[event.id]} onRsvp={onRsvp} />
+              <EventCard event={event} attending={rsvps[event.id]} onRsvp={event.attendanceEnabled ? onRsvp : undefined} />
+              {!event.attendanceEnabled ? <p className="text-xs text-white/45">RSVP is disabled for this event.</p> : null}
               {!canAccessPrivateContent && (event.classroomLink || event.classroomPostLink || event.meetLink || event.resourceLinks.length > 0) ? (
-                <p className="text-xs text-white/45">Private links are hidden until membership approval.</p>
+                <p className="text-xs text-white/45">Private links are not readable until membership approval.</p>
               ) : null}
             </div>
           ))}

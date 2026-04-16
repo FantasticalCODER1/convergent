@@ -9,6 +9,8 @@ const USER_ROLES = ['student', 'manager', 'master', 'admin'];
 const CLUB_MANAGER_ROLES = ['manager', 'master'];
 const CERTIFICATE_ISSUER_ROLES = ['manager', 'master', 'admin'];
 const EVENT_TYPES = ['club', 'school', 'competition'];
+const CLUB_VISIBILITIES = ['school', 'members', 'managers', 'private'];
+const CLUB_MEMBERSHIP_MODES = ['open', 'approval_required', 'invite_only'];
 
 function normalizeRole(role) {
   if (role === 'teacher') return 'master';
@@ -79,6 +81,256 @@ function normalizeResourceLinks(value) {
       };
     })
     .filter(Boolean);
+}
+
+function normalizeVisibility(value, fallback = 'school') {
+  const normalized = normalizeOptionalString(value);
+  return normalized && CLUB_VISIBILITIES.includes(normalized) ? normalized : fallback;
+}
+
+function normalizeMembershipMode(value) {
+  const normalized = normalizeOptionalString(value);
+  return normalized && CLUB_MEMBERSHIP_MODES.includes(normalized) ? normalized : 'open';
+}
+
+function normalizeNonNegativeNumber(value, fallback = 0) {
+  if (value === undefined || value === null || value === '') return fallback;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    throw new functions.https.HttpsError('invalid-argument', 'Expected a non-negative number.');
+  }
+  return numeric;
+}
+
+function normalizeClubGroupType(value) {
+  const normalized = normalizeOptionalString(value);
+  return normalized || 'club';
+}
+
+function approvedMembershipStatus(status) {
+  return !status || status === 'approved';
+}
+
+function callerManagesClubData(caller, clubData) {
+  if (caller.role === 'admin') return true;
+  if (!isClubScopedRole(caller.role)) return false;
+  return normalizeStringArray(clubData?.managerIds).includes(caller.uid);
+}
+
+function clubHasGatedContent(clubData) {
+  return Boolean(
+    normalizeOptionalString(clubData?.classroomLink)
+    || normalizeOptionalString(clubData?.classroomCode)
+    || normalizeOptionalString(clubData?.classroomCourseId)
+    || normalizeOptionalString(clubData?.defaultMeetLink)
+    || normalizeOptionalString(clubData?.meetLink)
+    || normalizeResourceLinks(clubData?.resourceLinks).length > 0
+  );
+}
+
+function getEventGroupId(data) {
+  return normalizeOptionalString(data?.relatedGroupId) || normalizeOptionalString(data?.clubId);
+}
+
+function isAcademicEventData(data) {
+  return (
+    normalizeOptionalString(data?.scope) === 'academic'
+    || normalizeOptionalString(data?.category) === 'academic'
+    || normalizeOptionalString(data?.type) === 'academic'
+  );
+}
+
+async function getMembershipSnapshot(clubId, userId) {
+  return admin.firestore().doc(`clubs/${clubId}/memberships/${userId}`).get();
+}
+
+async function callerHasApprovedMembership(caller, clubId) {
+  if (caller.role === 'admin') return true;
+  const membershipSnap = await getMembershipSnapshot(clubId, caller.uid);
+  if (!membershipSnap.exists) return false;
+  return approvedMembershipStatus(membershipSnap.data()?.status);
+}
+
+async function canReadClubSnapshot(caller, clubSnap) {
+  const clubData = clubSnap.data() || {};
+  if (callerManagesClubData(caller, clubData)) return true;
+
+  const visibility = normalizeVisibility(clubData.visibility, 'school');
+  if (visibility === 'school' && !clubHasGatedContent(clubData)) {
+    return true;
+  }
+  if (visibility === 'managers') {
+    return false;
+  }
+
+  return callerHasApprovedMembership(caller, clubSnap.id);
+}
+
+async function assertClubReadable(caller, clubId) {
+  const clubSnap = await getClubSnapshot(clubId);
+  if (!(await canReadClubSnapshot(caller, clubSnap))) {
+    throw new functions.https.HttpsError('permission-denied', 'You do not have access to this club.');
+  }
+  return clubSnap;
+}
+
+async function canReadPostData(caller, clubSnap, postData) {
+  if (!(await canReadClubSnapshot(caller, clubSnap))) {
+    return false;
+  }
+  if (callerManagesClubData(caller, clubSnap.data() || {})) {
+    return true;
+  }
+
+  const visibility = normalizeVisibility(postData?.visibility, 'members');
+  if (visibility === 'school') {
+    return true;
+  }
+  if (visibility === 'managers') {
+    return false;
+  }
+
+  return callerHasApprovedMembership(caller, clubSnap.id);
+}
+
+async function canReadEventData(caller, eventData) {
+  if (caller.role === 'admin') return true;
+
+  const clubId = getEventGroupId(eventData);
+  if (!clubId || isAcademicEventData(eventData)) {
+    return true;
+  }
+
+  const clubSnap = await getClubSnapshot(clubId).catch(() => null);
+  if (!clubSnap) {
+    return false;
+  }
+  if (!(await canReadClubSnapshot(caller, clubSnap))) {
+    return false;
+  }
+  if (callerManagesClubData(caller, clubSnap.data() || {})) {
+    return true;
+  }
+
+  const visibility = normalizeVisibility(eventData?.visibility, 'members');
+  if (visibility === 'school') {
+    return true;
+  }
+  if (visibility === 'managers') {
+    return false;
+  }
+
+  return callerHasApprovedMembership(caller, clubId);
+}
+
+function toClubRecord(snapshot) {
+  const data = snapshot.data() || {};
+  const defaultMeetLink = normalizeOptionalString(data.defaultMeetLink) || normalizeOptionalString(data.meetLink);
+  return {
+    id: snapshot.id,
+    name: normalizeOptionalString(data.name) || 'Unnamed club',
+    description: normalizeOptionalString(data.description) || '',
+    category: normalizeOptionalString(data.category) || 'club',
+    groupType: normalizeClubGroupType(data.groupType),
+    mic: normalizeOptionalString(data.mic) || 'N/A',
+    schedule: normalizeOptionalString(data.schedule) || 'TBD',
+    meetingLocation: normalizeOptionalString(data.meetingLocation) || undefined,
+    logoUrl: normalizeOptionalString(data.logoUrl) || undefined,
+    classroomLink: normalizeOptionalString(data.classroomLink),
+    classroomCode: normalizeOptionalString(data.classroomCode),
+    classroomCourseId: normalizeOptionalString(data.classroomCourseId),
+    defaultMeetLink,
+    meetLink: defaultMeetLink,
+    resourceLinks: normalizeResourceLinks(data.resourceLinks),
+    membershipMode: normalizeMembershipMode(data.membershipMode),
+    visibility: normalizeVisibility(data.visibility, 'school'),
+    managerIds: normalizeStringArray(data.managerIds),
+    memberCount: typeof data.memberCount === 'number' ? data.memberCount : 0,
+    createdAt: timestampToIso(data.createdAt),
+    updatedAt: timestampToIso(data.updatedAt)
+  };
+}
+
+function toPostRecord(snapshot, fallbackGroupId) {
+  const data = snapshot.data() || {};
+  return {
+    id: snapshot.id,
+    title: normalizeOptionalString(data.title) || 'Update',
+    content: normalizeOptionalString(data.content) || normalizeOptionalString(data.text) || '',
+    category: normalizeOptionalString(data.category) || 'club',
+    relatedGroupId: normalizeOptionalString(data.relatedGroupId) || normalizeOptionalString(data.clubId) || fallbackGroupId || null,
+    linkedEventId: normalizeOptionalString(data.linkedEventId),
+    classroomLink: normalizeOptionalString(data.classroomLink),
+    meetLink: normalizeOptionalString(data.meetLink),
+    resourceLinks: normalizeResourceLinks(data.resourceLinks),
+    postedByUid: normalizeOptionalString(data.postedByUid) || normalizeOptionalString(data.authorId) || 'unknown',
+    postedByNameSnapshot:
+      normalizeOptionalString(data.postedByNameSnapshot)
+      || normalizeOptionalString(data.authorName)
+      || 'Unknown author',
+    postedByEmailSnapshot:
+      normalizeOptionalString(data.postedByEmailSnapshot)
+      || normalizeOptionalString(data.authorEmail)
+      || '',
+    postedByRoleSnapshot:
+      normalizeOptionalString(data.postedByRoleSnapshot)
+      || normalizeOptionalString(data.authorRole)
+      || 'student',
+    visibility: normalizeVisibility(data.visibility, 'members'),
+    createdAt: timestampToIso(data.createdAt),
+    updatedAt: timestampToIso(data.updatedAt)
+  };
+}
+
+function toEventRecord(snapshot) {
+  const data = snapshot.data() || {};
+  const relatedGroupId = getEventGroupId(data);
+  return {
+    id: snapshot.id,
+    title: normalizeOptionalString(data.title) || 'Untitled event',
+    description: normalizeOptionalString(data.description) || undefined,
+    category: normalizeOptionalString(data.category) || (relatedGroupId ? 'club' : 'school_wide'),
+    scope: normalizeOptionalString(data.scope) || (isAcademicEventData(data) ? 'academic' : relatedGroupId ? 'group' : 'school'),
+    relatedGroupId: relatedGroupId || undefined,
+    startTime: timestampToIso(data.startTime) || timestampToIso(data.createdAt),
+    endTime: timestampToIso(data.endTime) || timestampToIso(data.startTime) || timestampToIso(data.createdAt),
+    allDay: !!data.allDay,
+    location: normalizeOptionalString(data.location) || undefined,
+    classroomLink: normalizeOptionalString(data.classroomLink),
+    classroomCourseId: normalizeOptionalString(data.classroomCourseId),
+    classroomPostLink: normalizeOptionalString(data.classroomPostLink),
+    meetLink: normalizeOptionalString(data.meetLink),
+    resourceLinks: normalizeResourceLinks(data.resourceLinks),
+    attendanceEnabled: data.attendanceEnabled !== false,
+    createdByUid: normalizeOptionalString(data.createdByUid) || normalizeOptionalString(data.authorId) || undefined,
+    createdByNameSnapshot:
+      normalizeOptionalString(data.createdByNameSnapshot)
+      || normalizeOptionalString(data.authorName)
+      || normalizeOptionalString(data.postedByNameSnapshot)
+      || undefined,
+    createdByEmailSnapshot:
+      normalizeOptionalString(data.createdByEmailSnapshot)
+      || normalizeOptionalString(data.authorEmail)
+      || normalizeOptionalString(data.postedByEmailSnapshot)
+      || undefined,
+    createdByRoleSnapshot:
+      normalizeOptionalString(data.createdByRoleSnapshot)
+      || normalizeOptionalString(data.authorRole)
+      || normalizeOptionalString(data.postedByRoleSnapshot)
+      || undefined,
+    visibility: normalizeVisibility(data.visibility, relatedGroupId ? 'members' : 'school'),
+    sourceMetadata: {
+      source: normalizeOptionalString(data?.sourceMetadata?.source) || normalizeOptionalString(data.source) || undefined,
+      sourceId: normalizeOptionalString(data?.sourceMetadata?.sourceId) || normalizeOptionalString(data.sourceId) || undefined,
+      sourceDataset: normalizeOptionalString(data?.sourceMetadata?.sourceDataset) || normalizeOptionalString(data.sourceDataset) || undefined,
+      sourceTerm: normalizeOptionalString(data?.sourceMetadata?.sourceTerm) || normalizeOptionalString(data.sourceTerm) || undefined,
+      sourceHash: normalizeOptionalString(data?.sourceMetadata?.sourceHash) || normalizeOptionalString(data.sourceHash) || undefined
+    },
+    clubId: relatedGroupId || undefined,
+    rsvpCount: typeof data.rsvpCount === 'number' ? data.rsvpCount : 0,
+    createdAt: timestampToIso(data.createdAt),
+    updatedAt: timestampToIso(data.updatedAt)
+  };
 }
 
 async function getCallerContext(context) {
@@ -209,6 +461,35 @@ exports.updateUserRole = functions.https.onCall(async (data, context) => {
   return { ok: true };
 });
 
+exports.listVisibleClubs = functions.https.onCall(async (_data, context) => {
+  const caller = await getCallerContext(context);
+  const snap = await admin.firestore().collection('clubs').orderBy('name').get();
+  const visible = await Promise.all(
+    snap.docs.map(async (clubDoc) => ((await canReadClubSnapshot(caller, clubDoc)) ? toClubRecord(clubDoc) : null))
+  );
+  return visible.filter(Boolean);
+});
+
+exports.listClubPosts = functions.https.onCall(async (data, context) => {
+  const caller = await getCallerContext(context);
+  const clubId = normalizeRequiredString(data?.clubId, 'clubId');
+  const clubSnap = await assertClubReadable(caller, clubId);
+  const snap = await admin.firestore().collection(`clubs/${clubId}/posts`).orderBy('createdAt', 'desc').get();
+  const visible = await Promise.all(
+    snap.docs.map(async (postDoc) => ((await canReadPostData(caller, clubSnap, postDoc.data())) ? toPostRecord(postDoc, clubId) : null))
+  );
+  return visible.filter(Boolean);
+});
+
+exports.listVisibleEvents = functions.https.onCall(async (_data, context) => {
+  const caller = await getCallerContext(context);
+  const snap = await admin.firestore().collection('events').orderBy('startTime').get();
+  const visible = await Promise.all(
+    snap.docs.map(async (eventDoc) => ((await canReadEventData(caller, eventDoc.data())) ? toEventRecord(eventDoc) : null))
+  );
+  return visible.filter(Boolean);
+});
+
 exports.listClubUsers = functions.https.onCall(async (data, context) => {
   const caller = await getCallerContext(context);
   const clubId = normalizeRequiredString(data?.clubId, 'clubId');
@@ -248,6 +529,141 @@ exports.listClubCertificates = functions.https.onCall(async (data, context) => {
   return snap.docs
     .map((doc) => toCertificateRecord(doc))
     .sort((a, b) => String(b.issuedAt || '').localeCompare(String(a.issuedAt || '')));
+});
+
+exports.createClubPost = functions.https.onCall(async (data, context) => {
+  const caller = await getCallerContext(context);
+  const clubId = normalizeRequiredString(data?.clubId, 'clubId');
+  await assertClubAccess(caller, clubId);
+
+  const linkedEventId = normalizeOptionalString(data?.linkedEventId);
+  if (linkedEventId) {
+    const linkedEventSnap = await admin.firestore().doc(`events/${linkedEventId}`).get();
+    if (!linkedEventSnap.exists) {
+      throw new functions.https.HttpsError('not-found', 'Linked event not found.');
+    }
+    if (getEventGroupId(linkedEventSnap.data()) !== clubId) {
+      throw new functions.https.HttpsError('failed-precondition', 'Linked event must belong to the same club.');
+    }
+  }
+
+  const postRef = await admin.firestore().collection(`clubs/${clubId}/posts`).add({
+    clubId,
+    relatedGroupId: clubId,
+    title: normalizeOptionalString(data?.title) || 'Club update',
+    content: normalizeRequiredString(data?.content, 'content'),
+    category: normalizeOptionalString(data?.category) || 'club',
+    linkedEventId,
+    classroomLink: normalizeOptionalString(data?.classroomLink),
+    meetLink: normalizeOptionalString(data?.meetLink),
+    resourceLinks: normalizeResourceLinks(data?.resourceLinks),
+    visibility: normalizeVisibility(data?.visibility, 'members'),
+    authorId: caller.uid,
+    authorName: caller.name,
+    authorEmail: caller.email,
+    authorRole: caller.role,
+    postedByUid: caller.uid,
+    postedByNameSnapshot: caller.name,
+    postedByEmailSnapshot: caller.email,
+    postedByRoleSnapshot: caller.role,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp()
+  });
+
+  return toPostRecord(await postRef.get(), clubId);
+});
+
+exports.saveClubMetadata = functions.https.onCall(async (data, context) => {
+  const caller = await getCallerContext(context);
+  const clubId = normalizeOptionalString(data?.id);
+  const clubRef = clubId
+    ? admin.firestore().doc(`clubs/${clubId}`)
+    : admin.firestore().collection('clubs').doc();
+  const existingSnap = clubId ? await clubRef.get() : null;
+  const existingData = existingSnap?.exists ? existingSnap.data() || {} : {};
+
+  if (!clubId && caller.role !== 'admin') {
+    throw new functions.https.HttpsError('permission-denied', 'Only admins can create clubs.');
+  }
+
+  if (caller.role !== 'admin') {
+    if (!clubId) {
+      throw new functions.https.HttpsError('permission-denied', 'Only admins can create clubs.');
+    }
+    await assertClubAccess(caller, clubId);
+
+    const allowedManagerFields = new Set(['id', 'description', 'schedule', 'meetingLocation']);
+    const submittedFields = Object.keys(data || {});
+    const disallowed = submittedFields.filter((key) => !allowedManagerFields.has(key));
+    if (disallowed.length > 0) {
+      throw new functions.https.HttpsError('permission-denied', 'Managers can only update the club description, schedule, and meeting location.');
+    }
+
+    await clubRef.set(
+      {
+        description: normalizeOptionalString(data?.description) || '',
+        schedule: normalizeRequiredString(data?.schedule ?? existingData.schedule, 'schedule'),
+        meetingLocation: normalizeOptionalString(data?.meetingLocation),
+        updatedAt: FieldValue.serverTimestamp()
+      },
+      { merge: true }
+    );
+
+    return toClubRecord(await clubRef.get());
+  }
+
+  const managerIds = Array.from(new Set(normalizeStringArray(data?.managerIds)));
+  const payload = {
+    name: normalizeRequiredString(data?.name ?? existingData.name, 'name'),
+    description: normalizeOptionalString(data?.description) || '',
+    category: normalizeRequiredString(data?.category ?? existingData.category, 'category'),
+    groupType: normalizeClubGroupType(data?.groupType ?? existingData.groupType),
+    mic: normalizeRequiredString(data?.mic ?? existingData.mic, 'mic'),
+    schedule: normalizeRequiredString(data?.schedule ?? existingData.schedule, 'schedule'),
+    meetingLocation: normalizeOptionalString(
+      Object.prototype.hasOwnProperty.call(data || {}, 'meetingLocation') ? data?.meetingLocation : existingData.meetingLocation
+    ),
+    logoUrl: normalizeOptionalString(
+      Object.prototype.hasOwnProperty.call(data || {}, 'logoUrl') ? data?.logoUrl : existingData.logoUrl
+    ),
+    classroomLink: normalizeOptionalString(
+      Object.prototype.hasOwnProperty.call(data || {}, 'classroomLink') ? data?.classroomLink : existingData.classroomLink
+    ),
+    classroomCode: normalizeOptionalString(
+      Object.prototype.hasOwnProperty.call(data || {}, 'classroomCode') ? data?.classroomCode : existingData.classroomCode
+    ),
+    classroomCourseId: normalizeOptionalString(
+      Object.prototype.hasOwnProperty.call(data || {}, 'classroomCourseId') ? data?.classroomCourseId : existingData.classroomCourseId
+    ),
+    defaultMeetLink: normalizeOptionalString(
+      Object.prototype.hasOwnProperty.call(data || {}, 'defaultMeetLink') ? data?.defaultMeetLink : existingData.defaultMeetLink
+    ),
+    meetLink: normalizeOptionalString(
+      Object.prototype.hasOwnProperty.call(data || {}, 'meetLink') ? data?.meetLink : existingData.meetLink
+    ),
+    resourceLinks: Object.prototype.hasOwnProperty.call(data || {}, 'resourceLinks')
+      ? normalizeResourceLinks(data?.resourceLinks)
+      : normalizeResourceLinks(existingData.resourceLinks),
+    membershipMode: normalizeMembershipMode(data?.membershipMode ?? existingData.membershipMode),
+    visibility: normalizeVisibility(data?.visibility ?? existingData.visibility, 'school'),
+    managerIds: managerIds.length > 0 ? managerIds : normalizeStringArray(existingData.managerIds),
+    memberCount: normalizeNonNegativeNumber(
+      Object.prototype.hasOwnProperty.call(data || {}, 'memberCount') ? data?.memberCount : existingData.memberCount,
+      0
+    ),
+    updatedAt: FieldValue.serverTimestamp()
+  };
+
+  const persistedPayload = existingSnap?.exists
+    ? payload
+    : {
+        ...payload,
+        managerIds: payload.managerIds.length > 0 ? payload.managerIds : [caller.uid],
+        createdAt: FieldValue.serverTimestamp()
+      };
+
+  await clubRef.set(persistedPayload, { merge: true });
+  return toClubRecord(await clubRef.get());
 });
 
 exports.setClubMembership = functions.https.onCall(async (data, context) => {
@@ -430,6 +846,12 @@ exports.setEventRsvp = functions.https.onCall(async (data, context) => {
   if (!eventSnap.exists) {
     throw new functions.https.HttpsError('not-found', 'Event not found.');
   }
+  if (!(await canReadEventData(caller, eventSnap.data() || {}))) {
+    throw new functions.https.HttpsError('permission-denied', 'You are not eligible to RSVP for this event.');
+  }
+  if (eventSnap.data()?.attendanceEnabled === false && attending) {
+    throw new functions.https.HttpsError('failed-precondition', 'Attendance tracking is disabled for this event.');
+  }
 
   const rsvpRef = admin.firestore().doc(`eventRsvps/${eventId}_${caller.uid}`);
   const existing = await rsvpRef.get();
@@ -569,7 +991,7 @@ function normalizeEventPayload(data, fallbackClubId) {
     meetLink: normalizeOptionalString(data?.meetLink),
     resourceLinks: normalizeResourceLinks(data?.resourceLinks),
     attendanceEnabled: data?.attendanceEnabled !== false,
-    visibility: normalizeOptionalString(data?.visibility) || 'members',
+    visibility: normalizeVisibility(data?.visibility, 'members'),
     type,
     relatedGroupId: clubId,
     clubId,

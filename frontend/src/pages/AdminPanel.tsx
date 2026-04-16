@@ -103,7 +103,7 @@ function AdminInner() {
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-white/50">Inbox review</p>
             <h2 className="mt-2 text-xl font-semibold text-white">School email change proposals</h2>
-            <p className="text-sm text-white/60">The review surface is live. External inbox ingestion and parsing remain scaffolded until a server-side intake path is wired.</p>
+            <p className="text-sm text-white/60">Admins can review and apply proposal records here. External inbox ingestion and parsing are still scaffolded and are not live in this repo.</p>
           </div>
           {reviewStatus ? <p className="text-sm text-white/60">{reviewStatus}</p> : null}
         </div>
@@ -114,11 +114,11 @@ function AdminInner() {
           <Metric label="Logs" value={String(changeLogCount)} hint="Recorded review actions" />
         </div>
         {pendingProposals.length === 0 ? (
-          <EmptyStateCard
-            eyebrow="Review queue"
-            title="No pending proposals yet"
-            body="The review-first architecture is in place, but no inbound inbox integration is live in this repo yet. When proposal docs are added, they will appear here for approval or rejection before any calendar change is applied."
-          />
+              <EmptyStateCard
+                eyebrow="Review queue"
+                title="No pending proposals yet"
+                body="The approval UI is live, but there is still no inbound inbox integration in this repo. Proposal documents have to exist before anything can be reviewed or applied here."
+              />
         ) : (
           <div className="grid gap-4">
             {pendingProposals.map((proposal) => (
@@ -176,6 +176,7 @@ function AdminInner() {
           </div>
           <EventEditor
             event={editingSchoolEvent}
+            lockedScope="school"
             allowedCategories={['school_wide', 'academic', 'meals']}
             title="School-wide event manager"
             description="Global events are created here; club events belong on club pages."
@@ -264,13 +265,13 @@ function AdminInner() {
         </div>
         <div className="rounded-3xl border border-white/5 bg-white/5 p-6 shadow-glass">
           <h2 className="text-xl font-semibold text-white">Imports</h2>
-          <p className="mt-2 text-sm text-white/60">Calendar imports remain club-scoped so imported activity lands in the correct workspace. Timetable and meal datasets now also have a reserved place in the model.</p>
+          <p className="mt-2 text-sm text-white/60">Calendar imports remain a server-side, club-scoped workflow. The model also reserves space for timetable and meal datasets, but those feeds are not a complete admin ingestion system yet.</p>
           {datasets.length === 0 ? (
             <div className="mt-4">
               <EmptyStateCard
                 eyebrow="Datasets"
                 title="No timetable datasets published yet"
-                body="The schedule dataset collections and UI placeholders now exist. Admin can start adding metadata and imports without changing route structure again."
+                body="The dataset collections exist, but this page is still only reporting readiness metadata. It is not a full timetable or meal import console yet."
               />
             </div>
           ) : (
