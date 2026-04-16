@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { EventRecord } from '../types/Event';
 import {
   EventInput,
+  EventListOptions,
   ImportedEventPayload,
   listEvents,
   listRsvpsForUser,
@@ -11,7 +12,7 @@ import {
 } from '../services/eventsService';
 import { useAuth } from './useAuth';
 
-type Options = { autoLoad?: boolean };
+type Options = EventListOptions & { autoLoad?: boolean };
 
 export function useEvents(options: Options = { autoLoad: true }) {
   const { user } = useAuth();
@@ -24,7 +25,10 @@ export function useEvents(options: Options = { autoLoad: true }) {
     setLoading(true);
     setError(null);
     try {
-      const data = await listEvents();
+      const data = await listEvents({
+        rangeStart: options.rangeStart,
+        rangeEnd: options.rangeEnd
+      });
       setEvents(data);
       if (user) {
         const userRsvps = await listRsvpsForUser(user.id);
@@ -37,7 +41,7 @@ export function useEvents(options: Options = { autoLoad: true }) {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [options.rangeEnd, options.rangeStart, user?.id]);
 
   useEffect(() => {
     if (options.autoLoad) {

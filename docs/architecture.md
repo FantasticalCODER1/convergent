@@ -27,7 +27,7 @@ Firestore  Storage  Cloud Functions
 - `/join-clubs` is the discovery and self-serve membership page
 - `/my-clubs` is the owned membership/workspace page
 - `/my-clubs/:id` is the group detail workspace
-- `/classes` combines timetable, meals, and Classroom foundations
+- `/classes` is a truthful read-model surface for timetable/meals plus attached Classroom recovery
 - `/certificates` remains user-facing
 - `/admin` remains restricted to admins
 
@@ -45,7 +45,7 @@ Firestore  Storage  Cloud Functions
   - `applyEventImport`
 - Cloud Functions still own aggregate-sensitive membership and RSVP writes.
 - Firestore rules now allow the richer user profile shape plus read access for timetable dataset collections.
-- Calendar dataset ingestion remains server-side through `scripts/importCalendarData.ts`.
+- Calendar dataset ingestion remains an operator workflow through `scripts/importCalendarData.ts`; there is no in-app import console.
 
 ## Domain Intent
 - `posts` are communication records and do not imply time.
@@ -58,5 +58,5 @@ Firestore  Storage  Cloud Functions
 ## Operational Reality
 - Membership approval now exists end-to-end for clubs that use `approval_required`, while open clubs still remain self-serve.
 - The main calendar intentionally uses a calm overview layer and a separate detailed day view rather than rendering every timetable block directly into month cells.
-- Timetable and meal surfaces are intentionally placeholder-first until live datasets arrive.
+- Timetable and meal surfaces are intentionally dataset-backed and limited until live cohort mappings exist.
 - Legacy `clubs` and `events` field names are preserved where necessary to avoid breaking the current stack during the refactor.

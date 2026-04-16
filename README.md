@@ -1,12 +1,12 @@
 # Convergent
 
-Convergent is a co-curricular management portal for The Doon School. The current codebase is a Firebase-backed React application with working modules for authentication, clubs, events, calendar, certificates, limited Classroom attachment/support, and an admin panel. Attendance, logs, and reports are not implemented yet.
+Convergent is a co-curricular management portal for The Doon School. The current codebase is a Firebase-backed React application with working modules for authentication, clubs, events, calendar, certificates, dataset-backed timetable/meal read models, limited Classroom attachment/support, and an admin panel. Attendance, logs, and reports are not implemented yet.
 
 ## Current Product Surface
 - Authenticated app shell with protected routing
 - Google sign-in with `@doonschool.com` restriction
 - Personal calendar with overview month view plus expanded day timeline
-- Dashboard, Join Clubs, My Clubs, club detail workspaces, classes, certificates, `/verify`, admin panel
+- Dashboard, Join Clubs, My Clubs, club detail/workspace routes, classes, certificates, `/verify`, admin panel
 - Firestore-backed clubs, posts, events, RSVPs, users, and certificates
 - Storage-backed certificate asset uploads
 - Firebase Functions for certificate verification, certificate issuance, admin role updates, membership approval, attendance review, and club-scoped privileged writes
@@ -71,6 +71,8 @@ The following areas are intentionally not represented as shipped features:
 - Logs and reports
 - Analytics
 - Offline-first local provider as a production data path
+- In-app timetable/meals ingestion tooling
+- In-app calendar import console
 
 ## Documentation
 - [Architecture](docs/architecture.md)

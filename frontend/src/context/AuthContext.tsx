@@ -8,7 +8,7 @@ import {
   signOut
 } from 'firebase/auth';
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
-import { clearGoogleAuthCache, getGoogleAccessAndProfile } from '../auth/google';
+import { clearGoogleAuthCache, getGoogleAccessAndProfile, type GoogleAccessMode } from '../auth/google';
 import { buildScheduleAudienceKey } from '../domain/profile';
 import { getFirebaseApp } from '../firebase/app';
 import { isFirebaseEmulatorMode } from '../lib/firebaseEnv';
@@ -21,6 +21,7 @@ type AuthState = {
   accessToken?: string;
   login: () => Promise<void>;
   loginWithEmulator?: (email: string, password: string) => Promise<void>;
+  ensureGoogleAccessToken?: (mode?: GoogleAccessMode) => Promise<string | null>;
   logout: () => Promise<void>;
   loading: boolean;
   error?: string;
@@ -59,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setError(undefined);
     try {
-      const { accessToken: googleToken, profile, idToken } = await getGoogleAccessAndProfile();
+      const { accessToken: googleToken, profile, idToken } = await getGoogleAccessAndProfile({ mode: 'interactive' });
       if (!idToken) throw new Error('Missing Google ID token');
       if (!isAllowedSchoolEmail(profile.email)) {
         throw new Error('Only @doonschool.com accounts are allowed');
@@ -123,6 +124,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearGoogleAuthCache();
   }, []);
 
+  const ensureGoogleAccessToken = useCallback(async (mode: GoogleAccessMode = 'silent') => {
+    try {
+      const { accessToken: googleToken } = await getGoogleAccessAndProfile({ mode });
+      setAccessToken(googleToken);
+      return googleToken;
+    } catch {
+      setAccessToken(undefined);
+      return null;
+    }
+  }, []);
+
   const refreshProfile = useCallback(async () => {
     if (!user) return;
     const fresh = await hydrateUser(user.id);
@@ -169,12 +181,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       accessToken,
       login,
       loginWithEmulator: shouldUseEmulatorLogin ? loginWithEmulator : undefined,
+      ensureGoogleAccessToken,
       logout,
       loading,
       error,
       refreshProfile
     }),
-    [user, accessToken, login, loginWithEmulator, logout, loading, error, refreshProfile]
+    [user, accessToken, login, loginWithEmulator, ensureGoogleAccessToken, logout, loading, error, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -26,6 +26,8 @@ test('membership, RSVP, and import writes use callable Functions for privileged 
   assert.doesNotMatch(clubsService, /setDoc\(/);
   assert.match(eventsService, /'setEventRsvp'/);
   assert.match(eventsService, /'applyEventImport'/);
+  assert.match(eventsService, /rangeStart: toIsoString\(options\.rangeStart\)/);
+  assert.match(eventsService, /rangeEnd: toIsoString\(options\.rangeEnd\)/);
 });
 
 test('routes are lazy-loaded to reduce the primary bundle', () => {
@@ -33,6 +35,8 @@ test('routes are lazy-loaded to reduce the primary bundle', () => {
   assert.match(app, /const CalendarPage = lazy/);
   assert.match(app, /const Certificates = lazy/);
   assert.match(app, /Suspense fallback=/);
+  assert.match(app, /More/);
+  assert.match(app, /bottom-0/);
 });
 
 test('legacy event mapping preserves school-wide visibility and author fallbacks', () => {
@@ -110,4 +114,57 @@ test('personal calendar keeps overnight items on the following day and condenses
   assert.equal(secondDayItems[0].title, 'Overnight trip');
   assert.equal(calendar.readiness.academicStatus, 'missing');
   assert.equal(calendar.readiness.mealStatus, 'missing');
+});
+
+test('academic events only appear for matching cohort audience fields', () => {
+  const start = new Date('2026-04-14T00:00:00.000Z');
+  const end = new Date('2026-04-16T00:00:00.000Z');
+  const matchingAcademic = mapEventData('academic-match', {
+    title: 'Grade 9 prep',
+    category: 'academic',
+    audienceGrade: '9',
+    audienceSection: 'S2',
+    startTime: '2026-04-15T08:00:00.000Z',
+    endTime: '2026-04-15T09:00:00.000Z',
+    type: 'school'
+  });
+  const otherAcademic = mapEventData('academic-other', {
+    title: 'Grade 10 prep',
+    category: 'academic',
+    audienceGrade: '10',
+    audienceSection: 'S1',
+    startTime: '2026-04-15T10:00:00.000Z',
+    endTime: '2026-04-15T11:00:00.000Z',
+    type: 'school'
+  });
+
+  const calendar = composePersonalCalendar({
+    clubs: [],
+    events: [matchingAcademic, otherAcademic],
+    scheduleEntries: [],
+    scheduleDatasets: [],
+    membershipMap: {},
+    rangeStart: start,
+    rangeEnd: end,
+    user: {
+      id: 'student-1',
+      name: 'Student',
+      email: 'student@doonschool.com',
+      role: 'student',
+      clubsJoined: [],
+      grade: '9',
+      section: 'S2'
+    }
+  });
+
+  assert.deepEqual(calendar.items.map((item) => item.title), ['Grade 9 prep']);
+});
+
+test('classroom recovery and import demotion stay explicit in source', () => {
+  const classroomHook = readFileSync(new URL('../frontend/src/hooks/useClassroom.ts', import.meta.url), 'utf8');
+  const clubManagementPanel = readFileSync(new URL('../frontend/src/components/club/ClubManagementPanel.tsx', import.meta.url), 'utf8');
+  assert.match(classroomHook, /sessionStatus/);
+  assert.match(classroomHook, /ensureGoogleAccessToken/);
+  assert.match(classroomHook, /needs_reconnect/);
+  assert.doesNotMatch(clubManagementPanel, /CalendarImporter/);
 });

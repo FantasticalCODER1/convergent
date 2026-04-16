@@ -1,3 +1,4 @@
+import { addDays } from 'date-fns';
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
@@ -12,7 +13,14 @@ export default function Clubs() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { clubs, loading, error, joinClub, leaveClub, membershipMap } = useClubs();
-  const { events } = useEvents();
+  const eventWindow = useMemo(
+    () => ({
+      rangeStart: new Date(),
+      rangeEnd: addDays(new Date(), 120)
+    }),
+    []
+  );
+  const { events } = useEvents(eventWindow);
 
   const nextEventsByClubId = useMemo(() => {
     const nextEvents = new Map<string, (typeof events)[number]>();
@@ -100,6 +108,7 @@ export default function Clubs() {
                   club={club}
                   membershipState={accessState}
                   nextEvent={nextEventsByClubId.get(club.id)}
+                  openLabel="Open detail"
                   onLeave={(id) => leaveClub(id)}
                   onOpen={(targetClub) => navigate(`/clubs/${targetClub.id}`)}
                 />
@@ -129,6 +138,7 @@ export default function Clubs() {
                   joined={false}
                   membershipState={accessState}
                   nextEvent={nextEventsByClubId.get(club.id)}
+                  openLabel="Open detail"
                   onJoin={(id) => joinClub(id)}
                   onLeave={(id) => leaveClub(id)}
                   onOpen={(targetClub) => navigate(`/clubs/${targetClub.id}`)}

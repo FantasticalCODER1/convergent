@@ -1,11 +1,11 @@
 import { Suspense, lazy, type ComponentType, useEffect, useRef, useState } from 'react';
-import { BrowserRouter, Navigate, Outlet, Route, Routes, NavLink as RouterNavLink } from 'react-router-dom';
+import { BrowserRouter, Navigate, Outlet, Route, Routes, NavLink as RouterNavLink, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProfileSetupGate } from './components/ProfileSetupGate';
 import { useAuth } from './hooks/useAuth';
 import RequireRole from './components/RequireRole';
 import RequireAuth from './components/RequireAuth';
-import { CalendarDays, Home, NotebookPen, Shield, Trophy, UserRoundCheck, UsersRound } from 'lucide-react';
+import { CalendarDays, Home, MoreHorizontal, NotebookPen, Shield, Trophy, UserRoundCheck, UsersRound } from 'lucide-react';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Clubs = lazy(() => import('./pages/Clubs'));
@@ -77,7 +77,18 @@ function RouteFallback() {
 
 function Shell() {
   const { user, logout, refreshProfile } = useAuth();
+  const location = useLocation();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const visibleNavLinks = navLinks.filter((link) => link.to !== '/admin' || user?.role === 'admin');
+  const primaryMobileLinks = visibleNavLinks.filter((link) =>
+    ['/calendar', '/dashboard', '/join-clubs', '/my-clubs'].includes(link.to)
+  );
+  const moreLinks = visibleNavLinks.filter((link) => !primaryMobileLinks.some((primaryLink) => primaryLink.to === link.to));
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white">
       <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-900/70 backdrop-blur-xl">
@@ -98,7 +109,7 @@ function Shell() {
           ) : null}
         </div>
       </header>
-      <div className="mx-auto flex w-full max-w-6xl gap-6 px-4 py-8 md:px-6">
+      <div className="mx-auto flex w-full max-w-6xl gap-6 px-4 py-8 pb-28 md:px-6 md:pb-8">
         <aside className="glass-card hidden w-60 shrink-0 flex-col space-y-2 p-4 md:flex">
           {visibleNavLinks.map((link) => (
             <NavLink key={link.to} to={link.to} icon={link.icon} label={link.label} />
@@ -108,6 +119,12 @@ function Shell() {
           <Outlet />
         </main>
       </div>
+      <MobileNav
+        open={mobileMenuOpen}
+        onToggle={() => setMobileMenuOpen((value) => !value)}
+        primaryLinks={primaryMobileLinks}
+        moreLinks={moreLinks}
+      />
       <ProfileSetupGate user={user} onComplete={refreshProfile} />
     </div>
   );
@@ -192,6 +209,61 @@ function NavLink({ to, label, icon: Icon }: { to: string; label: string; icon: C
       <Icon className="size-4" />
       {label}
     </RouterNavLink>
+  );
+}
+
+function MobileNav({
+  open,
+  onToggle,
+  primaryLinks,
+  moreLinks
+}: {
+  open: boolean;
+  onToggle: () => void;
+  primaryLinks: typeof navLinks;
+  moreLinks: typeof navLinks;
+}) {
+  return (
+    <div className="md:hidden">
+      {open && moreLinks.length > 0 ? (
+        <div className="fixed inset-x-4 bottom-20 z-50 rounded-3xl border border-white/10 bg-slate-900/95 p-3 shadow-xl backdrop-blur-xl">
+          <p className="px-2 pb-2 text-xs uppercase tracking-[0.25em] text-white/45">More</p>
+          <div className="space-y-1">
+            {moreLinks.map((link) => (
+              <NavLink key={link.to} to={link.to} icon={link.icon} label={link.label} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-slate-950/95 px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-3 backdrop-blur-xl">
+        <div className="mx-auto grid max-w-3xl grid-cols-5 gap-2">
+          {primaryLinks.map((link) => (
+            <RouterNavLink
+              key={link.to}
+              to={link.to}
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] transition ${
+                  isActive ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white'
+                }`
+              }
+            >
+              <link.icon className="size-4" />
+              <span>{link.label}</span>
+            </RouterNavLink>
+          ))}
+          <button
+            type="button"
+            onClick={onToggle}
+            className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] transition ${
+              open ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white'
+            }`}
+          >
+            <MoreHorizontal className="size-4" />
+            <span>More</span>
+          </button>
+        </div>
+      </nav>
+    </div>
   );
 }
 

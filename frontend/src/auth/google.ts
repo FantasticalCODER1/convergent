@@ -16,6 +16,8 @@ type Cached = {
   profile?: GoogleProfile;
 };
 
+export type GoogleAccessMode = 'interactive' | 'silent';
+
 const REQUIRED_SUFFIX = '.apps.googleusercontent.com';
 const TOKEN_EXPIRY_FALLBACK_MS = 55 * 60 * 1000;
 const SCOPES = [
@@ -105,9 +107,15 @@ async function requestAccessToken(prompt: '' | 'consent') {
   return cached;
 }
 
-async function ensureValidAccessToken() {
+async function ensureValidAccessToken(mode: GoogleAccessMode = 'interactive') {
   if (cached.accessToken && cached.expiresAt && Date.now() < cached.expiresAt - 60_000) {
     return cached;
+  }
+
+  if (mode === 'silent') {
+    const fresh = await requestAccessToken('');
+    hasPromptedConsent = true;
+    return fresh;
   }
 
   const firstPrompt = hasPromptedConsent ? '' : 'consent';
@@ -162,8 +170,10 @@ async function fetchUserInfo(accessToken: string): Promise<GoogleProfile> {
   throw new Error('PROFILE_FETCH_FAILED');
 }
 
-export async function getGoogleAccessAndProfile(): Promise<{ accessToken: string; profile: GoogleProfile; idToken?: string }> {
-  const state = await ensureValidAccessToken();
+export async function getGoogleAccessAndProfile(
+  options: { mode?: GoogleAccessMode } = {}
+): Promise<{ accessToken: string; profile: GoogleProfile; idToken?: string }> {
+  const state = await ensureValidAccessToken(options.mode ?? 'interactive');
   if (!state.accessToken) throw new Error('ACCESS_TOKEN_MISSING');
 
   if (!state.profile) {

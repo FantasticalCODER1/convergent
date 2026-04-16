@@ -12,12 +12,23 @@ type Props = {
   manageable?: boolean;
   membershipState?: ClubAccessState;
   nextEvent?: EventRecord;
+  openLabel?: string;
   onJoin?: (clubId: string) => Promise<void> | void;
   onLeave?: (clubId: string) => Promise<void> | void;
   onOpen?: (club: Club) => void;
 };
 
-export function ClubCard({ club, joined, manageable, membershipState = joined ? 'approved_member' : 'not_joined', nextEvent, onJoin, onLeave, onOpen }: Props) {
+export function ClubCard({
+  club,
+  joined,
+  manageable,
+  membershipState = joined ? 'approved_member' : 'not_joined',
+  nextEvent,
+  openLabel = 'Open club',
+  onJoin,
+  onLeave,
+  onOpen
+}: Props) {
   const handleAction = () => {
     if (manageable) return;
     if (joined || membershipState === 'pending_member') {
@@ -92,7 +103,7 @@ export function ClubCard({ club, joined, manageable, membershipState = joined ? 
             onClick={() => onOpen(club)}
             className="rounded-2xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10"
           >
-            Open club
+            {openLabel}
           </button>
         )}
         {(onJoin || onLeave) && !manageable && (

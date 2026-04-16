@@ -1,5 +1,6 @@
+import { addDays, subDays } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { CalendarDays, ChevronLeft, ExternalLink, FileBadge2, Info, MessageSquareText, UsersRound } from 'lucide-react';
 import { CertificateCard } from '../components/CertificateCard';
@@ -45,6 +46,7 @@ const tabMeta: Array<{ id: ClubTab; label: string; icon: typeof Info }> = [
 
 export default function ClubDetail() {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
   const { user } = useAuth();
   const {
     getClubById,
@@ -58,7 +60,18 @@ export default function ClubDetail() {
     membershipRequestsForClub,
     reviewMembership
   } = useClubs();
-  const { events, refresh: refreshEvents, saveEvent, rsvps, toggleRsvp, error: eventsError } = useEvents({ autoLoad: false });
+  const eventWindow = useMemo(
+    () => ({
+      rangeStart: subDays(new Date(), 30),
+      rangeEnd: addDays(new Date(), 180)
+    }),
+    []
+  );
+  const { events, refresh: refreshEvents, saveEvent, rsvps, toggleRsvp, error: eventsError } = useEvents({
+    autoLoad: false,
+    rangeStart: eventWindow.rangeStart,
+    rangeEnd: eventWindow.rangeEnd
+  });
   const { certificates: myCertificates } = useCertificates();
   const [activeTab, setActiveTab] = useState<ClubTab>('about');
   const [club, setClub] = useState<Club | null>(null);
@@ -104,10 +117,12 @@ export default function ClubDetail() {
 
   const accessState = getClubAccessState(user, club, membershipMap);
   const manageable = canManageClub(user, club);
+  const workspaceRoute = location.pathname.startsWith('/my-clubs/');
+  const showManagementPanel = manageable && workspaceRoute;
   const canAccessPrivateContent = canViewPrivateClubContent(user, club, membershipMap);
 
   useEffect(() => {
-    if (!manageable || !club) {
+    if (!showManagementPanel || !club) {
       setClubUsers([]);
       setClubCertificates([]);
       return;
@@ -135,7 +150,7 @@ export default function ClubDetail() {
     return () => {
       cancelled = true;
     };
-  }, [club, manageable, fetchMembershipRequests]);
+  }, [club, fetchMembershipRequests, showManagementPanel]);
 
   const posts = club ? postsForClub(club.id) : [];
   const membershipRequests = club ? membershipRequestsForClub(club.id) : [];
@@ -165,18 +180,34 @@ export default function ClubDetail() {
     () => (club ? myCertificates.filter((certificate) => certificate.clubId === club.id) : []),
     [club, myCertificates]
   );
+  const availableTabs = useMemo(
+    () =>
+      tabMeta.filter((tab) => {
+        if (!workspaceRoute) {
+          return tab.id === 'about' || tab.id === 'posts' || tab.id === 'events';
+        }
+        if (tab.id === 'members') return showManagementPanel;
+        if (tab.id === 'certificates') return accessState === 'approved_member' || showManagementPanel;
+        return true;
+      }),
+    [accessState, showManagementPanel, workspaceRoute]
+  );
 
   useEffect(() => {
-    if (!manageable || clubEvents.length === 0) {
+    setActiveTab(workspaceRoute ? 'posts' : 'about');
+  }, [id, workspaceRoute]);
+
+  useEffect(() => {
+    if (!showManagementPanel || clubEvents.length === 0) {
       setAttendanceEventId(null);
       setAttendance([]);
       return;
     }
     setAttendanceEventId((current) => (current && clubEvents.some((event) => event.id === current) ? current : clubEvents[0].id));
-  }, [clubEvents, manageable]);
+  }, [clubEvents, showManagementPanel]);
 
   useEffect(() => {
-    if (!manageable || !attendanceEventId) {
+    if (!showManagementPanel || !attendanceEventId) {
       setAttendance([]);
       return;
     }
@@ -201,11 +232,11 @@ export default function ClubDetail() {
     return () => {
       cancelled = true;
     };
-  }, [attendanceEventId, manageable]);
+  }, [attendanceEventId, showManagementPanel]);
 
   const refreshClubData = async () => {
     await Promise.all([fetchPosts(club?.id ?? ''), refreshEvents()]);
-    if (club && manageable) {
+    if (club && showManagementPanel) {
       const [users, certificates] = await Promise.all([listClubUsers(club.id), listCertificatesForClub(club.id), fetchMembershipRequests(club.id)]);
       setClubUsers(users);
       setClubCertificates(certificates);
@@ -233,22 +264,40 @@ export default function ClubDetail() {
   }
 
   const category = getCategoryMeta(club.category);
+  const routeEyebrow = workspaceRoute
+    ? showManagementPanel
+      ? 'Manager workspace'
+      : accessState === 'approved_member'
+        ? 'Member workspace'
+        : 'Workspace access'
+    : 'Club detail';
+  const routeSummary = workspaceRoute
+    ? showManagementPanel
+      ? 'This route is the real operations workspace for the club. Discovery copy and manager tooling are intentionally separated now.'
+      : accessState === 'approved_member'
+        ? 'This route is your member workspace for approved posts, events, and certificate history tied to this club.'
+        : 'This route is reserved for approved membership or management access. If you only need discovery context, use the browse detail route instead.'
+    : manageable
+      ? 'This is the browse/detail view. Manager tools stay on the workspace route so discovery does not double as an admin console.'
+      : accessState === 'approved_member'
+        ? 'This is the browse/detail view. Your member workspace lives on the My Clubs route.'
+        : 'This is the browse/detail view for readable club information. Workspace actions stay separate until you have approved access.';
 
   const stats = [
-    { label: 'Members', value: String(club.memberCount), hint: manageable ? `${clubUsers.length || club.memberCount} approved profiles` : 'Approved member count' },
+    { label: 'Members', value: String(club.memberCount), hint: showManagementPanel ? `${clubUsers.length || club.memberCount} approved profiles` : 'Approved member count' },
     { label: 'Upcoming', value: String(upcomingEvents.length), hint: upcomingEvents[0] ? formatRelativeEventWindow(upcomingEvents[0].startTime, upcomingEvents[0].endTime) : 'No upcoming event yet' },
     { label: 'Posts', value: String(visiblePosts.length), hint: visiblePosts[0]?.createdAt ? `Latest ${formatTimestamp(visiblePosts[0].createdAt)}` : 'No timeline posts yet' },
     {
       label: 'Certificates',
-      value: String(manageable ? clubCertificates.length : myClubCertificates.length),
-      hint: manageable ? 'Club-issued records' : 'Your club certificates'
+      value: String(showManagementPanel ? clubCertificates.length : myClubCertificates.length),
+      hint: showManagementPanel ? 'Club-issued records' : 'Your club certificates'
     }
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link to={manageable || accessState === 'approved_member' ? '/my-clubs' : '/join-clubs'} className="inline-flex items-center gap-2 text-sm text-white/60 transition hover:text-white">
+        <Link to={workspaceRoute ? '/my-clubs' : '/join-clubs'} className="inline-flex items-center gap-2 text-sm text-white/60 transition hover:text-white">
           <ChevronLeft className="size-4" />
           Back
         </Link>
@@ -264,11 +313,13 @@ export default function ClubDetail() {
         <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-3xl space-y-4">
             <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">{category.label}</p>
+              <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">{routeEyebrow}</p>
               <h1 className="mt-2 text-4xl font-semibold text-white">{club.name}</h1>
               <p className="mt-3 max-w-2xl text-base text-white/75">{club.description || 'This club description has not been filled in yet.'}</p>
+              <p className="mt-3 max-w-2xl text-sm text-white/55">{routeSummary}</p>
             </div>
             <div className="flex flex-wrap gap-2 text-sm text-white/65">
+              <span className="rounded-full border border-white/10 px-3 py-2">{category.label}</span>
               <span className="rounded-full border border-white/10 px-3 py-2">MIC · {club.mic}</span>
               <span className="rounded-full border border-white/10 px-3 py-2">{club.schedule}</span>
               <span className="rounded-full border border-white/10 px-3 py-2">
@@ -306,24 +357,36 @@ export default function ClubDetail() {
               </button>
             ) : (
               <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-3 text-sm font-medium text-emerald-100">
-                You manage this club.
+                {showManagementPanel ? 'You are in the manager workspace.' : 'You manage this club.'}
               </div>
             )}
             <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-sm text-white/70">
-              {manageable
-                ? 'This club workspace is visible because you manage it. Private membership access and private links are enforced in backend reads, not just hidden in the UI.'
+              {showManagementPanel
+                ? 'Manager tools are active on this route. Private membership access and private links are enforced in backend reads, not just hidden in the UI.'
+                : manageable
+                  ? 'Discovery and detail remain separate from operations. Use the workspace route when you need approvals, editing, attendance, or certificate issuance.'
                 : accessState === 'approved_member'
-                  ? 'Approved membership makes private event and post links readable here and feeds this club into your personal calendar automatically.'
-                : accessState === 'pending_member'
+                  ? workspaceRoute
+                    ? 'Approved membership makes private event and post links readable here and feeds this club into your personal calendar automatically.'
+                    : 'Approved membership makes private content readable, but your member workspace lives on the My Clubs route.'
+                  : accessState === 'pending_member'
                     ? 'Your request is pending. Private content stays unreadable until approval is granted.'
                     : 'Only school-visible clubs are browseable here. Private clubs are not readable until you have approved access.'}
             </div>
+            {manageable && !workspaceRoute ? (
+              <Link
+                to={`/my-clubs/${club.id}`}
+                className="rounded-2xl border border-white/10 px-5 py-3 text-sm font-medium text-white/80 transition hover:bg-white/10"
+              >
+                Open workspace
+              </Link>
+            ) : null}
           </div>
         </div>
       </section>
 
       <div className="flex flex-wrap gap-2">
-        {tabMeta.map((tab) => {
+        {availableTabs.map((tab) => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
           return (
@@ -343,7 +406,7 @@ export default function ClubDetail() {
         })}
       </div>
 
-      <div className={clsx('grid gap-6', manageable ? 'xl:grid-cols-[minmax(0,1.5fr)_380px]' : 'grid-cols-1')}>
+      <div className={clsx('grid gap-6', showManagementPanel ? 'xl:grid-cols-[minmax(0,1.5fr)_380px]' : 'grid-cols-1')}>
         <section className="space-y-4">
           {activeTab === 'about' ? (
             <AboutTab club={club} accessState={accessState} canAccessPrivateContent={canAccessPrivateContent} upcomingEvents={upcomingEvents} />
@@ -353,7 +416,7 @@ export default function ClubDetail() {
               posts={visiblePosts}
               linkedEventsMap={linkedEventsMap}
               canAccessPrivateContent={canAccessPrivateContent}
-              manageable={manageable}
+              manageable={showManagementPanel}
             />
           ) : null}
           {activeTab === 'events' ? (
@@ -361,17 +424,17 @@ export default function ClubDetail() {
               events={visibleEvents}
               rsvps={rsvps}
               onRsvp={toggleRsvp}
-              manageable={manageable}
+              manageable={showManagementPanel}
               canAccessPrivateContent={canAccessPrivateContent}
               error={eventsError}
             />
           ) : null}
           {activeTab === 'members' ? (
-            <MembersTab club={club} users={clubUsers} manageable={manageable} loading={loadingManagement} membershipRequests={membershipRequests} />
+            <MembersTab club={club} users={clubUsers} manageable={showManagementPanel} loading={loadingManagement} membershipRequests={membershipRequests} />
           ) : null}
           {activeTab === 'certificates' ? (
             <CertificatesTab
-              manageable={manageable}
+              manageable={showManagementPanel}
               loading={loadingManagement}
               clubCertificates={clubCertificates}
               myCertificates={myClubCertificates}
@@ -379,7 +442,7 @@ export default function ClubDetail() {
           ) : null}
         </section>
 
-        {manageable ? (
+        {showManagementPanel ? (
           <ClubManagementPanel
             club={club}
             users={clubUsers}

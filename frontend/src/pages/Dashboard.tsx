@@ -1,3 +1,4 @@
+import { addDays, startOfDay, subDays } from 'date-fns';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { EmptyStateCard } from '../components/EmptyStateCard';
@@ -9,12 +10,36 @@ import { formatDateTimeRange } from '../lib/formatters';
 
 function getUpcomingEmptyState(profileReady: boolean, academicStatus: string, mealStatus: string) {
   if (!profileReady) return 'Finish grade and section mapping to unlock timetable and meals. School-wide and approved club events will still appear here when available.';
-  if (academicStatus === 'missing' && mealStatus === 'missing') return 'No timetable or meal datasets are attached yet. School-wide and approved club events will appear here as soon as they are published.';
+  if (academicStatus === 'missing' && mealStatus === 'missing') return 'Timetable and meals are not live in this environment yet. School-wide and approved club events will still appear here when published.';
   return 'No school-wide events, approved club activity, or matched schedule items are queued right now.';
+}
+
+function getScheduleDetail(kind: 'academic' | 'meal', readiness: { profileReady: boolean; academicStatus: string; mealStatus: string; academicEntriesMatched: number; mealEntriesMatched: number }) {
+  const status = kind === 'academic' ? readiness.academicStatus : readiness.mealStatus;
+  const matched = kind === 'academic' ? readiness.academicEntriesMatched : readiness.mealEntriesMatched;
+  if (!readiness.profileReady) {
+    return 'Profile mapping is still incomplete.';
+  }
+  if (status === 'missing') {
+    return kind === 'academic' ? 'Timetable is not live in this environment.' : 'Meals are not live in this environment.';
+  }
+  if (matched === 0) {
+    return kind === 'academic'
+      ? 'A dataset record exists, but nothing maps to your cohort yet.'
+      : 'A meal dataset record exists, but nothing maps to your cohort yet.';
+  }
+  return kind === 'academic' ? 'Mapped from live cohort schedule entries.' : 'Mapped from live cohort meal entries.';
 }
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const calendarWindow = useMemo(
+    () => ({
+      rangeStart: subDays(startOfDay(new Date()), 1),
+      rangeEnd: addDays(new Date(), 45)
+    }),
+    []
+  );
   const {
     clubs,
     membershipMap,
@@ -25,7 +50,7 @@ export default function Dashboard() {
     nextSchoolWideItem,
     readiness,
     loading
-  } = usePersonalCalendar();
+  } = usePersonalCalendar(calendarWindow);
 
   const myClubs = useMemo(
     () =>
@@ -65,12 +90,12 @@ export default function Dashboard() {
         <FocusCard
           label="Next class"
           title={nextAcademicItem?.title ?? 'No class mapped'}
-          detail={nextAcademicItem ? formatDateTimeRange(nextAcademicItem.startTime, nextAcademicItem.endTime) : 'Timetable import still missing for your cohort.'}
+          detail={nextAcademicItem ? formatDateTimeRange(nextAcademicItem.startTime, nextAcademicItem.endTime) : getScheduleDetail('academic', readiness)}
         />
         <FocusCard
           label="Next meal"
           title={nextMealItem?.title ?? 'No meal mapped'}
-          detail={nextMealItem ? formatDateTimeRange(nextMealItem.startTime, nextMealItem.endTime) : 'Meal blocks appear once a schedule dataset is attached.'}
+          detail={nextMealItem ? formatDateTimeRange(nextMealItem.startTime, nextMealItem.endTime) : getScheduleDetail('meal', readiness)}
         />
         <FocusCard
           label="Next club meeting"

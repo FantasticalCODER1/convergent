@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { CalendarImporter } from '../admin/CalendarImporter';
 import { CertificateUploader } from '../admin/CertificateUploader';
 import { ClubEditor } from '../admin/ClubEditor';
 import { EventEditor } from '../admin/EventEditor';
@@ -80,7 +79,7 @@ export function ClubManagementPanel({
         <p className="text-xs uppercase tracking-[0.3em] text-emerald-200">Club operations</p>
         <h2 className="mt-2 text-2xl font-semibold text-white">Manage {club.name}</h2>
         <p className="mt-2 text-sm text-white/70">
-          Membership approvals, official posts, events, attendance review, import guidance, and certificate issuance stay inside the club workspace.
+          Membership approvals, official posts, events, attendance review, and certificate issuance stay inside the club workspace.
         </p>
       </div>
 
@@ -265,8 +264,6 @@ export function ClubManagementPanel({
           </div>
         )}
       </section>
-
-      <CalendarImporter clubId={club.id} onImported={onRefresh} />
     </aside>
   );
 }

@@ -14,11 +14,13 @@ type Options = {
 export function usePersonalCalendar(options: Options = {}) {
   const { user } = useAuth();
   const clubsState = useClubs();
-  const eventsState = useEvents();
-  const schedulesState = useSchedules();
-
   const rangeStart = options.rangeStart ?? subDays(startOfMonth(new Date()), 7);
   const rangeEnd = options.rangeEnd ?? addDays(endOfMonth(new Date()), 21);
+  const eventsState = useEvents({
+    rangeStart,
+    rangeEnd
+  });
+  const schedulesState = useSchedules();
 
   const personalCalendar = useMemo(
     () =>

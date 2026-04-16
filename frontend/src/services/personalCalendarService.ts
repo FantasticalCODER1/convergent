@@ -32,6 +32,10 @@ type ComposePersonalCalendarInput = {
   user?: AppUser | null;
 };
 
+function isAcademicItem(event: Pick<EventRecord, 'scope' | 'category'>) {
+  return event.scope === 'academic' || event.category === 'academic';
+}
+
 function normalizeKey(value?: string | null) {
   return String(value ?? '').trim().toLowerCase();
 }
@@ -82,6 +86,13 @@ function toOccurrenceIso(date: Date, time: string) {
 function matchesProfile(user: AppUser | null | undefined, entry: ScheduleEntry) {
   const gradeMatches = !entry.grade || normalizeKey(entry.grade) === normalizeKey(user?.grade);
   const sectionMatches = !entry.section || normalizeKey(entry.section) === normalizeKey(user?.section);
+  return gradeMatches && sectionMatches;
+}
+
+function matchesAcademicAudience(user: AppUser | null | undefined, event: EventRecord) {
+  if (!isAcademicItem(event)) return true;
+  const gradeMatches = !event.audienceGrade || normalizeKey(event.audienceGrade) === normalizeKey(user?.grade);
+  const sectionMatches = !event.audienceSection || normalizeKey(event.audienceSection) === normalizeKey(user?.section);
   return gradeMatches && sectionMatches;
 }
 
@@ -244,19 +255,7 @@ export function composePersonalCalendar({
 
   const visibleEvents = events.filter((event) => {
     if (!overlapsWindow(event.startTime, event.endTime, rangeStart, rangeEnd)) return false;
-    if (event.scope === 'academic' || event.category === 'academic') return matchesProfile(user, {
-      id: event.id,
-      scheduleType: 'academic',
-      category: event.category,
-      dayOfWeek: 1,
-      blockName: event.title,
-      title: event.title,
-      startTime: '00:00',
-      endTime: '00:00',
-      grade: user?.grade,
-      section: user?.section,
-      resourceLinks: []
-    });
+    if (isAcademicItem(event)) return matchesAcademicAudience(user, event);
     if (event.relatedGroupId || event.clubId) return isApprovedGroupEvent(user, membershipMap, clubMap, event);
     return true;
   });

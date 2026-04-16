@@ -253,7 +253,7 @@ function AdminInner() {
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="rounded-3xl border border-white/5 bg-white/5 p-6 shadow-glass">
           <h2 className="text-xl font-semibold text-white">Club operations handoff</h2>
-          <p className="mt-2 text-sm text-white/60">Global admin actions live here. Club-scoped events, imports, attendance, and certificate issuance now live on each club page.</p>
+          <p className="mt-2 text-sm text-white/60">Global admin actions live here. Club-scoped events, attendance, approvals, and certificate issuance now live on each club workspace.</p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             {clubs.map((club) => (
               <Link key={club.id} to={`/my-clubs/${club.id}`} className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-white transition hover:bg-white/10">
@@ -264,18 +264,25 @@ function AdminInner() {
           </div>
         </div>
         <div className="rounded-3xl border border-white/5 bg-white/5 p-6 shadow-glass">
-          <h2 className="text-xl font-semibold text-white">Imports</h2>
-          <p className="mt-2 text-sm text-white/60">Calendar imports remain a server-side, club-scoped workflow. The model also reserves space for timetable and meal datasets, but those feeds are not a complete admin ingestion system yet.</p>
+          <h2 className="text-xl font-semibold text-white">Calendar import operations</h2>
+          <p className="mt-2 text-sm text-white/60">The supported import path is still script-driven. Dataset files live in the repo, the registry decides what is active, and `npm run calendar:import` is the apply path. This page only reports published dataset metadata.</p>
           {datasets.length === 0 ? (
             <div className="mt-4">
               <EmptyStateCard
                 eyebrow="Datasets"
                 title="No timetable datasets published yet"
-                body="The dataset collections exist, but this page is still only reporting readiness metadata. It is not a full timetable or meal import console yet."
+                body="There is no in-app timetable or meal import console here. Publish dataset metadata or run the import script if you need live calendar ingestion."
               />
             </div>
           ) : (
-            <p className="mt-4 text-xs text-white/45">{datasets.length} schedule dataset record{datasets.length === 1 ? '' : 's'} currently available.</p>
+            <div className="mt-4 space-y-2">
+              <p className="text-xs text-white/45">{datasets.length} schedule dataset record{datasets.length === 1 ? '' : 's'} currently available.</p>
+              <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-3 text-xs text-white/65">
+                <p>Registry path: <code>data/calendar/datasetsRegistry.json</code></p>
+                <p className="mt-2">Docs: <code>docs/calendar-import.md</code></p>
+                <p className="mt-2">Dry run: <code>npm run calendar:import -- --dry-run</code></p>
+              </div>
+            </div>
           )}
         </div>
       </section>

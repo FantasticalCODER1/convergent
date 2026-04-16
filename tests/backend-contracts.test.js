@@ -12,6 +12,8 @@ test('backend verification and issuance are Function-backed', () => {
   assert.match(functionsFile, /exports\.updateUserRole = functions\.https\.onCall/);
   assert.match(functionsFile, /exports\.listVisibleClubs = functions\.https\.onCall/);
   assert.match(functionsFile, /exports\.listVisibleEvents = functions\.https\.onCall/);
+  assert.match(functionsFile, /rangeStart = parseOptionalIsoDate/);
+  assert.match(functionsFile, /audienceGrade/);
   assert.match(functionsFile, /exports\.createClubPost = functions\.https\.onCall/);
   assert.match(functionsFile, /exports\.saveClubMetadata = functions\.https\.onCall/);
   assert.match(functionsFile, /exports\.issueCertificate = functions\.https\.onCall/);

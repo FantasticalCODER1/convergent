@@ -19,6 +19,8 @@ const schema = z.object({
   meetLink: z.string().optional(),
   resourceLinks: z.string().optional(),
   description: z.string().optional(),
+  audienceGrade: z.string().optional(),
+  audienceSection: z.string().optional(),
   attendanceEnabled: z.boolean().default(true)
 });
 
@@ -36,6 +38,8 @@ type Props = {
     category: ConvergentCategoryKey;
     scope: EventRecord['scope'];
     relatedGroupId?: string;
+    audienceGrade?: string;
+    audienceSection?: string;
     startTime: string;
     endTime: string;
     allDay?: boolean;
@@ -61,6 +65,8 @@ function toEditorValues(event?: EventRecord | null): EventEditorValues {
       endTime: '17:00',
       category: 'club',
       scope: 'group',
+      audienceGrade: '',
+      audienceSection: '',
       attendanceEnabled: true
     };
   }
@@ -75,6 +81,8 @@ function toEditorValues(event?: EventRecord | null): EventEditorValues {
     location: event.location,
     category: event.category,
     scope: event.scope,
+    audienceGrade: event.audienceGrade ?? '',
+    audienceSection: event.audienceSection ?? '',
     classroomLink: event.classroomLink ?? undefined,
     classroomCourseId: event.classroomCourseId ?? undefined,
     classroomPostLink: event.classroomPostLink ?? undefined,
@@ -110,6 +118,7 @@ export function EventEditor({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { isSubmitting, errors }
   } = useForm<EventEditorValues>({
     resolver: zodResolver(schema),
@@ -119,6 +128,10 @@ export function EventEditor({
   useEffect(() => {
     reset(toEditorValues(event));
   }, [event, reset]);
+
+  const selectedCategory = watch('category');
+  const selectedScope = watch('scope');
+  const showAudienceFields = (lockedScope ?? selectedScope) === 'academic' || selectedCategory === 'academic';
 
   const submit = async (values: EventEditorValues) => {
     const startIso = new Date(`${values.date}T${values.startTime}`).toISOString();
@@ -130,6 +143,8 @@ export function EventEditor({
       category: values.category,
       scope: lockedScope ?? values.scope,
       relatedGroupId,
+      audienceGrade: showAudienceFields ? values.audienceGrade || undefined : undefined,
+      audienceSection: showAudienceFields ? values.audienceSection || undefined : undefined,
       startTime: startIso,
       endTime: endIso,
       location: values.location || undefined,
@@ -202,6 +217,18 @@ export function EventEditor({
           </label>
         )}
       </div>
+      {showAudienceFields ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="space-y-1 text-sm">
+            <span>Audience grade</span>
+            <input {...register('audienceGrade')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" placeholder="For example: 9" />
+          </label>
+          <label className="space-y-1 text-sm">
+            <span>Audience section</span>
+            <input {...register('audienceSection')} className="w-full rounded-xl border border-white/10 bg-slate-950/40 px-3 py-2" placeholder="For example: S2" />
+          </label>
+        </div>
+      ) : null}
       <div className="grid gap-3 md:grid-cols-2">
         <label className="space-y-1 text-sm">
           <span>Classroom link</span>

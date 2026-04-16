@@ -35,6 +35,10 @@ function normalizeOptionalString(value) {
   return normalized || null;
 }
 
+function normalizeKey(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
 function normalizeRequiredString(value, field) {
   const normalized = normalizeOptionalString(value);
   if (!normalized) {
@@ -140,6 +144,15 @@ function isAcademicEventData(data) {
   );
 }
 
+function callerMatchesAcademicAudience(caller, eventData) {
+  if (!isAcademicEventData(eventData)) return true;
+  const grade = normalizeOptionalString(eventData?.audienceGrade);
+  const section = normalizeOptionalString(eventData?.audienceSection);
+  const gradeMatches = !grade || normalizeKey(grade) === normalizeKey(caller.grade);
+  const sectionMatches = !section || normalizeKey(section) === normalizeKey(caller.section);
+  return gradeMatches && sectionMatches;
+}
+
 async function getMembershipSnapshot(clubId, userId) {
   return admin.firestore().doc(`clubs/${clubId}/memberships/${userId}`).get();
 }
@@ -198,7 +211,7 @@ async function canReadEventData(caller, eventData) {
 
   const clubId = getEventGroupId(eventData);
   if (!clubId || isAcademicEventData(eventData)) {
-    return true;
+    return callerMatchesAcademicAudience(caller, eventData);
   }
 
   const clubSnap = await getClubSnapshot(clubId).catch(() => null);
@@ -292,6 +305,8 @@ function toEventRecord(snapshot) {
     category: normalizeOptionalString(data.category) || (relatedGroupId ? 'club' : 'school_wide'),
     scope: normalizeOptionalString(data.scope) || (isAcademicEventData(data) ? 'academic' : relatedGroupId ? 'group' : 'school'),
     relatedGroupId: relatedGroupId || undefined,
+    audienceGrade: normalizeOptionalString(data.audienceGrade) || undefined,
+    audienceSection: normalizeOptionalString(data.audienceSection) || undefined,
     startTime: timestampToIso(data.startTime) || timestampToIso(data.createdAt),
     endTime: timestampToIso(data.endTime) || timestampToIso(data.startTime) || timestampToIso(data.createdAt),
     allDay: !!data.allDay,
@@ -347,11 +362,15 @@ async function getCallerContext(context) {
   const userSnap = await admin.firestore().doc(`users/${context.auth.uid}`).get();
   const role = normalizeRole(userSnap.exists ? userSnap.data()?.role : 'student');
   const name = userSnap.exists ? userSnap.data()?.name || context.auth.token?.name || email : context.auth.token?.name || email;
+  const grade = userSnap.exists ? normalizeOptionalString(userSnap.data()?.grade) || undefined : undefined;
+  const section = userSnap.exists ? normalizeOptionalString(userSnap.data()?.section) || undefined : undefined;
   return {
     uid: context.auth.uid,
     name,
     email,
     role,
+    grade,
+    section,
     userRef: admin.firestore().doc(`users/${context.auth.uid}`)
   };
 }
@@ -481,9 +500,18 @@ exports.listClubPosts = functions.https.onCall(async (data, context) => {
   return visible.filter(Boolean);
 });
 
-exports.listVisibleEvents = functions.https.onCall(async (_data, context) => {
+exports.listVisibleEvents = functions.https.onCall(async (data, context) => {
   const caller = await getCallerContext(context);
-  const snap = await admin.firestore().collection('events').orderBy('startTime').get();
+  const rangeStart = parseOptionalIsoDate(data?.rangeStart, 'rangeStart');
+  const rangeEnd = parseOptionalIsoDate(data?.rangeEnd, 'rangeEnd');
+  let query = admin.firestore().collection('events');
+  if (rangeStart) {
+    query = query.where('startTime', '>=', Timestamp.fromDate(rangeStart));
+  }
+  if (rangeEnd) {
+    query = query.where('startTime', '<=', Timestamp.fromDate(rangeEnd));
+  }
+  const snap = await query.orderBy('startTime').get();
   const visible = await Promise.all(
     snap.docs.map(async (eventDoc) => ((await canReadEventData(caller, eventDoc.data())) ? toEventRecord(eventDoc) : null))
   );
@@ -1143,6 +1171,8 @@ function sanitizeEventUpdate(values) {
     'description',
     'category',
     'scope',
+    'audienceGrade',
+    'audienceSection',
     'location',
     'classroomLink',
     'classroomCourseId',

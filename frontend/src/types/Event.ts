@@ -18,6 +18,8 @@ export interface EventRecord {
   category: ConvergentCategoryKey;
   scope: EventScope;
   relatedGroupId?: string;
+  audienceGrade?: string;
+  audienceSection?: string;
   startTime: string;
   endTime: string;
   allDay?: boolean;

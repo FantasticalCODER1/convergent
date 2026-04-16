@@ -34,6 +34,8 @@ export type EventInput = {
   category: EventRecord['category'];
   scope: EventScope;
   relatedGroupId?: string;
+  audienceGrade?: string;
+  audienceSection?: string;
   startTime: string;
   endTime: string;
   allDay?: boolean;
@@ -48,8 +50,22 @@ export type EventInput = {
   sourceMetadata?: EventRecord['sourceMetadata'];
 };
 
-export async function listEvents(): Promise<EventRecord[]> {
-  return callFunction<undefined, EventRecord[]>('listVisibleEvents', undefined);
+export type EventListOptions = {
+  rangeStart?: string | Date;
+  rangeEnd?: string | Date;
+};
+
+function toIsoString(value?: string | Date) {
+  if (!value) return undefined;
+  if (value instanceof Date) return value.toISOString();
+  return new Date(value).toISOString();
+}
+
+export async function listEvents(options: EventListOptions = {}): Promise<EventRecord[]> {
+  return callFunction<{ rangeStart?: string; rangeEnd?: string }, EventRecord[]>('listVisibleEvents', {
+    rangeStart: toIsoString(options.rangeStart),
+    rangeEnd: toIsoString(options.rangeEnd)
+  });
 }
 
 function buildLegacyEventType(input: EventInput) {
@@ -65,6 +81,8 @@ export async function saveEvent(input: EventInput, author?: AppUser) {
     category: input.category,
     scope: input.scope,
     relatedGroupId: relatedGroupId ?? null,
+    audienceGrade: input.audienceGrade ?? null,
+    audienceSection: input.audienceSection ?? null,
     clubId: relatedGroupId ?? null,
     startTime: toTimestamp(input.startTime),
     endTime: toTimestamp(input.endTime),

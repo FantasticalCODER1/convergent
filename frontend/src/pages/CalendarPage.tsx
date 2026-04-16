@@ -110,19 +110,25 @@ function getCalendarEmptyState(readiness: ReturnType<typeof usePersonalCalendar>
   if (!readiness.profileReady) {
     return {
       title: 'Finish your profile mapping first',
-      body: 'Grade and section are still missing, so timetable and meal items cannot be derived yet. School-wide and approved club events will appear as soon as they exist.'
+      body: 'Grade and section are still missing, so timetable and meal items cannot be derived yet. School-wide and approved club events will still appear when they exist.'
     };
   }
   if (readiness.academicStatus === 'missing' && readiness.mealStatus === 'missing') {
     return {
-      title: 'Waiting on timetable and meal datasets',
-      body: 'No cohort schedule datasets are published yet. The calendar will still show school-wide and approved club events as they are created.'
+      title: 'Timetable and meals are not live here yet',
+      body: 'No cohort schedule datasets are published in this environment. The calendar still shows school-wide and approved club events as they are created.'
     };
   }
   return {
     title: 'Nothing is mapped yet',
-    body: 'No school-wide events, approved group activity, or matched schedule items are available in the current window yet.'
+    body: 'No school-wide events, approved group activity, or matched schedule items are available in the current window for your profile yet.'
   };
+}
+
+function getReadinessValue(status: 'missing' | 'placeholder' | 'ready', matched: number, missingText: string) {
+  if (status === 'missing') return missingText;
+  if (matched === 0) return 'Published dataset, no live mapping for your cohort';
+  return `${matched} mapped`;
 }
 
 export default function CalendarPage() {
@@ -239,13 +245,13 @@ export default function CalendarPage() {
           <p className="text-sm uppercase tracking-[0.25em] text-white/60">Calendar</p>
           <h1 className="text-3xl font-semibold text-white">Personal calendar</h1>
           <p className="mt-2 max-w-3xl text-white/60">
-            Your school-wide events, approved group activity, timetable blocks, and meals are derived here into one calm overview, then expanded into a full day timeline when you need detail.
+            Your school-wide events, approved group activity, and any real timetable or meal mappings for your cohort are derived here into one overview, then expanded into a full day timeline when you need detail.
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <StatCard label="Upcoming" value={String(upcomingItems.length)} hint="Visible in your feed" />
-          <StatCard label="Next class" value={nextAcademicItem ? formatTimeLabel(nextAcademicItem.startTime) : '—'} hint={nextAcademicItem?.title ?? 'No timetable block mapped'} />
-          <StatCard label="Next meal" value={nextMealItem ? formatTimeLabel(nextMealItem.startTime) : '—'} hint={nextMealItem?.title ?? 'No meal block mapped'} />
+          <StatCard label="Next class" value={nextAcademicItem ? formatTimeLabel(nextAcademicItem.startTime) : '—'} hint={nextAcademicItem?.title ?? getReadinessValue(readiness.academicStatus, readiness.academicEntriesMatched, 'Not live')} />
+          <StatCard label="Next meal" value={nextMealItem ? formatTimeLabel(nextMealItem.startTime) : '—'} hint={nextMealItem?.title ?? getReadinessValue(readiness.mealStatus, readiness.mealEntriesMatched, 'Not live')} />
         </div>
       </div>
 
@@ -386,12 +392,12 @@ export default function CalendarPage() {
             <h2 className="mt-2 text-2xl font-semibold text-white">Timetable and meals</h2>
             <div className="mt-4 space-y-3 text-sm text-white/70">
               <StatusRow label="Profile mapping" value={readiness.profileReady ? 'Ready' : 'Grade and section needed'} />
-              <StatusRow label="Academic datasets" value={`${readiness.academicStatus} · ${readiness.academicEntriesMatched} mapped blocks`} />
-              <StatusRow label="Meal datasets" value={`${readiness.mealStatus} · ${readiness.mealEntriesMatched} mapped meals`} />
+              <StatusRow label="Academic datasets" value={getReadinessValue(readiness.academicStatus, readiness.academicEntriesMatched, 'Not live in this environment')} />
+              <StatusRow label="Meal datasets" value={getReadinessValue(readiness.mealStatus, readiness.mealEntriesMatched, 'Not live in this environment')} />
             </div>
             {!readiness.profileReady ? (
               <p className="mt-4 rounded-2xl border border-dashed border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-white/55">
-                Convergent needs grade and section on the profile before academic and meal recurrences can be derived.
+                Convergent needs grade and section on the profile before it can tell whether any published timetable or meal dataset applies to you.
               </p>
             ) : null}
           </section>

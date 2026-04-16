@@ -226,6 +226,8 @@ export function mapEventData(id: string, data: FirestoreRecord): EventRecord {
     category,
     scope,
     relatedGroupId,
+    audienceGrade: normalizeString(data.audienceGrade),
+    audienceSection: normalizeString(data.audienceSection),
     startTime,
     endTime,
     allDay: !!data.allDay,

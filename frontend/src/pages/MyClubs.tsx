@@ -1,3 +1,4 @@
+import { addDays } from 'date-fns';
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { EmptyStateCard } from '../components/EmptyStateCard';
@@ -11,7 +12,14 @@ export default function MyClubs() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { clubs, loading, error, membershipMap, leaveClub } = useClubs();
-  const { events } = useEvents();
+  const eventWindow = useMemo(
+    () => ({
+      rangeStart: new Date(),
+      rangeEnd: addDays(new Date(), 120)
+    }),
+    []
+  );
+  const { events } = useEvents(eventWindow);
 
   const mine = useMemo(
     () =>
@@ -96,6 +104,7 @@ export default function MyClubs() {
                   membershipState={accessState}
                   manageable={accessState === 'manager'}
                   nextEvent={nextEventsByClubId.get(club.id)}
+                  openLabel="Open workspace"
                   onLeave={(id) => leaveClub(id)}
                   onOpen={(targetClub) => navigate(`/my-clubs/${targetClub.id}`)}
                 />

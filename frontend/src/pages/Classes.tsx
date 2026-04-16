@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useClassroom } from '../hooks/useClassroom';
 import { useSchedules } from '../hooks/useSchedules';
 import { isFirebaseEmulatorMode } from '../lib/firebaseEnv';
+import { formatTimestamp } from '../lib/formatters';
 import type { ClassroomCourse } from '../services/classroomService';
 
 function formatDueDate(due?: { year: number; month: number; day: number }) {
@@ -16,15 +17,15 @@ function formatDueDate(due?: { year: number; month: number; day: number }) {
 }
 
 export default function Classes() {
-  const { user, accessToken } = useAuth();
-  const { courses, coursework, loadingCourses, loadingWork, error, openCourse } = useClassroom();
+  const { user } = useAuth();
+  const { courses, coursework, loadingCourses, loadingWork, error, openCourse, reconnect, sessionStatus } = useClassroom();
   const { entries, datasets, loading: loadingSchedules, error: scheduleError } = useSchedules();
   const [selected, setSelected] = useState<ClassroomCourse | null>(null);
   const classroomUnavailableMessage = isFirebaseEmulatorMode
-    ? 'Live Classroom sync is intentionally disabled in emulator mode.'
+    ? 'Live Classroom recovery is intentionally disabled in emulator mode.'
     : !isGoogleAuthConfigured()
-      ? 'Classroom becomes available once Google auth is configured for this environment.'
-      : 'Sign in with Google and grant Classroom access to view live courses.';
+      ? 'Classroom is unavailable until Google OAuth is configured for this environment.'
+      : 'Classroom is attached here only when a recoverable Google session is available.';
 
   if (!user) {
     return (
@@ -48,13 +49,35 @@ export default function Classes() {
   const mealEntries = personalisedEntries.filter((entry) => entry.scheduleType === 'meal');
   const academicDatasets = datasets.filter((dataset) => dataset.scheduleType === 'academic');
   const mealDatasets = datasets.filter((dataset) => dataset.scheduleType === 'meal');
+  const hasAcademicDataset = academicDatasets.length > 0;
+  const hasMealDataset = mealDatasets.length > 0;
+
+  const academicEmptyState = !hasAcademicDataset
+    ? {
+        title: 'Timetable is not live in this environment',
+        body: 'No academic dataset metadata has been published yet, so there is no defensible timetable surface to show here.'
+      }
+    : academicEntries.length === 0
+      ? {
+          title: 'Academic datasets exist, but your cohort is not mapped',
+          body: 'Convergent can see schedule dataset records, but there are no live academic entries for this grade-section combination yet.'
+        }
+      : null;
+
+  const mealEmptyState = !hasMealDataset
+    ? 'Meals are not live in this environment yet.'
+    : mealEntries.length === 0
+      ? 'Meal dataset metadata exists, but there are no live meal entries for your cohort yet.'
+      : null;
 
   return (
     <div className="space-y-6">
       <div>
         <p className="text-sm uppercase tracking-[0.25em] text-white/50">Academic structure</p>
         <h1 className="text-3xl font-semibold text-white">Classes</h1>
-        <p className="text-white/60">This page combines timetable datasets, meal structure, and attached Classroom links. It is still a partial academic surface rather than a complete school operating system.</p>
+        <p className="text-white/60">
+          This page only shows real cohort timetable mappings, published dataset metadata, and attached Classroom data when a Google session can actually recover. It is not presented as a full school operating system.
+        </p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.95fr)]">
@@ -75,7 +98,7 @@ export default function Classes() {
                 <EmptyStateCard
                   eyebrow="Profile mapping"
                   title="Grade and section are required"
-                  body="The first-login flow now stores these fields on the user profile so Convergent can map users onto timetable datasets later."
+                  body="Convergent cannot test timetable or meal coverage until your grade and section are stored on the profile."
                   tone="warning"
                 />
               </div>
@@ -85,8 +108,8 @@ export default function Classes() {
               <div className="mt-4">
                 <EmptyStateCard
                   eyebrow="Timetable dataset"
-                  title="No academic blocks mapped yet"
-                  body="The schedule entry model is in place, but there is no live dataset attached for this grade-section combination yet."
+                  title={academicEmptyState?.title ?? 'No academic blocks mapped yet'}
+                  body={academicEmptyState?.body ?? 'No academic blocks are mapped yet.'}
                   tone="accent"
                 />
               </div>
@@ -113,9 +136,9 @@ export default function Classes() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-glass">
               <p className="text-xs uppercase tracking-[0.3em] text-white/45">Meal schedules</p>
-              <h2 className="mt-2 text-xl font-semibold text-white">Structured meal blocks</h2>
+              <h2 className="mt-2 text-xl font-semibold text-white">Meal blocks</h2>
               {mealEntries.length === 0 ? (
-                <p className="mt-4 text-sm text-white/60">No meal schedule dataset has been attached for your cohort yet.</p>
+                <p className="mt-4 text-sm text-white/60">{mealEmptyState}</p>
               ) : (
                 <div className="mt-4 space-y-3">
                   {mealEntries.map((entry) => (
@@ -129,10 +152,10 @@ export default function Classes() {
             </div>
             <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-glass">
               <p className="text-xs uppercase tracking-[0.3em] text-white/45">Datasets</p>
-              <h2 className="mt-2 text-xl font-semibold text-white">Dataset readiness</h2>
+              <h2 className="mt-2 text-xl font-semibold text-white">Published dataset records</h2>
               <div className="mt-4 space-y-3">
                 {[...academicDatasets, ...mealDatasets].length === 0 ? (
-                  <p className="text-sm text-white/60">No dataset metadata has been published yet. Placeholder records can now be added without redesigning this page.</p>
+                  <p className="text-sm text-white/60">No timetable or meal dataset records have been published yet.</p>
                 ) : (
                   [...academicDatasets, ...mealDatasets].map((dataset) => (
                     <div key={dataset.id} className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-white/75">
@@ -140,7 +163,10 @@ export default function Classes() {
                         <span className="font-medium text-white">{dataset.title}</span>
                         <span className="text-xs uppercase tracking-[0.25em] text-white/45">{dataset.status}</span>
                       </div>
-                      <p className="mt-1 text-xs text-white/50">{dataset.notes ?? 'No additional dataset notes yet.'}</p>
+                      <p className="mt-1 text-xs text-white/50">
+                        {dataset.scheduleType} dataset · updated {formatTimestamp(dataset.updatedAt, 'not recorded')}
+                      </p>
+                      <p className="mt-2 text-xs text-white/50">{dataset.notes ?? 'No additional dataset notes recorded.'}</p>
                     </div>
                   ))
                 )}
@@ -152,11 +178,29 @@ export default function Classes() {
         <section className="space-y-4">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-glass">
             <h2 className="text-xl font-semibold text-white">Google Classroom</h2>
-            {!accessToken ? <p className="mt-2 text-sm text-white/60">{classroomUnavailableMessage}</p> : null}
             {error ? <p className="mt-2 text-sm text-rose-300">{error}</p> : null}
-            {accessToken && loadingCourses ? (
+            {sessionStatus === 'checking' || loadingCourses ? (
+              <p className="mt-4 text-white/60">Checking Google session and loading courses…</p>
+            ) : sessionStatus === 'ready' ? (
+              <div className="mt-2 text-sm text-white/60">Recovered Google session. Classroom remains an attached coursework surface, not the scheduling authority.</div>
+            ) : sessionStatus === 'needs_reconnect' ? (
+              <div className="mt-4 space-y-3">
+                <EmptyStateCard
+                  eyebrow="Reconnect"
+                  title="Classroom needs Google re-approval"
+                  body="Your Firebase session survived, but the Classroom token did not. Reconnect Google access to load live courses and coursework again."
+                  actionLabel="Reconnect Classroom"
+                  onAction={() => {
+                    void reconnect();
+                  }}
+                />
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-white/60">{classroomUnavailableMessage}</p>
+            )}
+            {sessionStatus === 'ready' && loadingCourses ? (
               <p className="mt-4 text-white/60">Loading courses…</p>
-            ) : accessToken ? (
+            ) : sessionStatus === 'ready' ? (
               <div className="mt-4 space-y-3">
                 {courses.map((course) => (
                   <button
@@ -173,19 +217,19 @@ export default function Classes() {
                 ))}
                 {courses.length === 0 ? <p className="text-sm text-white/60">No active courses found for your account.</p> : null}
               </div>
-            ) : (
+            ) : sessionStatus === 'checking' ? null : (
               <div className="mt-4">
                 <EmptyStateCard
                   eyebrow="Classroom links"
-                  title="Live Classroom access is not available yet"
-                  body="The data model can store Classroom references on clubs, events, and posts, but the live Classroom experience here is still limited and environment-dependent."
+                  title="Live Classroom access is not available here"
+                  body="The product can store Classroom references on clubs, events, and posts, but live coursework browsing still depends on a recoverable Google session in this environment."
                 />
               </div>
             )}
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-glass">
-            {selected && accessToken ? (
+            {selected && sessionStatus === 'ready' ? (
               <>
                 <h2 className="text-xl font-semibold text-white">{selected.name} coursework</h2>
                 {loadingWork ? (
@@ -215,7 +259,7 @@ export default function Classes() {
               <EmptyStateCard
                 eyebrow="Section mapping"
                 title="Course links and timetable mapping stay separate"
-                body="Grade and section decide timetable datasets. Classroom is still an attached service layer here, not the source of truth for scheduling or club operations."
+                body="Grade and section decide schedule coverage. Classroom remains an attached service for coursework only, not the source of truth for scheduling or club operations."
               />
             )}
           </div>
