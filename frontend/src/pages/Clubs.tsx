@@ -8,11 +8,13 @@ import { getClubAccessState } from '../domain/memberships';
 import { useAuth } from '../hooks/useAuth';
 import { useClubs } from '../hooks/useClubs';
 import { useEvents } from '../hooks/useEvents';
+import { STUDENT_CLUB_PLACEHOLDER, shouldUseStudentClubPlaceholder } from '../lib/productTruth';
 
 export default function Clubs() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { clubs, loading, error, joinClub, leaveClub, membershipMap } = useClubs();
+  const showStudentPlaceholder = shouldUseStudentClubPlaceholder(user);
   const eventWindow = useMemo(
     () => ({
       rangeStart: new Date(),
@@ -48,6 +50,29 @@ export default function Clubs() {
   const pendingClubs = clubStates.filter((entry) => entry.accessState === 'pending_member');
   const availableClubs = clubStates.filter((entry) => entry.accessState === 'not_joined' || entry.accessState === 'rejected_member');
   const approvedClubs = clubStates.filter((entry) => entry.accessState === 'approved_member' || entry.accessState === 'manager');
+
+  if (showStudentPlaceholder) {
+    return (
+      <div className="space-y-6">
+        <header>
+          <p className="text-sm uppercase tracking-[0.25em] text-white/50">Communities</p>
+          <h1 className="text-3xl font-semibold text-white">Join Clubs</h1>
+          <p className="mt-2 max-w-3xl text-white/60">
+            This surface remains in explicit placeholder mode for students until real club data replaces the development fixtures used elsewhere in the repo.
+          </p>
+        </header>
+
+        <EmptyStateCard
+          eyebrow="Student clubs"
+          title={STUDENT_CLUB_PLACEHOLDER.title}
+          body={STUDENT_CLUB_PLACEHOLDER.body}
+          actionLabel="Open calendar"
+          onAction={() => navigate('/calendar')}
+          tone="accent"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

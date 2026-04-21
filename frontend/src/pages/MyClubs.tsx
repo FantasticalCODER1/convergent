@@ -7,11 +7,13 @@ import { getClubAccessState } from '../domain/memberships';
 import { useAuth } from '../hooks/useAuth';
 import { useClubs } from '../hooks/useClubs';
 import { useEvents } from '../hooks/useEvents';
+import { STUDENT_CLUB_PLACEHOLDER, shouldUseStudentClubPlaceholder } from '../lib/productTruth';
 
 export default function MyClubs() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { clubs, loading, error, membershipMap, leaveClub } = useClubs();
+  const showStudentPlaceholder = shouldUseStudentClubPlaceholder(user);
   const eventWindow = useMemo(
     () => ({
       rangeStart: new Date(),
@@ -49,6 +51,28 @@ export default function MyClubs() {
       });
     return nextEvents;
   }, [events]);
+
+  if (showStudentPlaceholder) {
+    return (
+      <div className="space-y-6">
+        <header>
+          <p className="text-sm uppercase tracking-[0.25em] text-white/50">Ownership</p>
+          <h1 className="text-3xl font-semibold text-white">My Clubs</h1>
+          <p className="mt-2 max-w-3xl text-white/60">
+            Student club memberships stay in placeholder mode locally until the real directory and approval data are ready to replace the seeded fixtures.
+          </p>
+        </header>
+
+        <EmptyStateCard
+          eyebrow="Student clubs"
+          title={STUDENT_CLUB_PLACEHOLDER.title}
+          body="There are no truthful student club memberships to show yet. When the club program is live, approved clubs will appear here automatically."
+          actionLabel="Back to calendar"
+          onAction={() => navigate('/calendar')}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

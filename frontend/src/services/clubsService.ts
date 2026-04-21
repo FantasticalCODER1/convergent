@@ -1,7 +1,6 @@
 import {
   collection,
   collectionGroup,
-  documentId,
   doc,
   getDoc,
   getDocs,
@@ -130,12 +129,13 @@ export async function addClubPost(clubId: string, input: ClubPostInput, _author:
 
 export async function listMembershipsForUser(userId: string): Promise<MembershipRecord[]> {
   const memberships = collectionGroup(firestore, 'memberships');
-  const [byUserId, byLegacyDocId] = await Promise.all([
+  const [byUserId, legacyMemberships] = await Promise.all([
     getDocs(query(memberships, where('userId', '==', userId))),
-    getDocs(query(memberships, where(documentId(), '==', userId)))
+    getDocs(memberships)
   ]);
   const deduped = new Map<string, MembershipRecord>();
-  [...byUserId.docs, ...byLegacyDocId.docs].forEach((docSnap) => {
+  const byLegacyDocId = legacyMemberships.docs.filter((docSnap) => docSnap.id === userId);
+  [...byUserId.docs, ...byLegacyDocId].forEach((docSnap) => {
     const record = mapMembership(docSnap);
     if (!record.groupId) return;
     deduped.set(record.groupId, record);

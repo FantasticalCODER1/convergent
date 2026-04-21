@@ -1,5 +1,5 @@
 import { FirebaseApp, getApps, initializeApp } from 'firebase/app';
-import { emulatorProjectId, isFirebaseEmulatorMode } from '../lib/firebaseEnv';
+import { emulatorProjectId, firebaseRuntimeMode, hasFirebaseConfiguration, isFirebaseEmulatorMode } from '../lib/firebaseEnv';
 
 type FirebaseConfig = {
   apiKey: string;
@@ -11,7 +11,8 @@ type FirebaseConfig = {
 };
 
 function getConfig(): FirebaseConfig {
-  const projectId = emulatorProjectId;
+  const configuredProjectId = (import.meta.env.VITE_FIREBASE_PROJECT_ID ?? '').trim();
+  const projectId = configuredProjectId || emulatorProjectId;
   const config: FirebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? (isFirebaseEmulatorMode ? 'demo-api-key' : ''),
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? (isFirebaseEmulatorMode ? `${projectId}.firebaseapp.com` : ''),
@@ -26,7 +27,7 @@ function getConfig(): FirebaseConfig {
     return !value;
   });
 
-  if (missing.length > 0) {
+  if (missing.length > 0 && firebaseRuntimeMode === 'firebase') {
     throw new Error(`Missing Firebase config values: ${missing.join(', ')}`);
   }
 
@@ -41,4 +42,12 @@ export function getFirebaseApp(): FirebaseApp {
     app = apps.length > 0 ? apps[0] : initializeApp(getConfig());
   }
   return app;
+}
+
+export function getFirebaseRuntimeSummary() {
+  return {
+    runtimeMode: firebaseRuntimeMode,
+    hasFirebaseConfiguration,
+    usesEmulators: isFirebaseEmulatorMode
+  };
 }

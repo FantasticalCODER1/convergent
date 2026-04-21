@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
+import { isGoogleAuthConfigured } from '../auth/google';
 import type { ClassroomCourse, ClassroomCoursework } from '../services/classroomService';
 import { listCoursework, listCourses } from '../services/classroomService';
 import { useAuth } from './useAuth';
+import { isFirebaseEmulatorMode } from '../lib/firebaseEnv';
 
-export type ClassroomSessionStatus = 'idle' | 'checking' | 'ready' | 'needs_reconnect';
+export type ClassroomSessionStatus = 'idle' | 'checking' | 'ready' | 'needs_reconnect' | 'unsupported';
 
 export function useClassroom() {
   const { accessToken, user, ensureGoogleAccessToken } = useAuth();
+  const classroomSupported = !isFirebaseEmulatorMode && isGoogleAuthConfigured();
   const [courses, setCourses] = useState<ClassroomCourse[]>([]);
   const [coursework, setCoursework] = useState<ClassroomCoursework[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
@@ -27,6 +30,13 @@ export function useClassroom() {
       setCourses([]);
       setCoursework([]);
       setSessionStatus('idle');
+      return;
+    }
+    if (!classroomSupported) {
+      setCourses([]);
+      setCoursework([]);
+      setError(null);
+      setSessionStatus('unsupported');
       return;
     }
     setLoadingCourses(true);
@@ -51,21 +61,34 @@ export function useClassroom() {
     } finally {
       setLoadingCourses(false);
     }
-  }, [resolveToken, user]);
+  }, [classroomSupported, resolveToken, user]);
 
   useEffect(() => {
-    if (user) {
-      void loadCourses('silent');
-    } else {
+    if (!user) {
       setCourses([]);
       setCoursework([]);
       setSessionStatus('idle');
+      return;
     }
-  }, [loadCourses, user]);
+
+    if (!classroomSupported) {
+      setCourses([]);
+      setCoursework([]);
+      setSessionStatus('unsupported');
+      return;
+    }
+
+    if (user) {
+      void loadCourses('silent');
+    }
+  }, [classroomSupported, loadCourses, user]);
 
   const openCourse = useCallback(
     async (course: ClassroomCourse) => {
-      if (!user) return;
+      if (!user || !classroomSupported) {
+        setSessionStatus(classroomSupported ? 'idle' : 'unsupported');
+        return;
+      }
       setLoadingWork(true);
       setError(null);
       try {
@@ -86,12 +109,16 @@ export function useClassroom() {
         setLoadingWork(false);
       }
     },
-    [resolveToken, user]
+    [classroomSupported, resolveToken, user]
   );
 
   const reconnect = useCallback(async () => {
+    if (!classroomSupported) {
+      setSessionStatus('unsupported');
+      return;
+    }
     await loadCourses('interactive');
-  }, [loadCourses]);
+  }, [classroomSupported, loadCourses]);
 
   return {
     courses,
@@ -100,6 +127,7 @@ export function useClassroom() {
     loadingWork,
     error,
     sessionStatus,
+    classroomSupported,
     loadCourses,
     openCourse,
     reconnect

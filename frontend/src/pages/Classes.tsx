@@ -18,11 +18,11 @@ function formatDueDate(due?: { year: number; month: number; day: number }) {
 
 export default function Classes() {
   const { user } = useAuth();
-  const { courses, coursework, loadingCourses, loadingWork, error, openCourse, reconnect, sessionStatus } = useClassroom();
+  const { courses, coursework, loadingCourses, loadingWork, error, openCourse, reconnect, sessionStatus, classroomSupported } = useClassroom();
   const { entries, datasets, loading: loadingSchedules, error: scheduleError } = useSchedules();
   const [selected, setSelected] = useState<ClassroomCourse | null>(null);
   const classroomUnavailableMessage = isFirebaseEmulatorMode
-    ? 'Live Classroom recovery is intentionally disabled in emulator mode.'
+    ? 'Google Classroom is intentionally disabled in local emulator mode. The supported local path is the timetable-driven calendar and classes view.'
     : !isGoogleAuthConfigured()
       ? 'Classroom is unavailable until Google OAuth is configured for this environment.'
       : 'Classroom is attached here only when a recoverable Google session is available.';
@@ -195,6 +195,14 @@ export default function Classes() {
                   }}
                 />
               </div>
+            ) : sessionStatus === 'unsupported' ? (
+              <div className="mt-4">
+                <EmptyStateCard
+                  eyebrow="Local mode"
+                  title="Classroom is not part of the supported local path"
+                  body={classroomUnavailableMessage}
+                />
+              </div>
             ) : (
               <p className="mt-2 text-sm text-white/60">{classroomUnavailableMessage}</p>
             )}
@@ -217,7 +225,7 @@ export default function Classes() {
                 ))}
                 {courses.length === 0 ? <p className="text-sm text-white/60">No active courses found for your account.</p> : null}
               </div>
-            ) : sessionStatus === 'checking' ? null : (
+            ) : sessionStatus === 'checking' || !classroomSupported ? null : (
               <div className="mt-4">
                 <EmptyStateCard
                   eyebrow="Classroom links"

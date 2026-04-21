@@ -7,6 +7,7 @@ import { getClubAccessState } from '../domain/memberships';
 import { useAuth } from '../hooks/useAuth';
 import { usePersonalCalendar } from '../hooks/usePersonalCalendar';
 import { formatDateTimeRange } from '../lib/formatters';
+import { STUDENT_CLUB_PLACEHOLDER, shouldUseStudentClubPlaceholder } from '../lib/productTruth';
 
 function getUpcomingEmptyState(profileReady: boolean, academicStatus: string, mealStatus: string) {
   if (!profileReady) return 'Finish grade and section mapping to unlock timetable and meals. School-wide and approved club events will still appear here when available.';
@@ -33,6 +34,7 @@ function getScheduleDetail(kind: 'academic' | 'meal', readiness: { profileReady:
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const showStudentClubPlaceholder = shouldUseStudentClubPlaceholder(user);
   const calendarWindow = useMemo(
     () => ({
       rangeStart: subDays(startOfDay(new Date()), 1),
@@ -146,43 +148,55 @@ export default function Dashboard() {
         </section>
 
         <section className="space-y-4">
-          <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-glass">
-            <p className="text-xs uppercase tracking-[0.3em] text-white/45">My clubs</p>
-            <h2 className="mt-2 text-2xl font-semibold text-white">Approved memberships</h2>
-            {myClubs.length === 0 ? (
-              <p className="mt-4 text-sm text-white/60">No approved clubs yet.</p>
-            ) : (
-              <div className="mt-4 space-y-3">
-                {myClubs.slice(0, 4).map((club) => (
-                  <Link
-                    key={club.id}
-                    to={`/my-clubs/${club.id}`}
-                    className="block rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-white transition hover:bg-white/10"
-                  >
-                    <div className="font-medium">{club.name}</div>
-                    <div className="mt-1 text-xs text-white/55">{club.schedule}</div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-glass">
-            <p className="text-xs uppercase tracking-[0.3em] text-white/45">Pending</p>
-            <h2 className="mt-2 text-2xl font-semibold text-white">Join requests</h2>
-            {pendingClubs.length === 0 ? (
-              <p className="mt-4 text-sm text-white/60">No pending club approvals.</p>
-            ) : (
-              <div className="mt-4 space-y-3">
-                {pendingClubs.map((club) => (
-                  <div key={club.id} className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-white">
-                    <div className="font-medium">{club.name}</div>
-                    <div className="mt-1 text-xs text-white/55">Awaiting manager or master approval</div>
+          {showStudentClubPlaceholder ? (
+            <EmptyStateCard
+              eyebrow="Student clubs"
+              title={STUDENT_CLUB_PLACEHOLDER.title}
+              body="The dashboard no longer reports fake memberships, approvals, or club counts for students in this local environment."
+              actionLabel="Open Join Clubs"
+              onAction={() => window.location.assign('/join-clubs')}
+            />
+          ) : (
+            <>
+              <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-glass">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/45">My clubs</p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">Approved memberships</h2>
+                {myClubs.length === 0 ? (
+                  <p className="mt-4 text-sm text-white/60">No approved clubs yet.</p>
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    {myClubs.slice(0, 4).map((club) => (
+                      <Link
+                        key={club.id}
+                        to={`/my-clubs/${club.id}`}
+                        className="block rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-white transition hover:bg-white/10"
+                      >
+                        <div className="font-medium">{club.name}</div>
+                        <div className="mt-1 text-xs text-white/55">{club.schedule}</div>
+                      </Link>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
-          </div>
+
+              <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-glass">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/45">Pending</p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">Join requests</h2>
+                {pendingClubs.length === 0 ? (
+                  <p className="mt-4 text-sm text-white/60">No pending club approvals.</p>
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    {pendingClubs.map((club) => (
+                      <div key={club.id} className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-white">
+                        <div className="font-medium">{club.name}</div>
+                        <div className="mt-1 text-xs text-white/55">Awaiting manager or master approval</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-glass">
             <p className="text-xs uppercase tracking-[0.3em] text-white/45">Readiness</p>

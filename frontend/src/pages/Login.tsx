@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { isGoogleAuthConfigured } from '../auth/google';
-import { isFirebaseEmulatorMode } from '../lib/firebaseEnv';
+import { firebaseRuntimeMode, isFirebaseEmulatorMode } from '../lib/firebaseEnv';
 
 const emulatorUsers = [
   'admin@doonschool.com',
@@ -18,7 +18,7 @@ export default function Login() {
   const [password, setPassword] = useState('password123');
   const from = (location.state as any)?.from?.pathname || '/';
   const emulatorLoginEnabled = isFirebaseEmulatorMode && !!loginWithEmulator;
-  const googleLoginEnabled = !isFirebaseEmulatorMode && isGoogleAuthConfigured();
+  const googleLoginEnabled = firebaseRuntimeMode === 'firebase' && isGoogleAuthConfigured();
 
   if (user) {
     return <Navigate to={from} replace />;
@@ -32,15 +32,17 @@ export default function Login() {
           <h1 className="text-3xl font-semibold">Sign in to your co-curricular workspace</h1>
           <p className="text-sm text-white/70">
             {emulatorLoginEnabled
-              ? 'Use the seeded local accounts for deterministic emulator validation.'
-              : 'Use your school Google account to access clubs, calendar, and certificates.'}
+              ? 'Local development uses seeded emulator accounts. Google sign-in is intentionally disabled in this mode.'
+              : googleLoginEnabled
+                ? 'Use your school Google account to access calendar, classes, and certificates.'
+                : 'This environment does not currently have a supported sign-in provider configured.'}
           </p>
         </div>
         {emulatorLoginEnabled ? (
           <div className="space-y-3 rounded-2xl border border-emerald-300/20 bg-emerald-500/5 p-4">
             <div>
               <p className="text-xs uppercase tracking-[0.25em] text-emerald-200">Emulator sign-in</p>
-              <p className="text-sm text-white/70">Local auth is active. Google token flows only start when a feature explicitly requests them.</p>
+              <p className="text-sm text-white/70">Use one of the seeded local accounts below. The local student experience is calendar-first and keeps clubs in explicit placeholder mode.</p>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
               {emulatorUsers.map((seededEmail) => (
@@ -94,7 +96,9 @@ export default function Login() {
         ) : null}
         {!googleLoginEnabled && !emulatorLoginEnabled ? (
           <div className="rounded-2xl border border-amber-300/20 bg-amber-500/5 px-4 py-3 text-sm text-amber-100">
-            Google sign-in is not configured for this environment yet.
+            {firebaseRuntimeMode === 'unconfigured'
+              ? 'Firebase configuration is missing for this environment. In local development, start the app through the emulator-backed dev flow.'
+              : 'Google sign-in is not configured for this environment yet.'}
           </div>
         ) : null}
         {error && <div className="text-red-300 text-sm whitespace-pre-wrap">{error}</div>}

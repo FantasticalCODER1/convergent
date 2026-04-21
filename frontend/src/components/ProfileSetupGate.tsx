@@ -51,14 +51,14 @@ export function ProfileSetupGate({ user, onComplete }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/85 p-4">
-      <div className="w-full max-w-2xl rounded-[32px] border border-white/10 bg-slate-900/95 p-6 text-white shadow-2xl">
+    <div className="fixed inset-x-4 bottom-24 z-40 flex justify-center md:bottom-6">
+      <div className="w-full max-w-4xl rounded-[28px] border border-cyan-300/20 bg-slate-900/95 p-5 text-white shadow-2xl backdrop-blur">
         <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">Profile setup</p>
-        <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="mt-3 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <h2 className="text-3xl font-semibold">Finish your academic profile</h2>
+            <h2 className="text-2xl font-semibold">Finish your academic profile</h2>
             <p className="mt-2 max-w-xl text-sm text-white/70">
-              Convergent now uses grade and section to map timetable datasets, meal views, and class-linked resources. This is stored on your profile and can be updated later.
+              Grade and section are only used to map timetable datasets, meals, and class-linked resources. Navigation stays open while you complete this.
             </p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-white/65">
@@ -66,7 +66,7 @@ export function ProfileSetupGate({ user, onComplete }: Props) {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <label className="space-y-2 text-sm">
             <span className="text-white/75">Grade</span>
             <input
@@ -110,7 +110,7 @@ export function ProfileSetupGate({ user, onComplete }: Props) {
 
         {error ? <p className="mt-4 text-sm text-rose-300">{error}</p> : null}
 
-        <div className="mt-6 flex flex-wrap items-center gap-3">
+        <div className="mt-5 flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={() => void submit()}
@@ -119,7 +119,7 @@ export function ProfileSetupGate({ user, onComplete }: Props) {
           >
             {saving ? 'Saving profile…' : 'Save profile'}
           </button>
-          <p className="text-sm text-white/55">This is the minimum profile data needed to route you into timetable datasets later.</p>
+          <p className="text-sm text-white/55">This is the minimum profile data needed for timetable matching. Clubs, dashboard navigation, and certificates remain usable without it.</p>
         </div>
       </div>
     </div>

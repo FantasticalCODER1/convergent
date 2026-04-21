@@ -20,6 +20,7 @@ import { useClubs } from '../hooks/useClubs';
 import { useEvents } from '../hooks/useEvents';
 import { formatDateTimeRange, formatRelativeEventWindow, formatTimestamp } from '../lib/formatters';
 import { canManageClub } from '../lib/policy';
+import { shouldUseStudentClubPlaceholder } from '../lib/productTruth';
 import { listCertificatesForClub } from '../services/certificatesService';
 import { listEventAttendance, type EventAttendanceRecord } from '../services/eventsService';
 import { listClubUsers } from '../services/usersService';
@@ -117,6 +118,7 @@ export default function ClubDetail() {
 
   const accessState = getClubAccessState(user, club, membershipMap);
   const manageable = canManageClub(user, club);
+  const showStudentPlaceholder = shouldUseStudentClubPlaceholder(user) && !manageable;
   const workspaceRoute = location.pathname.startsWith('/my-clubs/');
   const showManagementPanel = manageable && workspaceRoute;
   const canAccessPrivateContent = canViewPrivateClubContent(user, club, membershipMap);
@@ -261,6 +263,15 @@ export default function ClubDetail() {
       );
     }
     return <StateCard title="Club unavailable" body="This club record no longer exists." />;
+  }
+
+  if (showStudentPlaceholder) {
+    return (
+      <StateCard
+        title="Student clubs are still placeholder-only"
+        body="This route stays hidden from the ordinary student experience until real club data replaces the development fixtures. Calendar, classes, and certificates remain the truthful student surfaces."
+      />
+    );
   }
 
   const category = getCategoryMeta(club.category);
