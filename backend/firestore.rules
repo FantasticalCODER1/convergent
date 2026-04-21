@@ -228,9 +228,9 @@ service cloud.firestore {
     }
 
     function eventGroupId(data) {
-      return data.relatedGroupId is string && data.relatedGroupId.size() > 0
+      return ('relatedGroupId' in data) && data.relatedGroupId is string && data.relatedGroupId.size() > 0
         ? data.relatedGroupId
-        : data.clubId is string && data.clubId.size() > 0
+        : ('clubId' in data) && data.clubId is string && data.clubId.size() > 0
           ? data.clubId
           : null;
     }
