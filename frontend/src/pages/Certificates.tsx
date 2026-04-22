@@ -1,6 +1,8 @@
 import { useAuth } from '../hooks/useAuth';
 import { useCertificates } from '../hooks/useCertificates';
 import { CertificateCard } from '../components/CertificateCard';
+import { EmptyStateCard } from '../components/EmptyStateCard';
+import { MetricCard, PageHeader, SurfaceSection } from '../components/ui/product';
 
 export default function Certificates() {
   const { user } = useAuth();
@@ -8,32 +10,40 @@ export default function Certificates() {
 
   if (!user) {
     return (
-      <div className="rounded-3xl border border-white/5 bg-white/5 p-6 text-white/70">
-        Sign in to generate and view certificates.
-      </div>
+      <EmptyStateCard
+        eyebrow="Credentials"
+        title="Sign in to view certificate records"
+        body="Certificate history and verification links stay attached to your signed-in school profile."
+      />
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-white/50">Credentials</p>
-          <h1 className="text-3xl font-semibold text-white">Certificates</h1>
-          <p className="text-white/60">View your certificate history. Issuance now happens from club management surfaces.</p>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Metric label="Records" value={String(certificates.length)} hint="Issued to your profile" />
-          <Metric label="Verification" value="Live" hint="Each record keeps a public verify link" />
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Credentials"
+        title="Certificates"
+        description="This surface now reads like a student record ledger: issued credentials, public verification, and linked proof without the old generic dashboard-card treatment."
+        aside={
+          <div className="grid gap-3 sm:grid-cols-2">
+            <MetricCard label="Records" value={String(certificates.length)} hint="Issued to your profile" />
+            <MetricCard label="Verification" value="Live" hint="Each record keeps a public verify link" tone="accent" />
+          </div>
+        }
+      />
 
-      <div className="rounded-3xl border border-white/5 bg-white/5 p-6 shadow-glass">
+      <SurfaceSection
+        eyebrow="Issued records"
+        title="Verified certificate history"
+        description="Issuance stays inside club workspaces, while this page keeps the student view compact, readable, and verification-first."
+      >
         {loading ? (
-          <div className="p-8 text-center text-white/70">Loading certificates…</div>
+          <div className="rounded-[22px] border border-white/8 bg-[rgba(10,15,27,0.32)] p-8 text-center text-sm text-[var(--text-muted)]">
+            Loading certificates…
+          </div>
         ) : certificates.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-8 text-center text-white/70">
-            No certificates yet. When a club issues one, it will appear here with its verification link and downloadable asset.
+          <div className="rounded-[24px] border border-dashed border-white/10 bg-[rgba(10,15,27,0.22)] p-8 text-center text-sm leading-7 text-[var(--text-muted)]">
+            No certificates have been issued to this profile yet. When a club publishes one, it will appear here with a public verification page and any attached certificate asset.
           </div>
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">
@@ -42,17 +52,7 @@ export default function Certificates() {
             ))}
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-function Metric({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white shadow-glass">
-      <p className="text-xs uppercase tracking-[0.25em] text-white/45">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
-      <p className="text-xs text-white/50">{hint}</p>
+      </SurfaceSection>
     </div>
   );
 }
