@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { EmptyStateCard } from '../components/EmptyStateCard';
 import { ClubCard } from '../components/ClubCard';
+import { MetricCard, PageHeader, StatRow, SurfaceSection } from '../components/ui/product';
 import { getClubAccessState } from '../domain/memberships';
 import { useAuth } from '../hooks/useAuth';
 import { useClubs } from '../hooks/useClubs';
@@ -54,13 +55,17 @@ export default function Clubs() {
   if (showStudentPlaceholder) {
     return (
       <div className="space-y-6">
-        <header>
-          <p className="text-sm uppercase tracking-[0.25em] text-white/50">Communities</p>
-          <h1 className="text-3xl font-semibold text-white">Join Clubs</h1>
-          <p className="mt-2 max-w-3xl text-white/60">
-            This surface remains in explicit placeholder mode for students until real club data replaces the development fixtures used elsewhere in the repo.
-          </p>
-        </header>
+        <PageHeader
+          eyebrow="Communities"
+          title="Join Clubs"
+          description="This surface remains in explicit placeholder mode for students until real club data replaces the development fixtures used elsewhere in the repo."
+          aside={
+            <div className="grid gap-3 sm:grid-cols-2">
+              <MetricCard label="Directory" value="Staged" hint="Student discovery held back" tone="accent" />
+              <MetricCard label="Memberships" value="0" hint="No fake access shown" />
+            </div>
+          }
+        />
 
         <EmptyStateCard
           eyebrow="Student clubs"
@@ -70,63 +75,64 @@ export default function Clubs() {
           onAction={() => navigate('/calendar')}
           tone="accent"
         />
+
+        <SurfaceSection
+          eyebrow="Why this is limited"
+          title="Discovery stays truthful"
+          description="The product will only open student club discovery once the directory, approvals, and private-link behaviour are all backed by real school data instead of development fixtures."
+        >
+          <div className="space-y-3">
+            <StatRow label="Discovery cards" value="Hidden until directory data is real" />
+            <StatRow label="Approval states" value="Will appear once manager review is live" />
+            <StatRow label="Calendar links" value="Only approved clubs will feed the planner" />
+          </div>
+        </SurfaceSection>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-white/50">Communities</p>
-          <h1 className="text-3xl font-semibold text-white">Join Clubs</h1>
-          <p className="mt-2 max-w-3xl text-white/60">
-            Browse every group, request membership where approval is required, and keep discovery separate from the clubs already attached to your personal calendar.
-          </p>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-4">
-          <StatCard label="Directory" value={String(clubs.length)} hint="Visible groups" />
-          <StatCard label="Available" value={String(availableClubs.length)} hint="Open or requestable" />
-          <StatCard label="Pending" value={String(pendingClubs.length)} hint="Awaiting approval" />
-          <StatCard label="Approved" value={String(approvedClubs.length)} hint="Already on your calendar" />
-        </div>
-      </header>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Communities"
+        title="Join Clubs"
+        description="Browse every group, request membership where approval is required, and keep discovery separate from the clubs already attached to your personal calendar."
+        aside={
+          <div className="grid gap-3 sm:grid-cols-4">
+            <MetricCard label="Directory" value={String(clubs.length)} hint="Visible groups" />
+            <MetricCard label="Available" value={String(availableClubs.length)} hint="Open or requestable" />
+            <MetricCard label="Pending" value={String(pendingClubs.length)} hint="Awaiting approval" tone={pendingClubs.length > 0 ? 'warning' : 'muted'} />
+            <MetricCard label="Approved" value={String(approvedClubs.length)} hint="Already on your calendar" />
+          </div>
+        }
+      />
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-glass">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-white/45">Discovery</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">Browse available groups</h2>
-            </div>
-            <Link to="/my-clubs" className="rounded-2xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <SurfaceSection
+          eyebrow="Discovery"
+          title="Browse available groups"
+          description="Only school-visible clubs appear in discovery. Approved memberships feed private club links and your personal calendar, while private clubs stay unreadable until you have real access."
+          action={
+            <Link
+              to="/my-clubs"
+              className="inline-flex items-center rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-[var(--text-strong)] transition hover:bg-white/8"
+            >
               Open My Clubs
             </Link>
-          </div>
-          <p className="mt-3 text-sm text-white/65">
-            Only school-visible clubs appear in discovery. Approved memberships feed private club links and your personal calendar, while private clubs stay unreadable until you have real access.
-          </p>
-        </div>
-        <EmptyStateCard
+          }
+        />
+
+        <SurfaceSection
           eyebrow="Visibility"
           title="Private clubs stay private"
-          body="Discovery only shows clubs your account can actually read. Classroom links, Meet rooms, and members-only resources are enforced by backend access rules instead of cosmetic hiding alone."
+          description="Discovery only shows clubs your account can actually read. Classroom links, Meet rooms, and members-only resources are enforced by backend access rules instead of cosmetic hiding alone."
           tone="accent"
         />
-      </section>
+      </div>
 
       {pendingClubs.length > 0 ? (
-        <section className="rounded-[32px] border border-amber-300/20 bg-amber-500/5 p-6 shadow-glass">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-amber-50/80">Pending requests</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">Awaiting club approval</h2>
-            </div>
-            <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.25em] text-white/60">
-              {pendingClubs.length} open
-            </span>
-          </div>
-          <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <SurfaceSection eyebrow="Pending requests" title="Awaiting club approval" tone="warning">
+          <div className="grid gap-4 xl:grid-cols-2">
             {pendingClubs.map(({ club, accessState }, index) => (
               <motion.div key={club.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
                 <ClubCard
@@ -140,21 +146,25 @@ export default function Clubs() {
               </motion.div>
             ))}
           </div>
-        </section>
+        </SurfaceSection>
       ) : null}
 
       {loading ? (
-        <div className="rounded-3xl border border-white/5 bg-white/5 p-6 text-white/70 shadow-glass">Loading clubs…</div>
+        <SurfaceSection eyebrow="Directory" title="Loading groups">
+          <div className="text-sm text-[var(--text-muted)]">Loading clubs…</div>
+        </SurfaceSection>
       ) : error ? (
-        <div className="rounded-3xl border border-rose-300/20 bg-rose-500/5 p-6 text-rose-100 shadow-glass">{error}</div>
+        <SurfaceSection eyebrow="Directory" title="Discovery unavailable" tone="warning">
+          <div className="text-sm text-rose-100">{error}</div>
+        </SurfaceSection>
       ) : availableClubs.length === 0 ? (
-        <div className="rounded-3xl border border-white/5 bg-white/5 p-6 text-white/70 shadow-glass">No additional clubs are available right now.</div>
+        <EmptyStateCard
+          eyebrow="Directory"
+          title="No additional clubs are available right now"
+          body="When new school-visible groups are published, they will appear here with their true approval mode and discovery links."
+        />
       ) : (
-        <section className="space-y-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-white/45">Directory</p>
-            <h2 className="mt-2 text-2xl font-semibold text-white">Available to join or request</h2>
-          </div>
+        <SurfaceSection eyebrow="Directory" title="Available to join or request">
           <div className="grid gap-4 xl:grid-cols-2">
             {availableClubs.map(({ club, accessState }, index) => (
               <motion.div key={club.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
@@ -171,18 +181,8 @@ export default function Clubs() {
               </motion.div>
             ))}
           </div>
-        </section>
+        </SurfaceSection>
       )}
-    </div>
-  );
-}
-
-function StatCard({ label, value, hint }: { label: string; value: string; hint: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white shadow-glass">
-      <p className="text-xs uppercase tracking-[0.25em] text-white/45">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
-      <p className="text-xs text-white/50">{hint}</p>
     </div>
   );
 }

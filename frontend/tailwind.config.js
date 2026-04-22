@@ -6,7 +6,7 @@ const config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Inter"', '"Nunito Sans"', ...defaultTheme.fontFamily.sans]
+        sans: ['"Instrument Sans"', '"Avenir Next"', ...defaultTheme.fontFamily.sans]
       },
       colors: {
         glass: 'rgba(255,255,255,0.08)',
@@ -15,7 +15,7 @@ const config = {
           dark: '#4F46E5',
           light: '#A5B4FC'
         },
-        accent: '#22D3EE',
+        accent: '#74D7FF',
         surface: '#0F172A'
       },
       boxShadow: {

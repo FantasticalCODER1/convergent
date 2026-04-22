@@ -1,5 +1,6 @@
 import { Suspense, lazy, type ComponentType, useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Navigate, Outlet, Route, Routes, NavLink as RouterNavLink, useLocation } from 'react-router-dom';
+import clsx from 'clsx';
 import { AuthProvider } from './context/AuthContext';
 import { ProfileSetupGate } from './components/ProfileSetupGate';
 import { useAuth } from './hooks/useAuth';
@@ -72,7 +73,7 @@ function AppRoutes() {
 }
 
 function RouteFallback() {
-  return <div className="grid min-h-screen place-items-center bg-slate-950 text-white/70">Loading…</div>;
+  return <div className="grid min-h-screen place-items-center bg-[var(--bg)] text-[var(--text-muted)]">Loading…</div>;
 }
 
 function Shell() {
@@ -90,12 +91,14 @@ function Shell() {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white">
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-900/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-accent">Convergent</p>
-            <p className="text-lg font-semibold text-white/90">The school&apos;s central time-and-structure platform</p>
+    <div className="min-h-screen text-[var(--text)]">
+      <header className="sticky top-0 z-50 border-b border-white/8 bg-[rgba(8,14,26,0.82)] backdrop-blur-2xl">
+        <div className="mx-auto flex max-w-[1420px] items-center justify-between gap-4 px-4 py-4 md:px-6">
+          <div className="min-w-0">
+            <p className="text-[0.72rem] font-medium uppercase tracking-[0.38em] text-[var(--accent-2)]">Convergent</p>
+            <p className="mt-1 max-w-xl text-[1.02rem] font-semibold leading-6 text-[var(--text-strong)]">
+              The school&apos;s central time-and-structure platform
+            </p>
           </div>
           {user ? (
             <ProfileDropdown
@@ -109,13 +112,22 @@ function Shell() {
           ) : null}
         </div>
       </header>
-      <div className="mx-auto flex w-full max-w-6xl gap-6 px-4 py-8 pb-28 md:px-6 md:pb-8">
-        <aside className="glass-card hidden w-60 shrink-0 flex-col space-y-2 p-4 md:flex">
-          {visibleNavLinks.map((link) => (
-            <NavLink key={link.to} to={link.to} icon={link.icon} label={link.label} />
-          ))}
+      <div className="mx-auto flex w-full max-w-[1420px] gap-8 px-4 py-6 pb-28 md:px-6 md:pb-8">
+        <aside className="hidden h-[calc(100vh-7.5rem)] w-[250px] shrink-0 flex-col rounded-[30px] border border-white/8 bg-[linear-gradient(180deg,rgba(18,26,46,0.92),rgba(12,18,31,0.92))] p-4 shadow-[0_30px_70px_rgba(3,8,22,0.36)] md:sticky md:top-[98px] md:flex">
+          <p className="px-3 text-[0.68rem] font-medium uppercase tracking-[0.34em] text-[var(--text-faint)]">Workspace</p>
+          <div className="mt-4 space-y-1.5">
+            {visibleNavLinks.map((link) => (
+              <NavLink key={link.to} to={link.to} icon={link.icon} label={link.label} />
+            ))}
+          </div>
+          <div className="mt-auto rounded-[24px] border border-white/8 bg-[rgba(9,13,24,0.34)] p-4">
+            <p className="text-[0.7rem] font-medium uppercase tracking-[0.32em] text-[var(--text-faint)]">School operations</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+              Calendar, classes, clubs, and records now share one calmer workspace instead of reading like separate dashboards.
+            </p>
+          </div>
         </aside>
-        <main className="flex-1">
+        <main className="page-halo min-w-0 flex-1">
           <Outlet />
         </main>
       </div>
@@ -163,29 +175,31 @@ function ProfileDropdown({
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-left text-sm text-white/80 transition hover:bg-white/10"
+        className="flex items-center gap-3 rounded-full border border-white/10 bg-[rgba(20,28,46,0.88)] px-4 py-2.5 text-left text-sm text-[var(--text)] transition hover:bg-[rgba(30,39,61,0.94)]"
       >
         <div className="text-right leading-tight">
-          <p className="font-semibold text-white">{userName}</p>
-          <p className="text-xs text-white/60">
+          <p className="font-semibold text-[var(--text-strong)]">{userName}</p>
+          <p className="text-xs text-[var(--text-muted)]">
             {userRole}
             {userGrade || userSection ? ` · ${[userGrade, userSection].filter(Boolean).join(' / ')}` : ''}
           </p>
         </div>
-        <span aria-hidden className="text-white/60">
+        <span aria-hidden className="text-[var(--text-faint)]">
           ▾
         </span>
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-white/10 bg-slate-900/95 p-4 text-sm shadow-xl">
-          <p className="font-semibold text-white">{userName}</p>
-          <p className="text-white/60">{userEmail}</p>
-          <p className="mt-1 text-xs text-white/45">{userGrade && userSection ? `${userGrade} · ${userSection}` : 'Grade and section still needed for timetable mapping'}</p>
+        <div className="absolute right-0 mt-2 w-64 rounded-[26px] border border-white/10 bg-[rgba(10,15,27,0.96)] p-4 text-sm shadow-[0_30px_70px_rgba(3,8,22,0.45)]">
+          <p className="font-semibold text-[var(--text-strong)]">{userName}</p>
+          <p className="text-[var(--text-muted)]">{userEmail}</p>
+          <p className="mt-1 text-xs text-[var(--text-faint)]">
+            {userGrade && userSection ? `${userGrade} · ${userSection}` : 'Grade and section still needed for timetable mapping'}
+          </p>
           <div className="mt-4 space-y-2">
             <button
               type="button"
               onClick={() => onSignOut()}
-              className="w-full rounded-xl border border-white/10 px-4 py-2 text-left text-white/80 transition hover:bg-white/10"
+              className="w-full rounded-2xl border border-white/10 px-4 py-2.5 text-left text-[var(--text)] transition hover:bg-white/8"
             >
               Sign out
             </button>
@@ -200,14 +214,15 @@ function NavLink({ to, label, icon: Icon }: { to: string; label: string; icon: C
   return (
     <RouterNavLink
       to={to}
-      className={({ isActive }) =>
-        `flex items-center gap-3 rounded-2xl px-3 py-2 text-sm transition-colors ${
-          isActive ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white'
-        }`
-      }
+      className={({ isActive }) => clsx('group flex items-center gap-3 rounded-[18px] px-3 py-3 text-sm font-medium transition', {
+        'bg-white/12 text-[var(--text-strong)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]': isActive,
+        'text-[var(--text-muted)] hover:bg-white/6 hover:text-[var(--text-strong)]': !isActive
+      })}
     >
-      <Icon className="size-4" />
-      {label}
+      <span className="flex size-8 items-center justify-center rounded-full border border-white/8 bg-[rgba(8,12,23,0.32)]">
+        <Icon className="size-4" />
+      </span>
+      <span>{label}</span>
     </RouterNavLink>
   );
 }
@@ -226,8 +241,8 @@ function MobileNav({
   return (
     <div className="md:hidden">
       {open && moreLinks.length > 0 ? (
-        <div className="fixed inset-x-4 bottom-20 z-50 rounded-3xl border border-white/10 bg-slate-900/95 p-3 shadow-xl backdrop-blur-xl">
-          <p className="px-2 pb-2 text-xs uppercase tracking-[0.25em] text-white/45">More</p>
+        <div className="fixed inset-x-4 bottom-24 z-50 rounded-[28px] border border-white/10 bg-[rgba(10,15,27,0.96)] p-3 shadow-[0_30px_70px_rgba(3,8,22,0.45)] backdrop-blur-xl">
+          <p className="px-2 pb-2 text-[0.68rem] uppercase tracking-[0.3em] text-[var(--text-faint)]">More</p>
           <div className="space-y-1">
             {moreLinks.map((link) => (
               <NavLink key={link.to} to={link.to} icon={link.icon} label={link.label} />
@@ -235,17 +250,16 @@ function MobileNav({
           </div>
         </div>
       ) : null}
-      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-slate-950/95 px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-3 backdrop-blur-xl">
+      <nav className="fixed inset-x-3 bottom-3 z-50 rounded-[28px] border border-white/10 bg-[rgba(9,14,25,0.96)] px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.4rem)] pt-3 shadow-[0_30px_70px_rgba(3,8,22,0.42)] backdrop-blur-xl md:hidden">
         <div className="mx-auto grid max-w-3xl grid-cols-5 gap-2">
           {primaryLinks.map((link) => (
             <RouterNavLink
               key={link.to}
               to={link.to}
-              className={({ isActive }) =>
-                `flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] transition ${
-                  isActive ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white'
-                }`
-              }
+              className={({ isActive }) => clsx('flex flex-col items-center justify-center gap-1 rounded-[20px] px-2 py-2 text-[11px] font-medium transition', {
+                'bg-white/12 text-[var(--text-strong)]': isActive,
+                'text-[var(--text-muted)] hover:text-[var(--text-strong)]': !isActive
+              })}
             >
               <link.icon className="size-4" />
               <span>{link.label}</span>
@@ -254,9 +268,10 @@ function MobileNav({
           <button
             type="button"
             onClick={onToggle}
-            className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] transition ${
-              open ? 'bg-white/15 text-white' : 'text-white/60 hover:text-white'
-            }`}
+            className={clsx('flex flex-col items-center justify-center gap-1 rounded-[20px] px-2 py-2 text-[11px] font-medium transition', {
+              'bg-white/12 text-[var(--text-strong)]': open,
+              'text-[var(--text-muted)] hover:text-[var(--text-strong)]': !open
+            })}
           >
             <MoreHorizontal className="size-4" />
             <span>More</span>

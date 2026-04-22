@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { EmptyStateCard } from '../components/EmptyStateCard';
 import { ClubCard } from '../components/ClubCard';
+import { MetricCard, PageHeader, StatRow, SurfaceSection } from '../components/ui/product';
 import { getClubAccessState } from '../domain/memberships';
 import { useAuth } from '../hooks/useAuth';
 import { useClubs } from '../hooks/useClubs';
@@ -33,8 +34,7 @@ export default function MyClubs() {
   );
 
   const pending = useMemo(
-    () =>
-      clubs.filter((club) => getClubAccessState(user, club, membershipMap) === 'pending_member'),
+    () => clubs.filter((club) => getClubAccessState(user, club, membershipMap) === 'pending_member'),
     [clubs, membershipMap, user]
   );
 
@@ -55,70 +55,100 @@ export default function MyClubs() {
   if (showStudentPlaceholder) {
     return (
       <div className="space-y-6">
-        <header>
-          <p className="text-sm uppercase tracking-[0.25em] text-white/50">Ownership</p>
-          <h1 className="text-3xl font-semibold text-white">My Clubs</h1>
-          <p className="mt-2 max-w-3xl text-white/60">
-            Student club memberships stay in placeholder mode locally until the real directory and approval data are ready to replace the seeded fixtures.
-          </p>
-        </header>
+        <PageHeader
+          eyebrow="Ownership"
+          title="My Clubs"
+          description="Student club memberships stay in explicit placeholder mode locally until the real directory and approval data are ready to replace the seeded development fixtures."
+          aside={
+            <div className="grid gap-3 sm:grid-cols-2">
+              <MetricCard label="Memberships" value="0" hint="Held back intentionally" />
+              <MetricCard label="Workspace access" value="Staged" hint="No fake club feed shown" tone="accent" />
+            </div>
+          }
+        />
 
         <EmptyStateCard
           eyebrow="Student clubs"
           title={STUDENT_CLUB_PLACEHOLDER.title}
-          body="There are no truthful student club memberships to show yet. When the club program is live, approved clubs will appear here automatically."
+          body="There are no truthful student club memberships to show yet. When the club programme is live, approved clubs will appear here automatically together with their calendar-linked workspace access."
           actionLabel="Back to calendar"
           onAction={() => navigate('/calendar')}
+          tone="accent"
         />
+
+        <SurfaceSection
+          eyebrow="What will appear here"
+          title="Approved memberships only"
+          description="This page is reserved for clubs you genuinely belong to or manage. Pending requests remain in discovery, and unreleased club fixtures are kept out instead of being styled as real product data."
+        >
+          <div className="space-y-3">
+            <StatRow label="Approved clubs" value="Appear automatically after approval" />
+            <StatRow label="Pending requests" value="Stay on Join Clubs" />
+            <StatRow label="Private links" value="Hidden until access is real" />
+          </div>
+        </SurfaceSection>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-white/50">Ownership</p>
-          <h1 className="text-3xl font-semibold text-white">My Clubs</h1>
-          <p className="mt-2 max-w-3xl text-white/60">
-            This page is reserved for approved memberships and managed groups. Anything still waiting for approval remains in Join Clubs until access is granted.
-          </p>
-        </div>
-        <Link to="/join-clubs" className="rounded-2xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10">
-          Browse all groups
-        </Link>
-      </header>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Ownership"
+        title="My Clubs"
+        description="This page is reserved for approved memberships and managed groups. Anything still waiting for approval remains in Join Clubs until access is granted."
+        aside={
+          <div className="grid gap-3 sm:grid-cols-2">
+            <MetricCard label="Approved" value={String(mine.length)} hint="Visible in your workspace" />
+            <MetricCard label="Pending" value={String(pending.length)} hint="Still awaiting approval" tone={pending.length > 0 ? 'warning' : 'muted'} />
+          </div>
+        }
+      />
 
       {pending.length > 0 ? (
-        <section className="rounded-[32px] border border-amber-300/20 bg-amber-500/5 p-6 text-white shadow-glass">
-          <p className="text-xs uppercase tracking-[0.3em] text-amber-50/80">Pending</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">Requests still waiting</h2>
-          <div className="mt-4 flex flex-wrap gap-2">
+        <SurfaceSection eyebrow="Pending" title="Requests still waiting" tone="warning">
+          <div className="flex flex-wrap gap-2">
             {pending.map((club) => (
-              <span key={club.id} className="rounded-full border border-white/10 px-3 py-2 text-sm text-white/70">
+              <span key={club.id} className="rounded-full border border-white/10 px-3 py-2 text-sm text-[var(--text-strong)]">
                 {club.name}
               </span>
             ))}
           </div>
-        </section>
+        </SurfaceSection>
       ) : null}
 
       {loading ? (
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-white/70 shadow-glass">Loading memberships…</div>
+        <SurfaceSection eyebrow="Memberships" title="Loading clubs">
+          <div className="text-sm text-[var(--text-muted)]">Loading memberships…</div>
+        </SurfaceSection>
       ) : error ? (
-        <div className="rounded-3xl border border-rose-300/20 bg-rose-500/5 p-6 text-rose-100 shadow-glass">{error}</div>
+        <SurfaceSection eyebrow="Memberships" title="Membership data unavailable" tone="warning">
+          <div className="text-sm text-rose-100">{error}</div>
+        </SurfaceSection>
       ) : mine.length === 0 ? (
         <EmptyStateCard
-          eyebrow="My Clubs"
+          eyebrow="My clubs"
           title="No approved memberships yet"
           body="Approved groups will appear here automatically and feed into your personal calendar. Discovery and pending requests remain on the Join Clubs page."
           actionLabel="Open Join Clubs"
           onAction={() => navigate('/join-clubs')}
         />
       ) : (
-        <div className="grid gap-4 xl:grid-cols-2">
-          {mine.map((club) => (
-            (() => {
+        <SurfaceSection
+          eyebrow="Workspace access"
+          title="Approved memberships"
+          description="Club workspaces only appear here once access is real. Discovery remains separate so this page can stay focused on clubs you already operate inside."
+          action={
+            <Link
+              to="/join-clubs"
+              className="inline-flex items-center rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-[var(--text-strong)] transition hover:bg-white/8"
+            >
+              Browse all groups
+            </Link>
+          }
+        >
+          <div className="grid gap-4 xl:grid-cols-2">
+            {mine.map((club) => {
               const accessState = getClubAccessState(user, club, membershipMap);
               return (
                 <ClubCard
@@ -133,9 +163,9 @@ export default function MyClubs() {
                   onOpen={(targetClub) => navigate(`/my-clubs/${targetClub.id}`)}
                 />
               );
-            })()
-          ))}
-        </div>
+            })}
+          </div>
+        </SurfaceSection>
       )}
     </div>
   );

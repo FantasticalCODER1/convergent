@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { isGoogleAuthConfigured } from '../auth/google';
 import { EmptyStateCard } from '../components/EmptyStateCard';
+import { MetricCard, PageHeader, StatRow, SurfaceSection } from '../components/ui/product';
 import { isProfileComplete } from '../domain/profile';
 import { useAuth } from '../hooks/useAuth';
 import { useClassroom } from '../hooks/useClassroom';
@@ -18,7 +19,17 @@ function formatDueDate(due?: { year: number; month: number; day: number }) {
 
 export default function Classes() {
   const { user } = useAuth();
-  const { courses, coursework, loadingCourses, loadingWork, error, openCourse, reconnect, sessionStatus, classroomSupported } = useClassroom();
+  const {
+    courses,
+    coursework,
+    loadingCourses,
+    loadingWork,
+    error,
+    openCourse,
+    reconnect,
+    sessionStatus,
+    classroomSupported
+  } = useClassroom();
   const { entries, datasets, loading: loadingSchedules, error: scheduleError } = useSchedules();
   const [selected, setSelected] = useState<ClassroomCourse | null>(null);
   const classroomUnavailableMessage = isFirebaseEmulatorMode
@@ -29,7 +40,7 @@ export default function Classes() {
 
   if (!user) {
     return (
-      <div className="rounded-3xl border border-white/5 bg-white/5 p-6 text-white/70">
+      <div className="rounded-[28px] border border-white/10 bg-[rgba(18,25,43,0.9)] p-6 text-[var(--text-muted)] shadow-[0_24px_60px_rgba(3,8,22,0.28)]">
         Sign in to view your timetable and Classroom surface.
       </div>
     );
@@ -72,206 +83,238 @@ export default function Classes() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-sm uppercase tracking-[0.25em] text-white/50">Academic structure</p>
-        <h1 className="text-3xl font-semibold text-white">Classes</h1>
-        <p className="text-white/60">
-          This page only shows real cohort timetable mappings, published dataset metadata, and attached Classroom data when a Google session can actually recover. It is not presented as a full school operating system.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Academic structure"
+        title="Classes"
+        description="This page shows only real cohort timetable mappings, published dataset metadata, and attached Classroom data when a Google session can actually recover. It no longer pretends to be a full school operating system."
+        aside={
+          <div className="grid gap-3 sm:grid-cols-3">
+            <MetricCard label="Academic datasets" value={String(academicDatasets.length)} hint="Published timetable records" />
+            <MetricCard label="Meal datasets" value={String(mealDatasets.length)} hint="Published dining records" />
+            <MetricCard
+              label="Classroom"
+              value={sessionStatus === 'ready' ? 'Live' : sessionStatus === 'needs_reconnect' ? 'Reconnect' : 'Limited'}
+              hint={sessionStatus === 'ready' ? `${courses.length} course${courses.length === 1 ? '' : 's'}` : 'Attached service only'}
+              tone={sessionStatus === 'ready' ? 'muted' : 'warning'}
+            />
+          </div>
+        }
+      />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.95fr)]">
-        <section className="space-y-4">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-glass">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-white/45">Timetable</p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">Personal timetable mapping</h2>
-              </div>
-              <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.25em] text-white/60">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+        <div className="space-y-6">
+          <SurfaceSection
+            eyebrow="Timetable"
+            title="Personal timetable mapping"
+            description="The main academic surface is now organised as one timetable region with explicit dataset status, not a stack of unrelated cards."
+            action={
+              <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.28em] text-[var(--text-muted)]">
                 {user.grade && user.section ? `${user.grade} · ${user.section}` : 'Profile incomplete'}
               </span>
-            </div>
-            {scheduleError ? <p className="mt-3 text-sm text-rose-300">{scheduleError}</p> : null}
+            }
+          >
+            {scheduleError ? <p className="text-sm text-rose-300">{scheduleError}</p> : null}
+
             {!isProfileComplete(user) ? (
-              <div className="mt-4">
-                <EmptyStateCard
-                  eyebrow="Profile mapping"
-                  title="Grade and section are required"
-                  body="Convergent cannot test timetable or meal coverage until your grade and section are stored on the profile."
-                  tone="warning"
-                />
-              </div>
+              <EmptyStateCard
+                eyebrow="Profile mapping"
+                title="Grade and section are required"
+                body="Convergent cannot test timetable or meal coverage until your grade and section are stored on the profile."
+                tone="warning"
+              />
             ) : loadingSchedules ? (
-              <p className="mt-4 text-white/60">Loading timetable structure…</p>
-            ) : academicEntries.length === 0 ? (
-              <div className="mt-4">
-                <EmptyStateCard
-                  eyebrow="Timetable dataset"
-                  title={academicEmptyState?.title ?? 'No academic blocks mapped yet'}
-                  body={academicEmptyState?.body ?? 'No academic blocks are mapped yet.'}
-                  tone="accent"
-                />
+              <div className="rounded-[22px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-5 py-5 text-sm text-[var(--text-muted)]">
+                Loading timetable structure…
               </div>
+            ) : academicEntries.length === 0 ? (
+              <EmptyStateCard
+                eyebrow="Timetable dataset"
+                title={academicEmptyState?.title ?? 'No academic blocks mapped yet'}
+                body={academicEmptyState?.body ?? 'No academic blocks are mapped yet.'}
+                tone="accent"
+              />
             ) : (
-              <div className="mt-4 space-y-3">
+              <div className="space-y-3">
                 {academicEntries.slice(0, 8).map((entry) => (
-                  <div key={entry.id} className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-white">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium">{entry.title}</p>
-                        <p className="text-xs text-white/55">{entry.blockName}</p>
+                  <div key={entry.id} className="grid gap-3 rounded-[24px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-5 py-4 md:grid-cols-[minmax(0,1fr)_auto]">
+                    <div>
+                      <p className="text-lg font-semibold text-[var(--text-strong)]">{entry.title}</p>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">{entry.blockName}</p>
+                    </div>
+                    <div className="text-sm text-[var(--text-muted)] md:text-right">
+                      <div className="font-medium text-[var(--text-strong)]">
+                        {entry.startTime} - {entry.endTime}
                       </div>
-                      <div className="text-right text-sm text-white/70">
-                        <div>{entry.startTime} - {entry.endTime}</div>
-                        <div className="text-xs text-white/45">{entry.location ?? 'Location pending'}</div>
-                      </div>
+                      <div className="mt-1">{entry.location ?? 'Location pending'}</div>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-          </div>
+          </SurfaceSection>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-glass">
-              <p className="text-xs uppercase tracking-[0.3em] text-white/45">Meal schedules</p>
-              <h2 className="mt-2 text-xl font-semibold text-white">Meal blocks</h2>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <SurfaceSection eyebrow="Meal schedules" title="Meal blocks">
               {mealEntries.length === 0 ? (
-                <p className="mt-4 text-sm text-white/60">{mealEmptyState}</p>
+                <div className="rounded-[22px] border border-dashed border-white/10 bg-[rgba(10,15,27,0.22)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
+                  {mealEmptyState}
+                </div>
               ) : (
-                <div className="mt-4 space-y-3">
+                <div className="space-y-3">
                   {mealEntries.map((entry) => (
-                    <div key={entry.id} className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-white/75">
-                      <div className="font-medium text-white">{entry.title}</div>
-                      <div className="mt-1">{entry.startTime} - {entry.endTime}</div>
+                    <div key={entry.id} className="rounded-[20px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-4 py-3">
+                      <div className="text-base font-semibold text-[var(--text-strong)]">{entry.title}</div>
+                      <div className="mt-1 text-sm text-[var(--text-muted)]">
+                        {entry.startTime} - {entry.endTime}
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
-            </div>
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-glass">
-              <p className="text-xs uppercase tracking-[0.3em] text-white/45">Datasets</p>
-              <h2 className="mt-2 text-xl font-semibold text-white">Published dataset records</h2>
-              <div className="mt-4 space-y-3">
-                {[...academicDatasets, ...mealDatasets].length === 0 ? (
-                  <p className="text-sm text-white/60">No timetable or meal dataset records have been published yet.</p>
-                ) : (
-                  [...academicDatasets, ...mealDatasets].map((dataset) => (
-                    <div key={dataset.id} className="rounded-2xl border border-white/10 bg-slate-950/30 px-4 py-3 text-sm text-white/75">
+            </SurfaceSection>
+
+            <SurfaceSection eyebrow="Datasets" title="Published records">
+              {[...academicDatasets, ...mealDatasets].length === 0 ? (
+                <div className="rounded-[22px] border border-dashed border-white/10 bg-[rgba(10,15,27,0.22)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
+                  No timetable or meal dataset records have been published yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {[...academicDatasets, ...mealDatasets].map((dataset) => (
+                    <div key={dataset.id} className="rounded-[22px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-4 py-4">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="font-medium text-white">{dataset.title}</span>
-                        <span className="text-xs uppercase tracking-[0.25em] text-white/45">{dataset.status}</span>
+                        <span className="text-base font-semibold text-[var(--text-strong)]">{dataset.title}</span>
+                        <span className="text-xs uppercase tracking-[0.25em] text-[var(--text-faint)]">{dataset.status}</span>
                       </div>
-                      <p className="mt-1 text-xs text-white/50">
+                      <p className="mt-2 text-sm text-[var(--text-muted)]">
                         {dataset.scheduleType} dataset · updated {formatTimestamp(dataset.updatedAt, 'not recorded')}
                       </p>
-                      <p className="mt-2 text-xs text-white/50">{dataset.notes ?? 'No additional dataset notes recorded.'}</p>
+                      <p className="mt-3 text-sm leading-7 text-[var(--text-muted)]">{dataset.notes ?? 'No additional dataset notes recorded.'}</p>
                     </div>
-                  ))
-                )}
-              </div>
-            </div>
+                  ))}
+                </div>
+              )}
+            </SurfaceSection>
           </div>
-        </section>
+        </div>
 
-        <section className="space-y-4">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-glass">
-            <h2 className="text-xl font-semibold text-white">Google Classroom</h2>
-            {error ? <p className="mt-2 text-sm text-rose-300">{error}</p> : null}
+        <div className="space-y-6">
+          <SurfaceSection
+            eyebrow="Google Classroom"
+            title="Attached coursework surface"
+            description="Classroom remains visibly attached here, but timetable truth stays separate so the page does not imply Google is the scheduling authority."
+          >
+            {error ? <p className="text-sm text-rose-300">{error}</p> : null}
+
             {sessionStatus === 'checking' || loadingCourses ? (
-              <p className="mt-4 text-white/60">Checking Google session and loading courses…</p>
+              <div className="rounded-[22px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-5 py-5 text-sm text-[var(--text-muted)]">
+                Checking Google session and loading courses…
+              </div>
             ) : sessionStatus === 'ready' ? (
-              <div className="mt-2 text-sm text-white/60">Recovered Google session. Classroom remains an attached coursework surface, not the scheduling authority.</div>
-            ) : sessionStatus === 'needs_reconnect' ? (
-              <div className="mt-4 space-y-3">
-                <EmptyStateCard
-                  eyebrow="Reconnect"
-                  title="Classroom needs Google re-approval"
-                  body="Your Firebase session survived, but the Classroom token did not. Reconnect Google access to load live courses and coursework again."
-                  actionLabel="Reconnect Classroom"
-                  onAction={() => {
-                    void reconnect();
-                  }}
-                />
-              </div>
-            ) : sessionStatus === 'unsupported' ? (
-              <div className="mt-4">
-                <EmptyStateCard
-                  eyebrow="Local mode"
-                  title="Classroom is not part of the supported local path"
-                  body={classroomUnavailableMessage}
-                />
-              </div>
-            ) : (
-              <p className="mt-2 text-sm text-white/60">{classroomUnavailableMessage}</p>
-            )}
-            {sessionStatus === 'ready' && loadingCourses ? (
-              <p className="mt-4 text-white/60">Loading courses…</p>
-            ) : sessionStatus === 'ready' ? (
-              <div className="mt-4 space-y-3">
-                {courses.map((course) => (
-                  <button
-                    key={course.id}
-                    type="button"
-                    onClick={() => selectCourse(course)}
-                    className={`w-full rounded-2xl border border-white/5 bg-white/10 p-4 text-left text-white transition ${
-                      selected?.id === course.id ? 'ring-2 ring-accent' : ''
-                    }`}
-                  >
-                    <p className="text-lg font-semibold">{course.name}</p>
-                    <p className="text-sm text-white/60">{course.section}</p>
-                  </button>
-                ))}
-                {courses.length === 0 ? <p className="text-sm text-white/60">No active courses found for your account.</p> : null}
-              </div>
-            ) : sessionStatus === 'checking' || !classroomSupported ? null : (
-              <div className="mt-4">
-                <EmptyStateCard
-                  eyebrow="Classroom links"
-                  title="Live Classroom access is not available here"
-                  body="The product can store Classroom references on clubs, events, and posts, but live coursework browsing still depends on a recoverable Google session in this environment."
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-glass">
-            {selected && sessionStatus === 'ready' ? (
-              <>
-                <h2 className="text-xl font-semibold text-white">{selected.name} coursework</h2>
-                {loadingWork ? (
-                  <p className="mt-4 text-white/60">Fetching coursework…</p>
-                ) : coursework.length === 0 ? (
-                  <p className="mt-4 text-white/60">No coursework posted yet.</p>
+              <div className="space-y-3">
+                <div className="rounded-[22px] border border-cyan-400/20 bg-[rgba(24,46,68,0.52)] px-5 py-5 text-sm leading-7 text-cyan-50">
+                  Recovered Google session. Classroom is live here, but still treated as an attached coursework surface rather than the scheduling source of truth.
+                </div>
+                {courses.length === 0 ? (
+                  <div className="rounded-[22px] border border-dashed border-white/10 bg-[rgba(10,15,27,0.22)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
+                    No active courses found for your account.
+                  </div>
                 ) : (
-                  <div className="mt-4 space-y-3">
-                    {coursework.map((work) => (
-                      <a
-                        key={work.id}
-                        href={work.alternateLink}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block rounded-2xl border border-white/5 bg-white/10 p-4 text-white transition hover:bg-white/20"
+                  <div className="space-y-3">
+                    {courses.map((course) => (
+                      <button
+                        key={course.id}
+                        type="button"
+                        onClick={() => void selectCourse(course)}
+                        className={`w-full rounded-[22px] border px-4 py-4 text-left transition ${
+                          selected?.id === course.id
+                            ? 'border-white/18 bg-[rgba(27,39,63,0.92)]'
+                            : 'border-white/8 bg-[rgba(10,15,27,0.34)] hover:bg-[rgba(17,24,43,0.7)]'
+                        }`}
                       >
-                        <p className="text-lg font-semibold">{work.title}</p>
-                        <p className="text-sm text-white/60">
-                          {work.state} · Due {formatDueDate(work.dueDate)}
-                        </p>
-                      </a>
+                        <p className="text-lg font-semibold text-[var(--text-strong)]">{course.name}</p>
+                        <p className="mt-1 text-sm text-[var(--text-muted)]">{course.section}</p>
+                      </button>
                     ))}
                   </div>
                 )}
-              </>
-            ) : (
+              </div>
+            ) : sessionStatus === 'needs_reconnect' ? (
               <EmptyStateCard
-                eyebrow="Section mapping"
-                title="Course links and timetable mapping stay separate"
-                body="Grade and section decide schedule coverage. Classroom remains an attached service for coursework only, not the source of truth for scheduling or club operations."
+                eyebrow="Reconnect"
+                title="Classroom needs Google re-approval"
+                body="Your Firebase session survived, but the Classroom token did not. Reconnect Google access to load live courses and coursework again."
+                actionLabel="Reconnect Classroom"
+                onAction={() => {
+                  void reconnect();
+                }}
               />
+            ) : sessionStatus === 'unsupported' ? (
+              <EmptyStateCard
+                eyebrow="Local mode"
+                title="Classroom is not part of the supported local path"
+                body={classroomUnavailableMessage}
+              />
+            ) : (
+              <div className="rounded-[22px] border border-dashed border-white/10 bg-[rgba(10,15,27,0.22)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
+                {classroomUnavailableMessage}
+              </div>
             )}
-          </div>
-        </section>
+          </SurfaceSection>
+
+          <SurfaceSection
+            eyebrow="Coursework"
+            title={selected && sessionStatus === 'ready' ? `${selected.name} coursework` : 'Coursework rail'}
+            description="Selected coursework stays here so the main page keeps timetable status and attached work clearly separated."
+          >
+            {selected && sessionStatus === 'ready' ? (
+              loadingWork ? (
+                <div className="rounded-[22px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-5 py-5 text-sm text-[var(--text-muted)]">
+                  Fetching coursework…
+                </div>
+              ) : coursework.length === 0 ? (
+                <div className="rounded-[22px] border border-dashed border-white/10 bg-[rgba(10,15,27,0.22)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
+                  No coursework posted yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {coursework.map((work) => (
+                    <a
+                      key={work.id}
+                      href={work.alternateLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block rounded-[22px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-4 py-4 transition hover:bg-[rgba(17,24,43,0.7)]"
+                    >
+                      <p className="text-lg font-semibold text-[var(--text-strong)]">{work.title}</p>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        {work.state} · Due {formatDueDate(work.dueDate)}
+                      </p>
+                    </a>
+                  ))}
+                </div>
+              )
+            ) : (
+              <div className="space-y-3">
+                <StatRow label="Timetable source" value="Published cohort datasets" />
+                <StatRow label="Classroom source" value="Recoverable Google session only" />
+                <div className="rounded-[22px] border border-dashed border-white/10 bg-[rgba(10,15,27,0.22)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
+                  Course links and timetable mapping stay separate. Classroom remains an attached service for coursework only, not the source of truth for scheduling or club operations.
+                </div>
+              </div>
+            )}
+          </SurfaceSection>
+
+          {sessionStatus !== 'ready' && !classroomSupported ? (
+            <SurfaceSection eyebrow="Boundary" title="What stays available here" tone="accent">
+              <div className="space-y-3">
+                <StatRow label="Timetable" value="Uses local schedule datasets" />
+                <StatRow label="Classroom links" value="Stored as references only" />
+                <StatRow label="Coursework browsing" value="Requires live Google recovery" />
+              </div>
+            </SurfaceSection>
+          ) : null}
+        </div>
       </div>
     </div>
   );

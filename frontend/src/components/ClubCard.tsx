@@ -50,40 +50,43 @@ export function ClubCard({
             : 'Join club';
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-5 text-white shadow-glass">
-      <div className="flex items-center justify-between gap-3">
+    <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(18,25,43,0.92),rgba(13,19,34,0.92))] p-5 text-[var(--text)] shadow-[0_24px_60px_rgba(3,8,22,0.28)]">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{category.shortLabel}</p>
-          <h3 className="text-xl font-semibold">{club.name}</h3>
+          <p className="text-[0.7rem] font-medium uppercase tracking-[0.34em] text-[var(--text-faint)]">{category.shortLabel}</p>
+          <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-[var(--text-strong)]">{club.name}</h3>
         </div>
-        <div className="flex items-center gap-1 text-sm text-white/70">
+        <div className="flex items-center gap-1 text-sm text-[var(--text-muted)]">
           <UsersRound className="size-4" />
           {club.memberCount}
         </div>
       </div>
+
       <div className="mt-4 flex flex-wrap gap-2">
-        {manageable ? <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-emerald-100">Managing</span> : null}
-        {joined && !manageable ? <span className="rounded-full bg-indigo-500/20 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-indigo-100">Member</span> : null}
-        {membershipState === 'pending_member' ? <span className="rounded-full bg-amber-500/20 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-amber-50">Pending approval</span> : null}
+        {manageable ? <span className="rounded-full border border-emerald-400/20 bg-emerald-500/12 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-emerald-100">Managing</span> : null}
+        {joined && !manageable ? <span className="rounded-full border border-indigo-400/20 bg-indigo-500/12 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-indigo-100">Member</span> : null}
+        {membershipState === 'pending_member' ? <span className="rounded-full border border-amber-300/20 bg-amber-400/12 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-amber-50">Pending approval</span> : null}
         {!joined && !manageable && membershipState !== 'pending_member' ? (
-          <span className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-white/60">
+          <span className="rounded-full border border-white/10 px-3 py-1 text-[11px] uppercase tracking-[0.25em] text-[var(--text-muted)]">
             {club.membershipMode === 'approval_required' ? 'Approval required' : club.membershipMode === 'invite_only' ? 'Invite only' : 'Open to join'}
           </span>
         ) : null}
       </div>
-      <p className="mt-3 min-h-12 text-sm leading-6 text-white/70">{club.description || 'Club description pending.'}</p>
-      <div className="mt-4 space-y-2 text-sm text-white/65">
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/30 px-3 py-2">
+
+      <p className="mt-4 min-h-12 text-sm leading-7 text-[var(--text-muted)]">{club.description || 'Club description pending.'}</p>
+
+      <div className="mt-5 space-y-2 text-sm text-[var(--text-muted)]">
+        <div className="flex items-center justify-between gap-3 rounded-[18px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-4 py-3">
           <span>MIC</span>
-          <span className="text-right text-white">{club.mic}</span>
+          <span className="text-right font-medium text-[var(--text-strong)]">{club.mic}</span>
         </div>
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/30 px-3 py-2">
+        <div className="flex items-center justify-between gap-3 rounded-[18px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-4 py-3">
           <span>Schedule</span>
-          <span className="text-right text-white">{club.schedule}</span>
+          <span className="text-right font-medium text-[var(--text-strong)]">{club.schedule}</span>
         </div>
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/30 px-3 py-2">
+        <div className="flex items-center justify-between gap-3 rounded-[18px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-4 py-3">
           <span>Links</span>
-          <span className="text-right text-white">
+          <span className="text-right font-medium text-[var(--text-strong)]">
             {joined || manageable
               ? club.classroomLink || club.classroomCode || club.classroomCourseId || club.defaultMeetLink || club.meetLink || club.resourceLinks.length > 0
                 ? 'Attached'
@@ -91,17 +94,18 @@ export function ClubCard({
               : 'Hidden until approved'}
           </span>
         </div>
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-slate-950/30 px-3 py-2">
+        <div className="flex items-center justify-between gap-3 rounded-[18px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-4 py-3">
           <span>Next event</span>
-          <span className="text-right text-white">{nextEvent ? formatRelativeEventWindow(nextEvent.startTime, nextEvent.endTime) : 'None scheduled'}</span>
+          <span className="text-right font-medium text-[var(--text-strong)]">{nextEvent ? formatRelativeEventWindow(nextEvent.startTime, nextEvent.endTime) : 'None scheduled'}</span>
         </div>
       </div>
-      <div className="mt-4 flex flex-wrap gap-2">
+
+      <div className="mt-5 flex flex-wrap gap-2">
         {onOpen && (
           <button
             type="button"
             onClick={() => onOpen(club)}
-            className="rounded-2xl border border-white/10 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10"
+            className="rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-[var(--text-strong)] transition hover:bg-white/8"
           >
             {openLabel}
           </button>
@@ -112,12 +116,12 @@ export function ClubCard({
             disabled={club.membershipMode === 'invite_only' && !joined}
             onClick={handleAction}
             className={clsx(
-              'rounded-2xl px-4 py-2 text-sm font-medium transition',
+              'rounded-full px-4 py-2 text-sm font-medium transition',
               club.membershipMode === 'invite_only' && !joined
                 ? 'bg-white/10 text-white/40'
                 : joined || membershipState === 'pending_member'
                   ? 'bg-rose-500 text-white hover:bg-rose-600'
-                  : 'bg-indigo-500 text-white hover:bg-indigo-600'
+                  : 'bg-[var(--accent)] text-slate-950 hover:brightness-105'
             )}
           >
             {actionLabel}
