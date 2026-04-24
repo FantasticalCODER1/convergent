@@ -1,8 +1,8 @@
 import { useAuth } from '../hooks/useAuth';
 import { useCertificates } from '../hooks/useCertificates';
-import { CertificateCard } from '../components/CertificateCard';
 import { EmptyStateCard } from '../components/EmptyStateCard';
 import { MetricCard, PageHeader, SurfaceSection } from '../components/ui/product';
+import { formatTimestamp } from '../lib/formatters';
 
 export default function Certificates() {
   const { user } = useAuth();
@@ -23,7 +23,7 @@ export default function Certificates() {
       <PageHeader
         eyebrow="Credentials"
         title="Certificates"
-        description="This surface now reads like a student record ledger: issued credentials, public verification, and linked proof without the old generic dashboard-card treatment."
+        description="Issued certificates and public verification links."
         aside={
           <div className="grid gap-3 sm:grid-cols-2">
             <MetricCard label="Records" value={String(certificates.length)} hint="Issued to your profile" />
@@ -34,21 +34,51 @@ export default function Certificates() {
 
       <SurfaceSection
         eyebrow="Issued records"
-        title="Verified certificate history"
-        description="Issuance stays inside club workspaces, while this page keeps the student view compact, readable, and verification-first."
+        title="Certificate ledger"
       >
         {loading ? (
-          <div className="rounded-[22px] border border-white/8 bg-[rgba(10,15,27,0.32)] p-8 text-center text-sm text-[var(--text-muted)]">
-            Loading certificates…
+          <div className="rounded-[10px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-8 text-center text-sm text-[var(--text-muted)]">
+            Loading certificates...
           </div>
         ) : certificates.length === 0 ? (
-          <div className="rounded-[24px] border border-dashed border-white/10 bg-[rgba(10,15,27,0.22)] p-8 text-center text-sm leading-7 text-[var(--text-muted)]">
-            No certificates have been issued to this profile yet. When a club publishes one, it will appear here with a public verification page and any attached certificate asset.
+          <div className="ledger-table">
+            <div className="ledger-header grid-cols-[minmax(0,1.1fr)_180px_140px_120px]">
+              <span>Certificate</span>
+              <span>Club/Event</span>
+              <span>Issued</span>
+              <span>Status</span>
+            </div>
+            <div className="ledger-row grid-cols-[minmax(0,1.1fr)_180px_140px_120px] text-sm text-[var(--text-muted)]">
+              <span>No certificates issued yet.</span>
+              <span>-</span>
+              <span>-</span>
+              <span>-</span>
+            </div>
           </div>
         ) : (
-          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="ledger-table">
+            <div className="ledger-header grid-cols-[minmax(0,1.1fr)_180px_140px_120px_150px]">
+              <span>Certificate</span>
+              <span>Club/Event</span>
+              <span>Issued</span>
+              <span>Status</span>
+              <span>Action</span>
+            </div>
             {certificates.map((cert) => (
-              <CertificateCard key={cert.id} certificate={cert} />
+              <div key={cert.id} className="ledger-row grid-cols-[minmax(0,1.1fr)_180px_140px_120px_150px] text-sm">
+                <span className="font-semibold text-[var(--text-strong)]">{cert.eventTitle}</span>
+                <span className="text-[var(--text-muted)]">{cert.clubName}</span>
+                <span className="text-[var(--text-muted)]">{formatTimestamp(cert.issuedAt, 'Pending')}</span>
+                <span className="font-semibold text-[var(--academic-blue)]">Verified</span>
+                <a
+                  href={`/verify?id=${cert.verifierId}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold text-[var(--academic-blue)] transition hover:text-[var(--text-strong)]"
+                >
+                  Open verification
+                </a>
+              </div>
             ))}
           </div>
         )}

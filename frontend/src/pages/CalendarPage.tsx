@@ -1,4 +1,4 @@
-import { startTransition, useMemo, useState } from 'react';
+import { startTransition, useEffect, useMemo, useState } from 'react';
 import {
   addDays,
   addMonths,
@@ -32,14 +32,15 @@ const FILTER_OPTIONS: Array<{ id: OverviewFilterKey; label: string }> = [
 ];
 
 const categoryBarClasses: Record<string, string> = {
-  school_wide: 'border-l-sky-300 bg-sky-400/10 text-sky-50',
-  academic: 'border-l-amber-300 bg-amber-300/10 text-amber-50',
-  club: 'border-l-indigo-300 bg-indigo-400/10 text-indigo-50',
-  society: 'border-l-emerald-300 bg-emerald-400/10 text-emerald-50',
-  supw: 'border-l-orange-300 bg-orange-400/10 text-orange-50',
-  sta: 'border-l-pink-300 bg-pink-400/10 text-pink-50',
-  centre_of_excellence: 'border-l-teal-300 bg-teal-400/10 text-teal-50',
-  meals: 'border-l-yellow-200 bg-yellow-200/10 text-yellow-50'
+  school_wide: 'border-l-[#6B5CA5] bg-[#F1EEFA] text-[#3f3670]',
+  academic: 'border-l-[#2B4C7E] bg-[#EEF4FB] text-[#223f6b]',
+  club: 'border-l-[#2F7D5C] bg-[#ECF7F1] text-[#245f47]',
+  society: 'border-l-[#2F7D5C] bg-[#ECF7F1] text-[#245f47]',
+  supw: 'border-l-[#2F7D5C] bg-[#ECF7F1] text-[#245f47]',
+  sta: 'border-l-[#2F7D5C] bg-[#ECF7F1] text-[#245f47]',
+  centre_of_excellence: 'border-l-[#2F7D5C] bg-[#ECF7F1] text-[#245f47]',
+  meals: 'border-l-[#B98222] bg-[#FFF6E6] text-[#805616]',
+  records: 'border-l-[#52616F] bg-[#F2F4F6] text-[#394653]'
 };
 
 function matchesOverviewFilter(item: PersonalCalendarItem, activeFilter: OverviewFilterKey) {
@@ -128,7 +129,14 @@ export default function CalendarPage() {
     }, {});
   }, [filteredItems, monthDays]);
 
-  const selectedDayItems = itemsByDay[dayKey(selectedDate)] ?? [];
+  const selectedDayItems = useMemo(
+    () =>
+      [...(itemsByDay[dayKey(selectedDate)] ?? [])].sort((left, right) => {
+        if (left.allDay !== right.allDay) return left.allDay ? -1 : 1;
+        return left.startTime.localeCompare(right.startTime);
+      }),
+    [itemsByDay, selectedDate]
+  );
   const populatedDayCount = useMemo(
     () => monthDays.filter((day) => (itemsByDay[dayKey(day)] ?? []).length > 0).length,
     [itemsByDay, monthDays]
@@ -149,7 +157,15 @@ export default function CalendarPage() {
 
   const openDay = (day: Date, focusedId?: string | null) => {
     setSelectedDate(day);
+    if (!isSameMonth(day, visibleMonth)) {
+      setVisibleMonth(startOfMonth(day));
+    }
     setFocusedItemId(focusedId ?? null);
+  };
+
+  const moveSelectedDay = (delta: -1 | 1) => {
+    const nextDay = addDays(selectedDate, delta);
+    startTransition(() => openDay(nextDay));
   };
 
   const changeMonth = (direction: -1 | 1) => {
@@ -161,125 +177,131 @@ export default function CalendarPage() {
     });
   };
 
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, select, textarea, button, a')) return;
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        moveSelectedDay(-1);
+      }
+      if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        moveSelectedDay(1);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [selectedDate, visibleMonth]);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
         eyebrow="Calendar"
-        title="Personal calendar"
-        description="The calendar is now treated as the strongest product surface: a month grid for scanning time, a selected-day rail for detail, and explicit signals about what this environment can and cannot yet map."
+        title="Planner"
+        description="Month view for classes, meals, clubs, and school events."
         aside={
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="hidden gap-2 sm:grid sm:grid-cols-3">
             <MetricCard label="Visible items" value={String(filteredItems.length)} hint={`Across ${format(visibleMonth, 'MMMM yyyy')}`} />
-            <MetricCard label="Populated days" value={String(populatedDayCount)} hint="Days with mapped schedule or event data" />
-            <MetricCard label="Upcoming" value={String(upcomingItems.length)} hint="Queued personal items" />
+            <MetricCard label="Active days" value={String(populatedDayCount)} hint="With mapped entries" />
+            <MetricCard label="Upcoming" value={String(upcomingItems.length)} hint="Personal queue" />
           </div>
         }
       />
 
-      <SurfaceSection
-        eyebrow="Planner controls"
-        title={format(visibleMonth, 'MMMM yyyy')}
-        description="Month controls, category filters, and the day rail stay clearly separated so the grid can do the primary visual work."
-      >
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,360px)]">
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => changeMonth(-1)}
-                className="inline-flex size-11 items-center justify-center rounded-full border border-white/10 text-[var(--text-muted)] transition hover:bg-white/8 hover:text-[var(--text-strong)]"
-                aria-label="Previous month"
-              >
-                <ChevronLeft className="size-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  startTransition(() => {
-                    const today = new Date();
-                    setVisibleMonth(startOfMonth(today));
-                    setSelectedDate(today);
-                    setFocusedItemId(null);
-                  });
-                }}
-                className="rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-[var(--text-strong)] transition hover:bg-white/8"
-              >
-                Today
-              </button>
-              <button
-                type="button"
-                onClick={() => changeMonth(1)}
-                className="inline-flex size-11 items-center justify-center rounded-full border border-white/10 text-[var(--text-muted)] transition hover:bg-white/8 hover:text-[var(--text-strong)]"
-                aria-label="Next month"
-              >
-                <ChevronRight className="size-4" />
-              </button>
-              <div className="rounded-full border border-white/10 bg-[rgba(10,15,27,0.26)] px-4 py-2 text-sm text-[var(--text-muted)]">
-                {sourceSummary}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_330px]">
+        <section className="overflow-hidden rounded-[14px] border border-[color:var(--line)] bg-[var(--paper-card)] shadow-[var(--shadow-soft)]">
+          <div className="border-b border-[color:var(--line)] bg-[rgba(248,245,238,0.78)] px-4 py-3">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => changeMonth(-1)}
+                  className="inline-flex size-9 items-center justify-center rounded-[10px] border border-[color:var(--line)] bg-[var(--paper-card)] text-[var(--text-muted)] transition hover:bg-[var(--paper-soft)] hover:text-[var(--text-strong)]"
+                  aria-label="Previous month"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <h2 className="serif-display min-w-[190px] text-[1.5rem] font-semibold text-[var(--text-strong)]">{format(visibleMonth, 'MMMM yyyy')}</h2>
+                <button
+                  type="button"
+                  onClick={() => changeMonth(1)}
+                  className="inline-flex size-9 items-center justify-center rounded-[10px] border border-[color:var(--line)] bg-[var(--paper-card)] text-[var(--text-muted)] transition hover:bg-[var(--paper-soft)] hover:text-[var(--text-strong)]"
+                  aria-label="Next month"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    startTransition(() => {
+                      const today = new Date();
+                      setVisibleMonth(startOfMonth(today));
+                      setSelectedDate(today);
+                      setFocusedItemId(null);
+                    });
+                  }}
+                  className="rounded-[10px] border border-[color:var(--line)] bg-[var(--paper-card)] px-3 py-2 text-sm font-medium text-[var(--text-strong)] transition hover:bg-[var(--paper-soft)]"
+                >
+                  Today
+                </button>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {FILTER_OPTIONS.map((filter) => (
+                  <SectionButton key={filter.id} active={activeFilter === filter.id} onClick={() => setActiveFilter(filter.id)}>
+                    {filter.label}
+                  </SectionButton>
+                ))}
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {FILTER_OPTIONS.map((filter) => (
-                <SectionButton key={filter.id} active={activeFilter === filter.id} onClick={() => setActiveFilter(filter.id)}>
-                  {filter.label}
-                </SectionButton>
-              ))}
+            <div className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_210px]">
+              <div className="truncate rounded-[10px] border border-[color:var(--line)] bg-[rgba(255,253,248,0.7)] px-3 py-2 text-sm text-[var(--text-muted)]">
+                {sourceSummary}
+              </div>
+              <select
+                value={selectedGroupId}
+                onChange={(event) => setSelectedGroupId(event.target.value)}
+                className="rounded-[10px] border border-[color:var(--line)] bg-[var(--paper-card)] px-3 py-2 text-sm text-[var(--text-strong)]"
+                aria-label="Group filter"
+              >
+                <option value="all">All groups</option>
+                {groupOptions.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+              <StatRow label="Profile" value={readiness.profileReady ? 'Ready' : 'Pending'} />
+              <StatRow label="Academic" value={`${readiness.academicStatus} · ${readiness.academicEntriesMatched}`} />
+              <StatRow label="Meals" value={`${readiness.mealStatus} · ${readiness.mealEntriesMatched}`} />
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-white/8 bg-[rgba(10,15,27,0.34)] p-4">
-            <p className="text-[0.7rem] font-medium uppercase tracking-[0.34em] text-[var(--text-faint)]">View context</p>
-            <div className="mt-4 grid gap-3">
-              <label className="space-y-2 text-sm">
-                <span className="text-[var(--text-muted)]">Group</span>
-                <select
-                  value={selectedGroupId}
-                  onChange={(event) => setSelectedGroupId(event.target.value)}
-                  className="w-full rounded-[18px] border border-white/10 bg-[rgba(13,19,34,0.58)] px-4 py-3 text-[var(--text-strong)]"
-                >
-                  <option value="all">All groups</option>
-                  {groupOptions.map((group) => (
-                    <option key={group.id} value={group.id}>
-                      {group.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <StatRow label="Academic coverage" value={`${readiness.academicStatus} · ${readiness.academicEntriesMatched} mapped`} subdued />
-              <StatRow label="Meal coverage" value={`${readiness.mealStatus} · ${readiness.mealEntriesMatched} mapped`} subdued />
-            </div>
+          <div className="sm:hidden border-b border-[color:var(--line)] bg-[var(--paper-soft)] px-4 py-3">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[var(--brass)]">Selected day</p>
+            <p className="mt-1 text-base font-semibold text-[var(--text-strong)]">{format(selectedDate, 'EEEE, d MMMM')}</p>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              {selectedDayItems.length === 0 ? 'No items mapped.' : `${selectedDayItems.length} item${selectedDayItems.length === 1 ? '' : 's'} mapped.`}
+            </p>
           </div>
-        </div>
-      </SurfaceSection>
 
-      {(readiness.academicStatus === 'missing' || readiness.mealStatus === 'missing' || !readiness.profileReady) && (
-        <SurfaceSection
-          eyebrow="Calendar scope"
-          title={!readiness.profileReady ? 'Finish profile mapping to unlock timetable coverage' : 'Timetable and meals are not fully live yet'}
-          description={
-            !readiness.profileReady
-              ? 'Grade and section are still required before academic and meal blocks can map into the planner. School-wide and approved club events will continue to appear when available.'
-              : 'The planner still renders as a real calendar, but timetable and meal coverage remain limited in this environment. School-wide and approved club activity stay visible without pretending broader data exists.'
-          }
-          tone="accent"
-        />
-      )}
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <SurfaceSection eyebrow="Month grid" title="Planner" className="overflow-hidden p-0" contentClassName="mt-0">
           {loading ? (
-            <div className="px-6 py-8 text-sm text-[var(--text-muted)]">Loading calendar data…</div>
+            <div className="px-6 py-8 text-sm text-[var(--text-muted)]">Loading calendar data...</div>
           ) : (
             <>
-              <div className="grid grid-cols-7 border-b border-white/10 bg-[rgba(10,15,27,0.2)] px-2 py-3">
+              <div className="grid grid-cols-7 border-b border-[color:var(--line)] bg-[color:var(--paper-muted)] px-2 py-2">
                 {WEEKDAY_LABELS.map((label) => (
-                  <div key={label} className="px-3 text-sm font-medium text-[var(--text-muted)]">
+                  <div key={label} className="px-2 text-[0.78rem] font-semibold uppercase tracking-[0.12em] text-[var(--brass)] sm:px-3">
                     {label}
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 bg-[linear-gradient(180deg,rgba(17,24,43,0.74),rgba(11,16,28,0.74))]">
+              <div className="grid grid-cols-7 bg-[var(--paper-card)]">
                 {monthDays.map((day) => {
                   const dayItems = itemsByDay[dayKey(day)] ?? [];
                   const previewItems = getPreviewItems(dayItems);
@@ -300,22 +322,26 @@ export default function CalendarPage() {
                         }
                       }}
                       className={clsx(
-                        'planner-grid-cell min-h-[132px] border-b border-r border-white/8 px-3 py-3 text-left transition sm:min-h-[146px]',
-                        selected ? 'bg-[rgba(37,53,83,0.92)]' : outsideMonth ? 'bg-[rgba(8,12,22,0.4)] hover:bg-[rgba(18,24,40,0.7)]' : 'hover:bg-[rgba(18,24,40,0.7)]'
+                        'planner-grid-cell min-h-[72px] border-b border-r border-[color:var(--line-soft)] px-1.5 py-2 text-left transition sm:min-h-[108px] sm:px-2.5',
+                        selected
+                          ? 'bg-[var(--academic-blue-soft)] ring-1 ring-inset ring-[var(--academic-blue-line)]'
+                          : outsideMonth
+                            ? 'bg-[rgba(241,231,214,0.42)] text-[var(--text-faint)] hover:bg-[rgba(241,231,214,0.58)]'
+                            : 'hover:bg-[rgba(255,246,216,0.42)]'
                       )}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className={clsx('text-sm font-semibold', outsideMonth ? 'text-white/35' : 'text-[var(--text-strong)]')}>
+                        <span className={clsx('text-sm font-semibold', outsideMonth ? 'text-[var(--text-faint)]' : 'text-[var(--text-strong)]')}>
                           {format(day, 'd')}
                         </span>
                         {isToday(day) ? (
-                          <span className="rounded-full border border-cyan-400/20 bg-cyan-400/12 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.24em] text-cyan-100">
+                          <span className="rounded-[6px] border border-[color:var(--gold-line)] bg-[color:var(--gold-soft)] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--brass)]">
                             Today
                           </span>
                         ) : null}
                       </div>
 
-                      <div className="mt-3 space-y-1.5">
+                      <div className="mt-2 space-y-1">
                         {previewItems.map((item) => {
                           const category = getCategoryMeta(item.category);
                           return (
@@ -327,12 +353,12 @@ export default function CalendarPage() {
                                 openDay(day, item.id);
                               }}
                               className={clsx(
-                                'block w-full rounded-[12px] border border-white/6 border-l-[3px] px-2.5 py-1.5 text-left text-[11px] leading-4 transition hover:bg-white/10',
+                                'hidden w-full border-l-[3px] px-2 py-1 text-left text-[11px] leading-4 transition hover:translate-x-0.5 sm:block',
                                 categoryBarClasses[item.category] ?? categoryBarClasses.school_wide
                               )}
                             >
-                              <div className="truncate font-medium text-[var(--text-strong)]">{item.title}</div>
-                              <div className="mt-0.5 truncate text-white/70">
+                              <div className="truncate font-semibold">{item.title}</div>
+                              <div className="truncate opacity-80">
                                 {item.allDay ? category.shortLabel : `${formatTimeLabel(item.startTime)} · ${category.shortLabel}`}
                               </div>
                             </button>
@@ -345,12 +371,23 @@ export default function CalendarPage() {
                               event.stopPropagation();
                               openDay(day);
                             }}
-                            className="text-[11px] font-medium text-[var(--accent-2)] transition hover:text-white"
+                            className="hidden text-[11px] font-semibold text-[var(--academic-blue)] transition hover:text-[var(--text-strong)] sm:inline-flex"
                           >
                             +{overflowCount} more
                           </button>
                         ) : null}
-                        {dayItems.length === 0 ? <div className="pt-4 text-[11px] text-white/20"> </div> : null}
+                        {dayItems.length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openDay(day);
+                            }}
+                            className="mt-1 inline-flex text-[10px] font-semibold text-[var(--academic-blue)] sm:hidden"
+                          >
+                            {dayItems.length}
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                   );
@@ -358,75 +395,87 @@ export default function CalendarPage() {
               </div>
             </>
           )}
-        </SurfaceSection>
+        </section>
 
-        <div className="space-y-6">
+        <aside className="space-y-4">
           <SurfaceSection
             eyebrow="Selected day"
             title={format(selectedDate, 'EEEE, d MMMM')}
             description={
               selectedDayItems.length === 0
-                ? 'No mapped items sit on this date. Quiet days remain quiet instead of being padded with filler activity.'
-                : `${selectedDayItems.length} mapped item${selectedDayItems.length === 1 ? '' : 's'} on this date.`
+                ? 'No mapped items.'
+                : `${selectedDayItems.length} item${selectedDayItems.length === 1 ? '' : 's'} mapped.`
             }
             action={
-              <button
-                type="button"
-                onClick={() => setDayViewDate(selectedDate)}
-                className="rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-[var(--text-strong)] transition hover:bg-white/8"
-              >
-                Open day view
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => moveSelectedDay(-1)}
+                  className="rounded-[10px] border border-[color:var(--line)] px-3 py-2 text-sm font-medium text-[var(--text-strong)] transition hover:bg-[color:var(--panel-2)]"
+                  aria-label="Previous day"
+                >
+                  <ChevronLeft className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveSelectedDay(1)}
+                  className="rounded-[10px] border border-[color:var(--line)] px-3 py-2 text-sm font-medium text-[var(--text-strong)] transition hover:bg-[color:var(--panel-2)]"
+                  aria-label="Next day"
+                >
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
             }
           >
             {selectedDayItems.length === 0 ? (
-              <div className="rounded-[22px] border border-dashed border-white/10 bg-[rgba(10,15,27,0.24)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
-                Empty days stay intentionally calm. The right rail still keeps the selected-date context visible so the month grid remains legible as you move around it.
+              <div className="rounded-[10px] border border-dashed border-[color:var(--line)] bg-[color:var(--paper-soft)] px-4 py-4 text-sm leading-6 text-[var(--text-muted)]">
+                The planner has no class, meal, club, or school item on this date.
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="overflow-hidden rounded-[12px] border border-[color:var(--line)] bg-[var(--paper-card)]">
                 {selectedDayItems.map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => setFocusedItemId(item.id)}
                     className={clsx(
-                      'w-full rounded-[22px] border px-4 py-4 text-left transition',
+                      'w-full border-t border-l-[3px] px-3 py-3 text-left transition first:border-t-0',
                       item.id === focusedItemId || (!focusedItemId && item.id === selectedDayItems[0]?.id)
-                        ? 'border-white/18 bg-[rgba(27,39,63,0.92)]'
-                        : 'border-white/8 bg-[rgba(10,15,27,0.34)] hover:bg-[rgba(17,24,43,0.7)]'
+                        ? `${categoryBarClasses[item.category] ?? categoryBarClasses.school_wide} border-t-[color:var(--line-soft)]`
+                        : 'border-l-transparent border-t-[color:var(--line-soft)] bg-[var(--paper-card)] hover:bg-[var(--paper-soft)]'
                     )}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-lg font-semibold text-[var(--text-strong)]">{item.title}</p>
-                        <p className="mt-1 text-sm text-[var(--text-muted)]">{formatDateTimeRange(item.startTime, item.endTime)}</p>
+                        <p className="text-sm font-semibold text-[var(--text-strong)]">{item.title}</p>
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">{formatDateTimeRange(item.startTime, item.endTime)}</p>
                       </div>
-                      <span className="text-sm text-[var(--text-muted)]">{item.relatedGroup?.name ?? getCategoryMeta(item.category).shortLabel}</span>
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-faint)]">{item.relatedGroup?.name ?? getCategoryMeta(item.category).shortLabel}</span>
                     </div>
-                    {item.location ? <p className="mt-3 text-sm text-[var(--text-muted)]">{item.location}</p> : null}
+                    {item.location ? <p className="mt-2 text-xs text-[var(--text-muted)]">{item.location}</p> : null}
                   </button>
                 ))}
               </div>
             )}
 
             {focusedItem ? (
-              <div className="mt-5 rounded-[24px] border border-white/8 bg-[rgba(10,15,27,0.34)] p-5">
-                <p className="text-[0.7rem] font-medium uppercase tracking-[0.34em] text-[var(--text-faint)]">Focused item</p>
-                <h3 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-[var(--text-strong)]">{focusedItem.title}</h3>
-                <p className="mt-2 text-sm leading-7 text-[var(--text-muted)]">{formatDateTimeRange(focusedItem.startTime, focusedItem.endTime)}</p>
+              <div className="mt-4 rounded-[12px] border border-[color:var(--line)] bg-[color:var(--paper-soft)] p-4">
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[var(--brass)]">Focused item</p>
+                <h3 className="mt-2 text-xl font-semibold text-[var(--text-strong)]">{focusedItem.title}</h3>
+                <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">{formatDateTimeRange(focusedItem.startTime, focusedItem.endTime)}</p>
                 {focusedItem.description ? <p className="mt-3 text-sm leading-7 text-[var(--text-muted)]">{focusedItem.description}</p> : null}
-                <div className="mt-4 space-y-3">
+                <div className="mt-3">
                   {focusedItem.location ? <StatRow label="Location" value={focusedItem.location} subdued /> : null}
                   {focusedItem.metadata?.teacher ? <StatRow label="Teacher" value={focusedItem.metadata.teacher} subdued /> : null}
+                  {focusedItem.metadata?.blockName ? <StatRow label="Block" value={focusedItem.metadata.blockName} subdued /> : null}
                 </div>
-                <div className="mt-4 space-y-2">
+                <div className="mt-3 space-y-2">
                   {focusedItem.classroomLink ? (
                     <a
                       href={focusedItem.classroomLink}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center justify-between rounded-[18px] border border-white/10 px-4 py-3 text-sm text-[var(--text-strong)] transition hover:bg-white/8"
+                      className="flex items-center justify-between rounded-[10px] border border-[color:var(--line)] bg-[var(--paper-card)] px-3 py-2.5 text-sm text-[var(--text-strong)] transition hover:bg-white"
                     >
                       Open Classroom
                       <ExternalLink className="size-4" />
@@ -437,7 +486,7 @@ export default function CalendarPage() {
                       href={focusedItem.classroomPostLink}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center justify-between rounded-[18px] border border-white/10 px-4 py-3 text-sm text-[var(--text-strong)] transition hover:bg-white/8"
+                      className="flex items-center justify-between rounded-[10px] border border-[color:var(--line)] bg-[var(--paper-card)] px-3 py-2.5 text-sm text-[var(--text-strong)] transition hover:bg-white"
                     >
                       Open Classroom post
                       <ExternalLink className="size-4" />
@@ -448,7 +497,7 @@ export default function CalendarPage() {
                       href={focusedItem.meetLink}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center justify-between rounded-[18px] border border-white/10 px-4 py-3 text-sm text-[var(--text-strong)] transition hover:bg-white/8"
+                      className="flex items-center justify-between rounded-[10px] border border-[color:var(--line)] bg-[var(--paper-card)] px-3 py-2.5 text-sm text-[var(--text-strong)] transition hover:bg-white"
                     >
                       Open Meet
                       <ExternalLink className="size-4" />
@@ -457,21 +506,27 @@ export default function CalendarPage() {
                 </div>
               </div>
             ) : null}
+            <button
+              type="button"
+              onClick={() => setDayViewDate(selectedDate)}
+              className="mt-4 w-full rounded-[10px] border border-[color:var(--academic-blue-line)] bg-[var(--academic-blue-soft)] px-4 py-2.5 text-sm font-semibold text-[var(--academic-blue)] transition hover:bg-white"
+            >
+              Open day agenda
+            </button>
           </SurfaceSection>
 
           <SurfaceSection
             eyebrow="Calendar context"
             title="Scope and sources"
-            description="This rail keeps the month view grounded in product truth rather than treating every empty slot as a missing design."
           >
-            <div className="space-y-3">
+            <div>
               <StatRow label="Profile mapping" value={readiness.profileReady ? 'Ready' : 'Pending'} />
               <StatRow label="Academic datasets" value={`${readiness.academicStatus} · ${readiness.academicEntriesMatched} mapped`} />
               <StatRow label="Meal datasets" value={`${readiness.mealStatus} · ${readiness.mealEntriesMatched} mapped`} />
               <StatRow label="Month source summary" value={sourceSummary} />
             </div>
           </SurfaceSection>
-        </div>
+        </aside>
       </div>
 
       <PersonalDaySheet
@@ -479,6 +534,7 @@ export default function CalendarPage() {
         focusedItemId={focusedItemId}
         items={dayViewDate ? getItemsForDay(filteredItems, dayViewDate) : []}
         onClose={() => setDayViewDate(null)}
+        onFocusItem={setFocusedItemId}
         open={!!dayViewDate}
       />
     </div>

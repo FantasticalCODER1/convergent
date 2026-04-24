@@ -31,19 +31,19 @@ type MetricCardProps = {
 };
 
 const surfaceToneClasses: Record<SurfaceTone, string> = {
-  default: 'border-white/8 bg-[linear-gradient(180deg,rgba(24,33,57,0.92),rgba(17,24,43,0.92))]',
-  muted: 'border-white/8 bg-[linear-gradient(180deg,rgba(18,24,40,0.82),rgba(13,19,34,0.82))]',
-  accent: 'border-cyan-400/20 bg-[linear-gradient(180deg,rgba(24,46,68,0.92),rgba(18,36,55,0.92))]',
-  warning: 'border-amber-300/20 bg-[linear-gradient(180deg,rgba(62,45,31,0.82),rgba(39,31,24,0.82))]'
+  default: 'border-[color:var(--line)] bg-[color:var(--panel)]',
+  muted: 'border-[color:var(--line)] bg-[color:var(--paper-soft)]',
+  accent: 'border-[color:var(--academic-blue-line)] bg-[color:var(--academic-blue-soft)]',
+  warning: 'border-[color:var(--gold-line)] bg-[color:var(--gold-soft)]'
 };
 
 export function PageHeader({ eyebrow, title, description, aside, className }: PageHeaderProps) {
   return (
-    <header className={clsx('flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between', className)}>
+    <header className={clsx('flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between', className)}>
       <div className="max-w-4xl">
-        <p className="text-[0.72rem] font-medium uppercase tracking-[0.36em] text-[var(--accent-2)]">{eyebrow}</p>
-        <h1 className="mt-2 text-4xl font-semibold tracking-[-0.03em] text-[var(--text-strong)] sm:text-5xl">{title}</h1>
-        {description ? <p className="mt-3 max-w-3xl text-[1.06rem] leading-8 text-[var(--text-muted)]">{description}</p> : null}
+        <p className="text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-[var(--brass)]">{eyebrow}</p>
+        <h1 className="serif-display mt-1.5 text-[2.35rem] font-semibold leading-tight text-[var(--text-strong)] sm:text-[2.75rem]">{title}</h1>
+        {description ? <p className="mt-2 max-w-3xl text-[0.98rem] leading-7 text-[var(--text-muted)]">{description}</p> : null}
       </div>
       {aside ? <div className="shrink-0">{aside}</div> : null}
     </header>
@@ -63,7 +63,7 @@ export function SurfaceSection({
   return (
     <section
       className={clsx(
-        'rounded-[30px] border p-6 shadow-[0_24px_60px_rgba(3,8,22,0.28)]',
+        'rounded-[14px] border p-4 shadow-[var(--shadow-soft)] md:p-5',
         surfaceToneClasses[tone],
         className
       )}
@@ -71,9 +71,9 @@ export function SurfaceSection({
       {eyebrow || title || description || action ? (
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl">
-            {eyebrow ? <p className="text-[0.72rem] font-medium uppercase tracking-[0.34em] text-[var(--text-faint)]">{eyebrow}</p> : null}
-            {title ? <h2 className="mt-2 text-[1.95rem] font-semibold tracking-[-0.03em] text-[var(--text-strong)]">{title}</h2> : null}
-            {description ? <p className="mt-2 text-[0.98rem] leading-7 text-[var(--text-muted)]">{description}</p> : null}
+            {eyebrow ? <p className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-[var(--brass)]">{eyebrow}</p> : null}
+            {title ? <h2 className="mt-1.5 text-[1.38rem] font-semibold leading-snug text-[var(--text-strong)]">{title}</h2> : null}
+            {description ? <p className="mt-1.5 text-[0.95rem] leading-6 text-[var(--text-muted)]">{description}</p> : null}
           </div>
           {action ? <div className="shrink-0">{action}</div> : null}
         </div>
@@ -87,14 +87,14 @@ export function MetricCard({ label, value, hint, tone = 'muted', className }: Me
   return (
     <div
       className={clsx(
-        'rounded-[22px] border px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]',
+        'min-w-[150px] rounded-[12px] border px-3.5 py-3',
         surfaceToneClasses[tone],
         className
       )}
     >
-      <p className="text-[0.7rem] font-medium uppercase tracking-[0.34em] text-[var(--text-faint)]">{label}</p>
-      <p className="mt-2 text-4xl font-semibold tracking-[-0.04em] text-[var(--text-strong)]">{value}</p>
-      {hint ? <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">{hint}</p> : null}
+      <p className="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-[var(--brass)]">{label}</p>
+      <p className="mt-1.5 text-[1.8rem] font-semibold leading-none text-[var(--text-strong)]">{value}</p>
+      {hint ? <p className="mt-1.5 text-[0.82rem] leading-5 text-[var(--text-muted)]">{hint}</p> : null}
     </div>
   );
 }
@@ -113,8 +113,8 @@ export function StatRow({
   return (
     <div
       className={clsx(
-        'flex items-center justify-between gap-4 rounded-[18px] border border-white/8 px-4 py-3',
-        subdued ? 'bg-[rgba(11,16,28,0.32)]' : 'bg-[rgba(11,16,28,0.48)]',
+        'flex items-center justify-between gap-4 border-b border-[color:var(--line-soft)] px-1 py-2.5 last:border-b-0',
+        subdued ? 'bg-transparent' : 'bg-transparent',
         className
       )}
     >
@@ -135,13 +135,13 @@ export function QuietBadge({
 }) {
   const toneClass =
     tone === 'accent'
-      ? 'border-cyan-400/20 bg-cyan-400/10 text-cyan-100'
+      ? 'border-[color:var(--academic-blue-line)] bg-[color:var(--academic-blue-soft)] text-[var(--academic-blue)]'
       : tone === 'warning'
-        ? 'border-amber-300/20 bg-amber-400/10 text-amber-50'
-        : 'border-white/10 bg-white/5 text-[var(--text-muted)]';
+        ? 'border-[color:var(--gold-line)] bg-[color:var(--gold-soft)] text-[var(--brass)]'
+        : 'border-[color:var(--line)] bg-[color:var(--paper-soft)] text-[var(--text-muted)]';
 
   return (
-    <span className={clsx('inline-flex items-center rounded-full border px-3 py-1 text-[0.7rem] font-medium uppercase tracking-[0.28em]', toneClass, className)}>
+    <span className={clsx('inline-flex items-center rounded-[8px] border px-2.5 py-1 text-[0.66rem] font-semibold uppercase tracking-[0.18em]', toneClass, className)}>
       {children}
     </span>
   );
@@ -157,10 +157,10 @@ export function SectionButton({
     <button
       {...props}
       className={clsx(
-        'inline-flex items-center justify-center rounded-full border px-4 py-2 text-sm font-medium transition',
+        'inline-flex items-center justify-center rounded-[10px] border px-3.5 py-2 text-sm font-medium transition active:translate-y-px',
         active
-          ? 'border-white/18 bg-white/12 text-[var(--text-strong)]'
-          : 'border-white/10 bg-[rgba(8,12,23,0.24)] text-[var(--text-muted)] hover:bg-white/8 hover:text-[var(--text-strong)]',
+          ? 'border-[var(--academic-blue)] bg-[var(--academic-blue-soft)] text-[var(--academic-blue)]'
+          : 'border-[color:var(--line)] bg-[rgba(255,253,248,0.74)] text-[var(--text-muted)] hover:border-[var(--line-strong)] hover:bg-[var(--paper-card)] hover:text-[var(--text-strong)]',
         className
       )}
     >

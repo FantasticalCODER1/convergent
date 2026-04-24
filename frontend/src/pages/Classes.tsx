@@ -33,14 +33,14 @@ export default function Classes() {
   const { entries, datasets, loading: loadingSchedules, error: scheduleError } = useSchedules();
   const [selected, setSelected] = useState<ClassroomCourse | null>(null);
   const classroomUnavailableMessage = isFirebaseEmulatorMode
-    ? 'Google Classroom is intentionally disabled in local emulator mode. The supported local path is the timetable-driven calendar and classes view.'
+    ? 'Google Classroom is disabled in local emulator mode. The local path uses timetable datasets and the classes view.'
     : !isGoogleAuthConfigured()
       ? 'Classroom is unavailable until Google OAuth is configured for this environment.'
       : 'Classroom is attached here only when a recoverable Google session is available.';
 
   if (!user) {
     return (
-      <div className="rounded-[28px] border border-white/10 bg-[rgba(18,25,43,0.9)] p-6 text-[var(--text-muted)] shadow-[0_24px_60px_rgba(3,8,22,0.28)]">
+      <div className="rounded-[20px] border border-[color:var(--line)] bg-[color:var(--panel)] p-6 text-[var(--text-muted)] shadow-[0_12px_28px_rgba(133,152,176,0.14)]">
         Sign in to view your timetable and Classroom surface.
       </div>
     );
@@ -86,7 +86,7 @@ export default function Classes() {
       <PageHeader
         eyebrow="Academic structure"
         title="Classes"
-        description="This page shows only real cohort timetable mappings, published dataset metadata, and attached Classroom data when a Google session can actually recover. It no longer pretends to be a full school operating system."
+        description="Cohort timetable, meals, dataset records, and attached Classroom context."
         aside={
           <div className="grid gap-3 sm:grid-cols-3">
             <MetricCard label="Academic datasets" value={String(academicDatasets.length)} hint="Published timetable records" />
@@ -105,10 +105,9 @@ export default function Classes() {
         <div className="space-y-6">
           <SurfaceSection
             eyebrow="Timetable"
-            title="Personal timetable mapping"
-            description="The main academic surface is now organised as one timetable region with explicit dataset status, not a stack of unrelated cards."
+            title="Personal timetable"
             action={
-              <span className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.28em] text-[var(--text-muted)]">
+              <span className="rounded-[8px] border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-1 text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
                 {user.grade && user.section ? `${user.grade} · ${user.section}` : 'Profile incomplete'}
               </span>
             }
@@ -123,30 +122,45 @@ export default function Classes() {
                 tone="warning"
               />
             ) : loadingSchedules ? (
-              <div className="rounded-[22px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-5 py-5 text-sm text-[var(--text-muted)]">
+              <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] px-5 py-5 text-sm text-[var(--text-muted)]">
                 Loading timetable structure…
               </div>
             ) : academicEntries.length === 0 ? (
-              <EmptyStateCard
-                eyebrow="Timetable dataset"
-                title={academicEmptyState?.title ?? 'No academic blocks mapped yet'}
-                body={academicEmptyState?.body ?? 'No academic blocks are mapped yet.'}
-                tone="accent"
-              />
+              <div className="ledger-table">
+                <div className="ledger-header grid-cols-[minmax(0,1.1fr)_90px_110px_100px_140px]">
+                  <span>Class</span>
+                  <span>Block</span>
+                  <span>Time</span>
+                  <span>Room</span>
+                  <span>Teacher</span>
+                </div>
+                <div className="ledger-row grid-cols-[minmax(0,1.1fr)_90px_110px_100px_140px] text-sm text-[var(--text-muted)]">
+                  <span>{academicEmptyState?.title ?? 'No academic blocks mapped yet'}</span>
+                  <span>-</span>
+                  <span>-</span>
+                  <span>-</span>
+                  <span>-</span>
+                </div>
+              </div>
             ) : (
-              <div className="space-y-3">
+              <div className="ledger-table">
+                <div className="ledger-header grid-cols-[minmax(0,1.1fr)_90px_120px_90px_150px]">
+                  <span>Class</span>
+                  <span>Block</span>
+                  <span>Time</span>
+                  <span>Room</span>
+                  <span>Teacher</span>
+                </div>
                 {academicEntries.slice(0, 8).map((entry) => (
-                  <div key={entry.id} className="grid gap-3 rounded-[24px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-5 py-4 md:grid-cols-[minmax(0,1fr)_auto]">
+                  <div key={entry.id} className="ledger-row grid-cols-[minmax(0,1.1fr)_90px_120px_90px_150px] text-sm">
                     <div>
-                      <p className="text-lg font-semibold text-[var(--text-strong)]">{entry.title}</p>
-                      <p className="mt-1 text-sm text-[var(--text-muted)]">{entry.blockName}</p>
+                      <p className="font-semibold text-[var(--text-strong)]">{entry.title}</p>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">{entry.sourceDataset}</p>
                     </div>
-                    <div className="text-sm text-[var(--text-muted)] md:text-right">
-                      <div className="font-medium text-[var(--text-strong)]">
-                        {entry.startTime} - {entry.endTime}
-                      </div>
-                      <div className="mt-1">{entry.location ?? 'Location pending'}</div>
-                    </div>
+                    <span className="text-[var(--text-muted)]">{entry.blockName}</span>
+                    <span className="font-medium text-[var(--text-strong)]">{entry.startTime} - {entry.endTime}</span>
+                    <span className="font-medium text-[var(--text-strong)]">{entry.location ?? 'TBC'}</span>
+                    <span className="text-[var(--text-muted)]">{entry.teacher ?? 'TBC'}</span>
                   </div>
                 ))}
               </div>
@@ -154,19 +168,32 @@ export default function Classes() {
           </SurfaceSection>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <SurfaceSection eyebrow="Meal schedules" title="Meal blocks">
-              {mealEntries.length === 0 ? (
-                <div className="rounded-[22px] border border-dashed border-white/10 bg-[rgba(10,15,27,0.22)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
-                  {mealEmptyState}
+          <SurfaceSection eyebrow="Meal schedules" title="Meal blocks">
+            {mealEntries.length === 0 ? (
+                <div className="ledger-table">
+                  <div className="ledger-header grid-cols-[minmax(0,1fr)_120px_150px]">
+                    <span>Meal</span>
+                    <span>Time</span>
+                    <span>Location</span>
+                  </div>
+                  <div className="ledger-row grid-cols-[minmax(0,1fr)_120px_150px] text-sm text-[var(--text-muted)]">
+                    <span>{mealEmptyState}</span>
+                    <span>-</span>
+                    <span>-</span>
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="ledger-table">
+                  <div className="ledger-header grid-cols-[minmax(0,1fr)_120px_150px]">
+                    <span>Meal</span>
+                    <span>Time</span>
+                    <span>Location</span>
+                  </div>
                   {mealEntries.map((entry) => (
-                    <div key={entry.id} className="rounded-[20px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-4 py-3">
-                      <div className="text-base font-semibold text-[var(--text-strong)]">{entry.title}</div>
-                      <div className="mt-1 text-sm text-[var(--text-muted)]">
-                        {entry.startTime} - {entry.endTime}
-                      </div>
+                    <div key={entry.id} className="ledger-row grid-cols-[minmax(0,1fr)_120px_150px] text-sm">
+                      <div className="font-semibold text-[var(--text-strong)]">{entry.title}</div>
+                      <div className="text-[var(--text-muted)]">{entry.startTime} - {entry.endTime}</div>
+                      <div className="text-[var(--text-muted)]">{entry.location ?? 'Dining Hall'}</div>
                     </div>
                   ))}
                 </div>
@@ -175,21 +202,33 @@ export default function Classes() {
 
             <SurfaceSection eyebrow="Datasets" title="Published records">
               {[...academicDatasets, ...mealDatasets].length === 0 ? (
-                <div className="rounded-[22px] border border-dashed border-white/10 bg-[rgba(10,15,27,0.22)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
-                  No timetable or meal dataset records have been published yet.
+                <div className="ledger-table">
+                  <div className="ledger-header grid-cols-[minmax(0,1fr)_120px_140px]">
+                    <span>Record</span>
+                    <span>Source</span>
+                    <span>Status</span>
+                  </div>
+                  <div className="ledger-row grid-cols-[minmax(0,1fr)_120px_140px] text-sm text-[var(--text-muted)]">
+                    <span>No timetable or meal dataset records have been published yet.</span>
+                    <span>-</span>
+                    <span>-</span>
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="ledger-table">
+                  <div className="ledger-header grid-cols-[minmax(0,1fr)_120px_140px]">
+                    <span>Record</span>
+                    <span>Source</span>
+                    <span>Status</span>
+                  </div>
                   {[...academicDatasets, ...mealDatasets].map((dataset) => (
-                    <div key={dataset.id} className="rounded-[22px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-4 py-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-base font-semibold text-[var(--text-strong)]">{dataset.title}</span>
-                        <span className="text-xs uppercase tracking-[0.25em] text-[var(--text-faint)]">{dataset.status}</span>
-                      </div>
-                      <p className="mt-2 text-sm text-[var(--text-muted)]">
-                        {dataset.scheduleType} dataset · updated {formatTimestamp(dataset.updatedAt, 'not recorded')}
-                      </p>
-                      <p className="mt-3 text-sm leading-7 text-[var(--text-muted)]">{dataset.notes ?? 'No additional dataset notes recorded.'}</p>
+                    <div key={dataset.id} className="ledger-row grid-cols-[minmax(0,1fr)_120px_140px] text-sm">
+                      <span>
+                        <span className="block font-semibold text-[var(--text-strong)]">{dataset.title}</span>
+                        <span className="text-[var(--text-muted)]">Updated {formatTimestamp(dataset.updatedAt, 'not recorded')}</span>
+                      </span>
+                      <span className="text-[var(--text-muted)]">{dataset.sourceDataset ?? dataset.scheduleType}</span>
+                      <span className="font-semibold text-[var(--text-strong)]">{dataset.status}</span>
                     </div>
                   ))}
                 </div>
@@ -201,26 +240,25 @@ export default function Classes() {
         <div className="space-y-6">
           <SurfaceSection
             eyebrow="Google Classroom"
-            title="Attached coursework surface"
-            description="Classroom remains visibly attached here, but timetable truth stays separate so the page does not imply Google is the scheduling authority."
+            title="Classroom context"
           >
             {error ? <p className="text-sm text-rose-300">{error}</p> : null}
 
             {sessionStatus === 'checking' || loadingCourses ? (
-              <div className="rounded-[22px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-5 py-5 text-sm text-[var(--text-muted)]">
+              <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] px-5 py-5 text-sm text-[var(--text-muted)]">
                 Checking Google session and loading courses…
               </div>
             ) : sessionStatus === 'ready' ? (
               <div className="space-y-3">
-                <div className="rounded-[22px] border border-cyan-400/20 bg-[rgba(24,46,68,0.52)] px-5 py-5 text-sm leading-7 text-cyan-50">
-                  Recovered Google session. Classroom is live here, but still treated as an attached coursework surface rather than the scheduling source of truth.
+                <div className="rounded-[10px] border border-[color:var(--academic-blue-line)] bg-[var(--academic-blue-soft)] px-5 py-5 text-sm leading-7 text-[var(--academic-blue)]">
+                  Classroom session recovered.
                 </div>
                 {courses.length === 0 ? (
-                  <div className="rounded-[22px] border border-dashed border-white/10 bg-[rgba(10,15,27,0.22)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
+                  <div className="rounded-[16px] border border-dashed border-[color:var(--line)] bg-[color:var(--panel-2)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
                     No active courses found for your account.
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="overflow-hidden rounded-[18px] border border-[color:var(--line)]">
                     {courses.map((course) => (
                       <button
                         key={course.id}
@@ -228,8 +266,8 @@ export default function Classes() {
                         onClick={() => void selectCourse(course)}
                         className={`w-full rounded-[22px] border px-4 py-4 text-left transition ${
                           selected?.id === course.id
-                            ? 'border-white/18 bg-[rgba(27,39,63,0.92)]'
-                            : 'border-white/8 bg-[rgba(10,15,27,0.34)] hover:bg-[rgba(17,24,43,0.7)]'
+                            ? 'border-[var(--academic-blue)] bg-[var(--academic-blue-soft)]'
+                            : 'border-t border-[color:var(--line)] bg-[var(--paper-card)] first:border-t-0 hover:bg-[color:var(--panel-2)]'
                         }`}
                       >
                         <p className="text-lg font-semibold text-[var(--text-strong)]">{course.name}</p>
@@ -256,7 +294,7 @@ export default function Classes() {
                 body={classroomUnavailableMessage}
               />
             ) : (
-              <div className="rounded-[22px] border border-dashed border-white/10 bg-[rgba(10,15,27,0.22)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
+              <div className="rounded-[16px] border border-dashed border-[color:var(--line)] bg-[color:var(--panel-2)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
                 {classroomUnavailableMessage}
               </div>
             )}
@@ -265,26 +303,25 @@ export default function Classes() {
           <SurfaceSection
             eyebrow="Coursework"
             title={selected && sessionStatus === 'ready' ? `${selected.name} coursework` : 'Coursework rail'}
-            description="Selected coursework stays here so the main page keeps timetable status and attached work clearly separated."
           >
             {selected && sessionStatus === 'ready' ? (
               loadingWork ? (
-                <div className="rounded-[22px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-5 py-5 text-sm text-[var(--text-muted)]">
+                <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] px-5 py-5 text-sm text-[var(--text-muted)]">
                   Fetching coursework…
                 </div>
               ) : coursework.length === 0 ? (
-                <div className="rounded-[22px] border border-dashed border-white/10 bg-[rgba(10,15,27,0.22)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
+                <div className="rounded-[16px] border border-dashed border-[color:var(--line)] bg-[color:var(--panel-2)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
                   No coursework posted yet.
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="overflow-hidden rounded-[18px] border border-[color:var(--line)]">
                   {coursework.map((work) => (
                     <a
                       key={work.id}
                       href={work.alternateLink}
                       target="_blank"
                       rel="noreferrer"
-                      className="block rounded-[22px] border border-white/8 bg-[rgba(10,15,27,0.34)] px-4 py-4 transition hover:bg-[rgba(17,24,43,0.7)]"
+                      className="block border-t border-[color:var(--line)] bg-white px-4 py-4 transition first:border-t-0 hover:bg-[color:var(--panel-2)]"
                     >
                       <p className="text-lg font-semibold text-[var(--text-strong)]">{work.title}</p>
                       <p className="mt-1 text-sm text-[var(--text-muted)]">
@@ -298,8 +335,8 @@ export default function Classes() {
               <div className="space-y-3">
                 <StatRow label="Timetable source" value="Published cohort datasets" />
                 <StatRow label="Classroom source" value="Recoverable Google session only" />
-                <div className="rounded-[22px] border border-dashed border-white/10 bg-[rgba(10,15,27,0.22)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
-                  Course links and timetable mapping stay separate. Classroom remains an attached service for coursework only, not the source of truth for scheduling or club operations.
+                <div className="rounded-[16px] border border-dashed border-[color:var(--line)] bg-[color:var(--panel-2)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
+                  Course links and timetable mapping stay separate.
                 </div>
               </div>
             )}

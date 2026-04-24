@@ -73,7 +73,7 @@ function AppRoutes() {
 }
 
 function RouteFallback() {
-  return <div className="grid min-h-screen place-items-center bg-[var(--bg)] text-[var(--text-muted)]">Loading…</div>;
+  return <div className="grid min-h-screen place-items-center bg-[var(--bg)] text-[var(--text-muted)]">Loading...</div>;
 }
 
 function Shell() {
@@ -92,13 +92,18 @@ function Shell() {
 
   return (
     <div className="min-h-screen text-[var(--text)]">
-      <header className="sticky top-0 z-50 border-b border-white/8 bg-[rgba(8,14,26,0.82)] backdrop-blur-2xl">
-        <div className="mx-auto flex max-w-[1420px] items-center justify-between gap-4 px-4 py-4 md:px-6">
-          <div className="min-w-0">
-            <p className="text-[0.72rem] font-medium uppercase tracking-[0.38em] text-[var(--accent-2)]">Convergent</p>
-            <p className="mt-1 max-w-xl text-[1.02rem] font-semibold leading-6 text-[var(--text-strong)]">
-              The school&apos;s central time-and-structure platform
-            </p>
+      <header className="sticky top-0 z-50 border-b border-[color:var(--line)] bg-[rgba(247,241,231,0.92)] backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1480px] items-center justify-between gap-4 px-4 py-3 md:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="identity-serif flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-[color:var(--line-strong)] bg-[var(--paper-card)] text-[1.15rem] text-[var(--academic-blue)] shadow-[var(--shadow-soft)]">
+              C
+            </div>
+            <div className="min-w-0">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.26em] text-[var(--brass)]">Convergent</p>
+              <p className="mt-0.5 max-w-xl text-[0.95rem] font-semibold leading-5 text-[var(--text-strong)]">
+                Spring Term 2026 · School year 2025-26
+              </p>
+            </div>
           </div>
           {user ? (
             <ProfileDropdown
@@ -112,19 +117,18 @@ function Shell() {
           ) : null}
         </div>
       </header>
-      <div className="mx-auto flex w-full max-w-[1420px] gap-8 px-4 py-6 pb-28 md:px-6 md:pb-8">
-        <aside className="hidden h-[calc(100vh-7.5rem)] w-[250px] shrink-0 flex-col rounded-[30px] border border-white/8 bg-[linear-gradient(180deg,rgba(18,26,46,0.92),rgba(12,18,31,0.92))] p-4 shadow-[0_30px_70px_rgba(3,8,22,0.36)] md:sticky md:top-[98px] md:flex">
-          <p className="px-3 text-[0.68rem] font-medium uppercase tracking-[0.34em] text-[var(--text-faint)]">Workspace</p>
-          <div className="mt-4 space-y-1.5">
+      <div className="mx-auto flex w-full max-w-[1480px] gap-5 px-4 py-4 pb-28 md:px-6 md:pb-7">
+        <aside className="hidden h-[calc(100vh-5.9rem)] w-[218px] shrink-0 flex-col border-r border-[color:var(--line)] bg-[rgba(255,253,248,0.42)] py-3 pr-4 md:sticky md:top-[76px] md:flex">
+          <p className="px-2 text-[0.66rem] font-semibold uppercase tracking-[0.24em] text-[var(--brass)]">Workspace</p>
+          <div className="mt-3 space-y-1">
             {visibleNavLinks.map((link) => (
               <NavLink key={link.to} to={link.to} icon={link.icon} label={link.label} />
             ))}
           </div>
-          <div className="mt-auto rounded-[24px] border border-white/8 bg-[rgba(9,13,24,0.34)] p-4">
-            <p className="text-[0.7rem] font-medium uppercase tracking-[0.32em] text-[var(--text-faint)]">School operations</p>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-              Calendar, classes, clubs, and records now share one calmer workspace instead of reading like separate dashboards.
-            </p>
+          <div className="mt-auto border-t border-[color:var(--line)] pt-4">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[var(--brass)]">Student context</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">S-Form / IB · Doon School</p>
+            <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">Planner, timetable, club access, records.</p>
           </div>
         </aside>
         <main className="page-halo min-w-0 flex-1">
@@ -175,7 +179,7 @@ function ProfileDropdown({
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="flex items-center gap-3 rounded-full border border-white/10 bg-[rgba(20,28,46,0.88)] px-4 py-2.5 text-left text-sm text-[var(--text)] transition hover:bg-[rgba(30,39,61,0.94)]"
+        className="flex items-center gap-3 rounded-[12px] border border-[color:var(--line)] bg-[var(--paper-card)] px-3.5 py-2 text-left text-sm text-[var(--text)] shadow-[var(--shadow-soft)] transition hover:bg-[color:var(--panel-2)]"
       >
         <div className="text-right leading-tight">
           <p className="font-semibold text-[var(--text-strong)]">{userName}</p>
@@ -189,7 +193,7 @@ function ProfileDropdown({
         </span>
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-64 rounded-[26px] border border-white/10 bg-[rgba(10,15,27,0.96)] p-4 text-sm shadow-[0_30px_70px_rgba(3,8,22,0.45)]">
+        <div className="absolute right-0 mt-2 w-64 rounded-[14px] border border-[color:var(--line)] bg-[var(--paper-card)] p-4 text-sm shadow-[var(--shadow-soft)]">
           <p className="font-semibold text-[var(--text-strong)]">{userName}</p>
           <p className="text-[var(--text-muted)]">{userEmail}</p>
           <p className="mt-1 text-xs text-[var(--text-faint)]">
@@ -199,7 +203,7 @@ function ProfileDropdown({
             <button
               type="button"
               onClick={() => onSignOut()}
-              className="w-full rounded-2xl border border-white/10 px-4 py-2.5 text-left text-[var(--text)] transition hover:bg-white/8"
+              className="w-full rounded-[10px] border border-[color:var(--line)] px-4 py-2.5 text-left text-[var(--text)] transition hover:bg-[color:var(--panel-2)]"
             >
               Sign out
             </button>
@@ -214,12 +218,12 @@ function NavLink({ to, label, icon: Icon }: { to: string; label: string; icon: C
   return (
     <RouterNavLink
       to={to}
-      className={({ isActive }) => clsx('group flex items-center gap-3 rounded-[18px] px-3 py-3 text-sm font-medium transition', {
-        'bg-white/12 text-[var(--text-strong)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]': isActive,
-        'text-[var(--text-muted)] hover:bg-white/6 hover:text-[var(--text-strong)]': !isActive
+      className={({ isActive }) => clsx('group flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-sm font-medium transition', {
+        'bg-[var(--academic-blue-soft)] text-[var(--academic-blue)]': isActive,
+        'text-[var(--text-muted)] hover:bg-[color:var(--paper-soft)] hover:text-[var(--text-strong)]': !isActive
       })}
     >
-      <span className="flex size-8 items-center justify-center rounded-full border border-white/8 bg-[rgba(8,12,23,0.32)]">
+      <span className="flex size-8 items-center justify-center rounded-[9px] border border-[color:var(--line)] bg-[color:var(--panel)]">
         <Icon className="size-4" />
       </span>
       <span>{label}</span>
@@ -241,7 +245,7 @@ function MobileNav({
   return (
     <div className="md:hidden">
       {open && moreLinks.length > 0 ? (
-        <div className="fixed inset-x-4 bottom-24 z-50 rounded-[28px] border border-white/10 bg-[rgba(10,15,27,0.96)] p-3 shadow-[0_30px_70px_rgba(3,8,22,0.45)] backdrop-blur-xl">
+        <div className="fixed inset-x-4 bottom-24 z-50 rounded-[16px] border border-[color:var(--line)] bg-[rgba(255,253,248,0.96)] p-3 shadow-[var(--shadow-soft)] backdrop-blur-xl">
           <p className="px-2 pb-2 text-[0.68rem] uppercase tracking-[0.3em] text-[var(--text-faint)]">More</p>
           <div className="space-y-1">
             {moreLinks.map((link) => (
@@ -250,14 +254,14 @@ function MobileNav({
           </div>
         </div>
       ) : null}
-      <nav className="fixed inset-x-3 bottom-3 z-50 rounded-[28px] border border-white/10 bg-[rgba(9,14,25,0.96)] px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.4rem)] pt-3 shadow-[0_30px_70px_rgba(3,8,22,0.42)] backdrop-blur-xl md:hidden">
+      <nav className="fixed inset-x-3 bottom-0 z-50 mb-3 rounded-[16px] border border-[color:var(--line)] bg-[rgba(255,253,248,0.96)] px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.4rem)] pt-3 shadow-[var(--shadow-soft)] backdrop-blur-xl md:hidden">
         <div className="mx-auto grid max-w-3xl grid-cols-5 gap-2">
           {primaryLinks.map((link) => (
             <RouterNavLink
               key={link.to}
               to={link.to}
-              className={({ isActive }) => clsx('flex flex-col items-center justify-center gap-1 rounded-[20px] px-2 py-2 text-[11px] font-medium transition', {
-                'bg-white/12 text-[var(--text-strong)]': isActive,
+              className={({ isActive }) => clsx('flex flex-col items-center justify-center gap-1 rounded-[12px] px-2 py-2 text-[11px] font-medium transition', {
+                'bg-[var(--academic-blue-soft)] text-[var(--academic-blue)]': isActive,
                 'text-[var(--text-muted)] hover:text-[var(--text-strong)]': !isActive
               })}
             >
@@ -268,8 +272,8 @@ function MobileNav({
           <button
             type="button"
             onClick={onToggle}
-            className={clsx('flex flex-col items-center justify-center gap-1 rounded-[20px] px-2 py-2 text-[11px] font-medium transition', {
-              'bg-white/12 text-[var(--text-strong)]': open,
+            className={clsx('flex flex-col items-center justify-center gap-1 rounded-[12px] px-2 py-2 text-[11px] font-medium transition', {
+              'bg-[var(--academic-blue-soft)] text-[var(--academic-blue)]': open,
               'text-[var(--text-muted)] hover:text-[var(--text-strong)]': !open
             })}
           >

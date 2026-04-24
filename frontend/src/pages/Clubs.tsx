@@ -9,7 +9,7 @@ import { getClubAccessState } from '../domain/memberships';
 import { useAuth } from '../hooks/useAuth';
 import { useClubs } from '../hooks/useClubs';
 import { useEvents } from '../hooks/useEvents';
-import { STUDENT_CLUB_PLACEHOLDER, shouldUseStudentClubPlaceholder } from '../lib/productTruth';
+import { shouldUseStudentClubPlaceholder } from '../lib/productTruth';
 
 export default function Clubs() {
   const navigate = useNavigate();
@@ -58,33 +58,61 @@ export default function Clubs() {
         <PageHeader
           eyebrow="Communities"
           title="Join Clubs"
-          description="This surface remains in explicit placeholder mode for students until real club data replaces the development fixtures used elsewhere in the repo."
+          description="Browse school clubs when the directory is published."
           aside={
-            <div className="grid gap-3 sm:grid-cols-2">
-              <MetricCard label="Directory" value="Staged" hint="Student discovery held back" tone="accent" />
-              <MetricCard label="Memberships" value="0" hint="No fake access shown" />
+            <div className="grid gap-2 sm:grid-cols-2">
+              <MetricCard label="Directory" value="Pending" hint="Not published yet" tone="accent" />
+              <MetricCard label="Requests" value="0" hint="No pending approvals" />
             </div>
           }
         />
 
-        <EmptyStateCard
-          eyebrow="Student clubs"
-          title={STUDENT_CLUB_PLACEHOLDER.title}
-          body={STUDENT_CLUB_PLACEHOLDER.body}
-          actionLabel="Open calendar"
-          onAction={() => navigate('/calendar')}
-          tone="accent"
-        />
-
         <SurfaceSection
-          eyebrow="Why this is limited"
-          title="Discovery stays truthful"
-          description="The product will only open student club discovery once the directory, approvals, and private-link behaviour are all backed by real school data instead of development fixtures."
+          eyebrow="Directory"
+          title="Club directory"
+          action={
+            <button
+              type="button"
+              onClick={() => navigate('/calendar')}
+              className="rounded-[10px] border border-[color:var(--line)] px-4 py-2 text-sm font-medium text-[var(--text-strong)] transition hover:bg-[var(--paper-soft)]"
+            >
+              Open calendar
+            </button>
+          }
         >
-          <div className="space-y-3">
-            <StatRow label="Discovery cards" value="Hidden until directory data is real" />
-            <StatRow label="Approval states" value="Will appear once manager review is live" />
-            <StatRow label="Calendar links" value="Only approved clubs will feed the planner" />
+          <div className="mb-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+            <input
+              disabled
+              placeholder="Search clubs"
+              className="rounded-[10px] border border-[color:var(--line)] bg-[color:var(--paper-soft)] px-4 py-3 text-sm text-[var(--text-muted)]"
+            />
+            <select disabled className="rounded-[10px] border border-[color:var(--line)] bg-[color:var(--paper-soft)] px-4 py-3 text-sm text-[var(--text-muted)]">
+              <option>All clubs</option>
+              <option>Open</option>
+              <option>Approval required</option>
+            </select>
+          </div>
+
+          <div className="ledger-table">
+            <div className="ledger-header grid-cols-[minmax(0,1fr)_180px_150px_150px_120px]">
+              <span>Club</span>
+              <span>Master-in-Charge</span>
+              <span>Meeting day</span>
+              <span>Status</span>
+              <span>Action</span>
+            </div>
+            <div className="ledger-row grid-cols-[minmax(0,1fr)_180px_150px_150px_120px] text-sm text-[var(--text-muted)]">
+              <span>Directory not published yet.</span>
+              <span>-</span>
+              <span>-</span>
+              <span>Pending</span>
+              <span>-</span>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <StatRow label="Private links" value="Hidden until access is approved" />
+            <StatRow label="Approval states" value="Shown as rows when live" />
           </div>
         </SurfaceSection>
       </div>
@@ -96,7 +124,7 @@ export default function Clubs() {
       <PageHeader
         eyebrow="Communities"
         title="Join Clubs"
-        description="Browse every group, request membership where approval is required, and keep discovery separate from the clubs already attached to your personal calendar."
+        description="Browse groups, request membership, and keep discovery separate from your workspace."
         aside={
           <div className="grid gap-3 sm:grid-cols-4">
             <MetricCard label="Directory" value={String(clubs.length)} hint="Visible groups" />
@@ -111,11 +139,10 @@ export default function Clubs() {
         <SurfaceSection
           eyebrow="Discovery"
           title="Browse available groups"
-          description="Only school-visible clubs appear in discovery. Approved memberships feed private club links and your personal calendar, while private clubs stay unreadable until you have real access."
           action={
             <Link
               to="/my-clubs"
-              className="inline-flex items-center rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-[var(--text-strong)] transition hover:bg-white/8"
+              className="inline-flex items-center rounded-[10px] border border-[color:var(--line)] px-4 py-2 text-sm font-medium text-[var(--text-strong)] transition hover:bg-[color:var(--panel-2)]"
             >
               Open My Clubs
             </Link>
@@ -125,7 +152,7 @@ export default function Clubs() {
         <SurfaceSection
           eyebrow="Visibility"
           title="Private clubs stay private"
-          description="Discovery only shows clubs your account can actually read. Classroom links, Meet rooms, and members-only resources are enforced by backend access rules instead of cosmetic hiding alone."
+          description="Private links open only after approval."
           tone="accent"
         />
       </div>
@@ -155,7 +182,7 @@ export default function Clubs() {
         </SurfaceSection>
       ) : error ? (
         <SurfaceSection eyebrow="Directory" title="Discovery unavailable" tone="warning">
-          <div className="text-sm text-rose-100">{error}</div>
+          <div className="text-sm text-rose-800">{error}</div>
         </SurfaceSection>
       ) : availableClubs.length === 0 ? (
         <EmptyStateCard

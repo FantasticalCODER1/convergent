@@ -51,29 +51,27 @@ export function ProfileSetupGate({ user, onComplete }: Props) {
   };
 
   return (
-    <div className="fixed inset-x-4 bottom-24 z-40 flex justify-center md:bottom-6">
-      <div className="w-full max-w-4xl rounded-[30px] border border-cyan-400/18 bg-[rgba(10,15,27,0.96)] p-5 text-[var(--text)] shadow-[0_30px_70px_rgba(3,8,22,0.42)] backdrop-blur">
-        <p className="text-[0.72rem] font-medium uppercase tracking-[0.35em] text-[var(--accent-2)]">Profile setup</p>
-        <div className="mt-3 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+    <div className="fixed inset-x-4 bottom-24 z-40 flex justify-center md:bottom-5">
+      <div className="w-full max-w-5xl rounded-[14px] border border-[color:var(--gold-line)] bg-[rgba(255,253,248,0.98)] p-4 text-[var(--text)] shadow-[var(--shadow-soft)] backdrop-blur">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-[var(--text-strong)]">Finish your academic profile</h2>
-            <p className="mt-2 max-w-xl text-sm leading-7 text-[var(--text-muted)]">
-              Grade and section are only used to map timetable datasets, meals, and class-linked resources. Navigation stays open while you complete this.
-            </p>
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[var(--brass)]">Profile incomplete</p>
+            <h2 className="mt-1 text-xl font-semibold text-[var(--text-strong)]">Academic profile</h2>
+            <p className="mt-1 max-w-xl text-sm leading-6 text-[var(--text-muted)]">Needed for timetable and meal matching.</p>
           </div>
-          <div className="rounded-[20px] border border-white/10 bg-[rgba(10,15,27,0.34)] px-4 py-3 text-sm text-[var(--text-muted)]">
+          <div className="rounded-[10px] border border-[color:var(--line)] bg-[color:var(--paper-soft)] px-4 py-3 text-sm text-[var(--text-muted)]">
             Current state: {getProfileCompletionLabel(user)}
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <label className="space-y-2 text-sm">
             <span className="text-[var(--text-muted)]">Grade</span>
             <input
               value={grade}
               onChange={(event) => setGrade(event.target.value)}
               placeholder={PROFILE_GRADE_PLACEHOLDER}
-              className="w-full rounded-[18px] border border-white/10 bg-[rgba(10,15,27,0.42)] px-4 py-3 text-[var(--text-strong)]"
+              className="w-full rounded-[10px] border border-[color:var(--line)] bg-[var(--paper-card)] px-4 py-3 text-[var(--text-strong)]"
             />
           </label>
           <label className="space-y-2 text-sm">
@@ -82,7 +80,7 @@ export function ProfileSetupGate({ user, onComplete }: Props) {
               value={section}
               onChange={(event) => setSection(event.target.value)}
               placeholder={PROFILE_SECTION_PLACEHOLDER}
-              className="w-full rounded-[18px] border border-white/10 bg-[rgba(10,15,27,0.42)] px-4 py-3 text-[var(--text-strong)]"
+              className="w-full rounded-[10px] border border-[color:var(--line)] bg-[var(--paper-card)] px-4 py-3 text-[var(--text-strong)]"
             />
           </label>
           <label className="space-y-2 text-sm">
@@ -91,7 +89,7 @@ export function ProfileSetupGate({ user, onComplete }: Props) {
               value={house}
               onChange={(event) => setHouse(event.target.value)}
               placeholder="Optional"
-              className="w-full rounded-[18px] border border-white/10 bg-[rgba(10,15,27,0.42)] px-4 py-3 text-[var(--text-strong)]"
+              className="w-full rounded-[10px] border border-[color:var(--line)] bg-[var(--paper-card)] px-4 py-3 text-[var(--text-strong)]"
             />
           </label>
           <label className="space-y-2 text-sm">
@@ -99,7 +97,7 @@ export function ProfileSetupGate({ user, onComplete }: Props) {
             <select
               value={residency ?? ''}
               onChange={(event) => setResidency((event.target.value || undefined) as AppUser['residency'])}
-              className="w-full rounded-[18px] border border-white/10 bg-[rgba(10,15,27,0.42)] px-4 py-3 text-[var(--text-strong)]"
+              className="w-full rounded-[10px] border border-[color:var(--line)] bg-[var(--paper-card)] px-4 py-3 text-[var(--text-strong)]"
             >
               <option value="">Optional</option>
               <option value="boarding">Boarding</option>
@@ -115,13 +113,11 @@ export function ProfileSetupGate({ user, onComplete }: Props) {
             type="button"
             onClick={() => void submit()}
             disabled={saving}
-            className="rounded-full bg-[var(--accent)] px-5 py-3 text-sm font-medium text-slate-950 transition hover:brightness-105 disabled:opacity-60"
+            className="rounded-[10px] bg-[var(--academic-blue)] px-5 py-3 text-sm font-medium text-white transition hover:brightness-110 disabled:opacity-60"
           >
             {saving ? 'Saving profile…' : 'Save profile'}
           </button>
-          <p className="text-sm text-[var(--text-muted)]">
-            This is the minimum profile data needed for timetable matching. Clubs, dashboard navigation, and certificates remain usable without it.
-          </p>
+          <p className="text-sm text-[var(--text-muted)]">Examples: Grade IB1, Section S2, House optional.</p>
         </div>
       </div>
     </div>

@@ -1,24 +1,49 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600;700&family=Libre+Baskerville:wght@700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --bg: #08101d;
-  --bg-2: #0d1628;
-  --panel: #141e34;
-  --panel-2: #18233a;
-  --text-strong: #f2f5fb;
-  --text: #d8deee;
-  --text-muted: #9ea8bf;
-  --text-faint: #7f89a4;
-  --accent: #86cdbf;
-  --accent-2: #74d7ff;
-  --line: rgba(158, 172, 203, 0.18);
+  --paper: #F7F1E7;
+  --paper-warm: #F4ECDD;
+  --paper-soft: #F8F5EE;
+  --paper-card: #FFFDF8;
+  --paper-muted: #F1E7D6;
+  --ink: #182638;
+  --ink-soft: #43556D;
+  --ink-muted: #6B7A90;
+  --academic-blue: #2B4C7E;
+  --academic-blue-soft: #E8F0FA;
+  --academic-blue-line: #B8CCE6;
+  --brass: #8B6F47;
+  --school-gold: #C9A227;
+  --gold-soft: #FFF6D8;
+  --gold-line: #E6C85C;
+  --line: #DED6C9;
+  --line-soft: #ECE3D6;
+  --line-cool: #D8E1EA;
+  --bg: var(--paper);
+  --bg-2: var(--paper-soft);
+  --panel: var(--paper-card);
+  --panel-2: var(--paper-soft);
+  --panel-3: var(--paper-muted);
+  --text-strong: var(--ink);
+  --text: var(--ink-soft);
+  --text-muted: var(--ink-muted);
+  --text-faint: #7C8796;
+  --accent: var(--academic-blue);
+  --accent-2: var(--brass);
+  --line-strong: #CBBFAA;
+  --academic-bg: #EEF4FB;
+  --meals-bg: #FFF6E6;
+  --clubs-bg: #ECF7F1;
+  --school-wide-bg: #F1EEFA;
+  --records-bg: #F2F4F6;
+  --shadow-soft: 0 1px 1px rgba(24, 38, 56, 0.04), 0 10px 24px rgba(86, 72, 49, 0.08);
 }
 
 html,
@@ -31,11 +56,11 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 18% 0%, rgba(79, 109, 171, 0.18), transparent 28%),
-    radial-gradient(circle at 82% 0%, rgba(17, 88, 116, 0.16), transparent 24%),
-    linear-gradient(180deg, #0d1526 0%, #09111f 36%, #08101d 100%);
+    radial-gradient(circle at 10% 0%, rgba(255, 246, 216, 0.62), transparent 34rem),
+    radial-gradient(circle at 96% 92%, rgba(232, 240, 250, 0.56), transparent 30rem),
+    linear-gradient(180deg, var(--paper-soft) 0%, var(--paper) 42%, var(--paper-warm) 100%);
   color: var(--text);
-  font-family: 'Instrument Sans', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-family: 'IBM Plex Sans', 'Avenir Next', 'Segoe UI', sans-serif;
 }
 
 body::before {
@@ -44,26 +69,28 @@ body::before {
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(rgba(255, 255, 255, 0.015), rgba(255, 255, 255, 0)) 0 0 / 100% 180px no-repeat,
-    radial-gradient(circle at 25% 20%, rgba(255, 255, 255, 0.025), transparent 18%) 0 0 / 100% 100% no-repeat;
-  opacity: 0.9;
+    linear-gradient(90deg, rgba(139, 111, 71, 0.035) 1px, transparent 1px) 0 0 / 22px 22px,
+    linear-gradient(rgba(255, 253, 248, 0.36), rgba(255, 253, 248, 0)) 0 0 / 100% 220px no-repeat;
+  opacity: 0.72;
 }
 
 .glass-card {
-  @apply rounded-glass border border-white/10 backdrop-blur-xl;
-  background: linear-gradient(180deg, rgba(22, 31, 53, 0.88), rgba(15, 22, 39, 0.88));
-  box-shadow: 0 24px 60px rgba(3, 8, 22, 0.28);
+  @apply border backdrop-blur-xl;
+  border-radius: 14px;
+  border-color: var(--line);
+  background: rgba(255, 253, 248, 0.84);
+  box-shadow: var(--shadow-soft);
 }
 
 .planner-grid {
   background-image:
-    linear-gradient(to right, rgba(160, 174, 205, 0.09) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(160, 174, 205, 0.09) 1px, transparent 1px);
+    linear-gradient(to right, rgba(184, 204, 230, 0.32) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(222, 214, 201, 0.74) 1px, transparent 1px);
   background-size: calc(100% / 7) 100%, 100% 1px;
 }
 
 .planner-grid-cell {
-  box-shadow: inset -1px -1px 0 rgba(160, 174, 205, 0.08);
+  box-shadow: inset -1px -1px 0 var(--line-soft);
 }
 
 .page-halo {
@@ -73,11 +100,11 @@ body::before {
 .page-halo::before {
   content: '';
   position: absolute;
-  inset: -2rem 12% auto -4rem;
-  height: 14rem;
+  inset: -1rem 12% auto -2rem;
+  height: 10rem;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(45, 84, 145, 0.16), transparent 68%);
-  filter: blur(28px);
+  background: radial-gradient(circle, rgba(255, 246, 216, 0.46), transparent 68%);
+  filter: blur(20px);
   pointer-events: none;
   z-index: 0;
 }
@@ -88,12 +115,56 @@ body::before {
 }
 
 .serif-display {
-  font-family: 'Newsreader', Georgia, serif;
+  font-family: 'IBM Plex Serif', Georgia, serif;
+}
+
+.identity-serif {
+  font-family: 'Libre Baskerville', 'IBM Plex Serif', Georgia, serif;
+}
+
+.ledger-table {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper-card);
+}
+
+.ledger-header,
+.ledger-row {
+  display: grid;
+  gap: 1rem;
+  align-items: center;
+}
+
+.ledger-header {
+  border-bottom: 1px solid var(--line);
+  background: var(--paper-muted);
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  padding: 0.8rem 1rem;
+  text-transform: uppercase;
+}
+
+.ledger-row {
+  border-top: 1px solid var(--line-soft);
+  min-height: 3.75rem;
+  padding: 0.95rem 1rem;
+}
+
+.ledger-row:first-of-type {
+  border-top: 0;
+}
+
+.notice-pin {
+  border-left: 3px solid var(--brass);
+  background: rgba(255, 253, 248, 0.78);
 }
 
 ::selection {
-  background: rgba(116, 215, 255, 0.22);
-  color: #fff;
+  background: rgba(201, 162, 39, 0.24);
+  color: var(--ink);
 }
 
 ::-webkit-scrollbar {
@@ -102,12 +173,12 @@ body::before {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(158, 172, 203, 0.22);
+  background: rgba(139, 111, 71, 0.28);
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(7, 11, 20, 0.36);
+  background: rgba(241, 231, 214, 0.74);
 }
 
 button:focus-visible,
@@ -115,6 +186,6 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid rgba(116, 215, 255, 0.72);
+  outline: 2px solid rgba(43, 76, 126, 0.58);
   outline-offset: 2px;
 }

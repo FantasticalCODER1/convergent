@@ -257,10 +257,42 @@ export default function ClubDetail() {
   if (!club) {
     if (accessDenied) {
       return (
-        <StateCard
-          title="Private club"
-          body="This club is not readable from your account. Private clubs are hidden entirely until you have approved membership or club management access."
-        />
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_320px]">
+          <SurfaceSection
+            eyebrow="Club access"
+            title="Private club"
+            description="This club is visible only to approved members and managers."
+            action={
+              <Link
+                to="/join-clubs"
+                className="inline-flex items-center gap-2 rounded-[10px] border border-[color:var(--line)] bg-[var(--paper-card)] px-4 py-2 text-sm font-medium text-[var(--text-strong)] transition hover:border-[color:var(--line-strong)] hover:bg-[color:var(--panel-2)]"
+              >
+                Browse visible clubs
+              </Link>
+            }
+          >
+            <div className="ledger-table">
+              <div className="ledger-header grid-cols-[160px_minmax(0,1fr)_110px]">
+                <span>Area</span>
+                <span>Availability</span>
+                <span>Status</span>
+              </div>
+              {['About', 'Posts', 'Events', 'Members', 'Certificates', 'Settings'].map((area) => (
+                <div key={area} className="ledger-row grid-cols-[160px_minmax(0,1fr)_110px] text-sm">
+                  <span className="font-semibold text-[var(--text-strong)]">{area}</span>
+                  <span className="text-[var(--text-muted)]">Approved member or manager access required.</span>
+                  <span className="font-semibold text-[var(--brass)]">Locked</span>
+                </div>
+              ))}
+            </div>
+          </SurfaceSection>
+
+          <SurfaceSection eyebrow="Access" title="Why closed" tone="muted">
+            <div className="text-sm leading-6 text-[var(--text-muted)]">
+              Private club records and member links are blocked by access rules. Ask the Master-in-Charge or manager for approval.
+            </div>
+          </SurfaceSection>
+        </div>
       );
     }
     return <StateCard title="Club unavailable" body="This club record no longer exists." />;
@@ -268,10 +300,42 @@ export default function ClubDetail() {
 
   if (showStudentPlaceholder) {
     return (
-      <StateCard
-        title="Student clubs are still placeholder-only"
-        body="This route stays hidden from the ordinary student experience until real club data replaces the development fixtures. Calendar, classes, and certificates remain the truthful student surfaces."
-      />
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_320px]">
+        <SurfaceSection
+          eyebrow="Club workspace"
+          title="Club access not available"
+          description="Club workspaces open after the school directory is published."
+          action={
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-2 rounded-[10px] border border-[color:var(--line)] bg-[var(--paper-card)] px-4 py-2 text-sm font-medium text-[var(--text-strong)] transition hover:border-[color:var(--line-strong)] hover:bg-[color:var(--panel-2)]"
+            >
+              Return to dashboard
+            </Link>
+          }
+        >
+          <div className="ledger-table">
+            <div className="ledger-header grid-cols-[160px_minmax(0,1fr)]">
+              <span>Area</span>
+              <span>Status</span>
+            </div>
+            {['About', 'Posts', 'Events', 'Members', 'Certificates', 'Settings'].map((area) => (
+              <div key={area} className="ledger-row grid-cols-[160px_minmax(0,1fr)] text-sm">
+                <span className="font-semibold text-[var(--text-strong)]">{area}</span>
+                <span className="text-[var(--text-muted)]">Unavailable until club data is live.</span>
+              </div>
+            ))}
+          </div>
+        </SurfaceSection>
+
+        <SurfaceSection eyebrow="Live now" title="Student-ready surfaces" tone="muted">
+          <div className="space-y-3">
+            <StatRow label="Calendar" value="Planner and day detail" />
+            <StatRow label="Classes" value="Timetable and attachments" />
+            <StatRow label="Certificates" value="Verification ledger" />
+          </div>
+        </SurfaceSection>
+      </div>
     );
   }
 
@@ -285,15 +349,15 @@ export default function ClubDetail() {
     : 'Club detail';
   const routeSummary = workspaceRoute
     ? showManagementPanel
-      ? 'This route is the real operations workspace for the club. Discovery copy and manager tooling are intentionally separated now.'
+      ? 'Operations workspace for approvals, events, members, and certificates.'
       : accessState === 'approved_member'
-        ? 'This route is your member workspace for approved posts, events, and certificate history tied to this club.'
-        : 'This route is reserved for approved membership or management access. If you only need discovery context, use the browse detail route instead.'
+        ? 'Member workspace for approved posts, events, and certificate history.'
+        : 'Approved membership or manager access required.'
     : manageable
-      ? 'This is the browse/detail view. Manager tools stay on the workspace route so discovery does not double as an admin console.'
+      ? 'Browse detail. Manager tools stay in the workspace route.'
       : accessState === 'approved_member'
-        ? 'This is the browse/detail view. Your member workspace lives on the My Clubs route.'
-        : 'This is the browse/detail view for readable club information. Workspace actions stay separate until you have approved access.';
+        ? 'Browse detail. Your workspace lives on My Clubs.'
+        : 'Readable club information and membership access.';
 
   const stats = [
     { label: 'Members', value: String(club.memberCount), hint: showManagementPanel ? `${clubUsers.length || club.memberCount} approved profiles` : 'Approved member count' },
@@ -337,38 +401,38 @@ export default function ClubDetail() {
                 disabled={club.membershipMode === 'invite_only' && accessState !== 'approved_member'}
                 onClick={() => (accessState === 'approved_member' || accessState === 'pending_member' ? leaveClub(club.id) : joinClub(club.id))}
                 className={clsx(
-                  'inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-medium transition',
+                  'inline-flex items-center justify-center rounded-[10px] px-5 py-3 text-sm font-medium transition',
                   club.membershipMode === 'invite_only' && accessState !== 'approved_member'
-                    ? 'bg-white/10 text-white/45'
+                    ? 'bg-[color:var(--panel-2)] text-[var(--text-faint)]'
                     : accessState === 'approved_member' || accessState === 'pending_member'
                       ? 'bg-rose-400/90 text-slate-950 hover:bg-rose-300'
-                      : 'bg-[var(--accent)] text-slate-950 hover:brightness-110'
+                      : 'bg-[var(--academic-blue)] text-white hover:brightness-110'
                 )}
               >
                 {getClubJoinActionLabel(accessState, club.membershipMode)}
               </button>
             ) : (
-              <div className="rounded-[20px] border border-cyan-400/20 bg-cyan-400/10 px-5 py-3 text-sm font-medium text-cyan-100">
+              <div className="rounded-[10px] border border-[color:var(--academic-blue-line)] bg-[var(--academic-blue-soft)] px-5 py-3 text-sm font-medium text-[var(--academic-blue)]">
                 {showManagementPanel ? 'You are in the manager workspace.' : 'You manage this club.'}
               </div>
             )}
-            <div className="rounded-[22px] border border-white/8 bg-[rgba(8,12,23,0.26)] p-4 text-sm leading-7 text-[var(--text-muted)]">
+            <div className="rounded-[10px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-4 text-sm leading-6 text-[var(--text-muted)]">
               {showManagementPanel
-                ? 'Manager tools are active on this route. Private membership access and private links are enforced in backend reads, not just hidden in the UI.'
+                ? 'Manager tools are active on this route.'
                 : manageable
-                  ? 'Discovery and detail remain separate from operations. Use the workspace route when you need approvals, editing, attendance, or certificate issuance.'
+                  ? 'Use the workspace route for approvals, editing, attendance, and certificates.'
                   : accessState === 'approved_member'
                     ? workspaceRoute
-                      ? 'Approved membership makes private event and post links readable here and feeds this club into your personal calendar automatically.'
-                      : 'Approved membership makes private content readable, but your member workspace lives on the My Clubs route.'
+                      ? 'Approved membership opens private links and calendar-linked activity.'
+                      : 'Approved membership opens private content. Workspace access lives on My Clubs.'
                     : accessState === 'pending_member'
                       ? 'Your request is pending. Private content stays unreadable until approval is granted.'
-                      : 'Only school-visible clubs are browseable here. Private clubs are not readable until you have approved access.'}
+                      : 'Private content opens after approval.'}
             </div>
             {manageable && !workspaceRoute ? (
               <Link
                 to={`/my-clubs/${club.id}`}
-                className="inline-flex items-center justify-center rounded-full border border-white/10 px-5 py-3 text-sm font-medium text-[var(--text-strong)] transition hover:bg-white/8"
+                className="inline-flex items-center justify-center rounded-[10px] border border-[color:var(--line)] px-5 py-3 text-sm font-medium text-[var(--text-strong)] transition hover:bg-[color:var(--panel-2)]"
               >
                 Open workspace
               </Link>
@@ -535,11 +599,11 @@ function AboutTab({
     <div className="space-y-4">
       <SurfaceSection eyebrow="Club brief" title="What this club is for">
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-[24px] border border-white/8 bg-[rgba(8,12,23,0.24)] p-5">
+          <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-5">
             <h2 className="text-xl font-semibold text-[var(--text-strong)]">What this club is for</h2>
             <p className="mt-3 text-sm leading-7 text-[var(--text-muted)]">{club.description || 'A fuller club description has not been entered yet.'}</p>
           </div>
-          <div className="rounded-[24px] border border-white/8 bg-[rgba(8,12,23,0.24)] p-5">
+          <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-5">
             <h2 className="text-xl font-semibold text-[var(--text-strong)]">Access and links</h2>
             <div className="mt-4 space-y-3">
               <StatRow label="Membership" value={accessState.replace(/_/g, ' ')} />
@@ -549,7 +613,7 @@ function AboutTab({
                 value={club.membershipMode === 'approval_required' ? 'Request then approval' : club.membershipMode === 'invite_only' ? 'Invite only' : 'Open self-serve'}
               />
             </div>
-            <div className="mt-4 space-y-3 rounded-[22px] border border-white/8 bg-[rgba(255,255,255,0.03)] p-3">
+            <div className="mt-4 space-y-3 rounded-[16px] border border-[color:var(--line)] bg-white p-3">
               <StatRow label="Classroom course id" value={club.classroomCourseId ?? 'Not attached'} subdued />
               <StatRow label="Classroom code" value={club.classroomCode ?? 'Not attached'} subdued />
               <StatRow label="Resource links" value={`${club.resourceLinks.length} attached`} subdued />
@@ -560,7 +624,7 @@ function AboutTab({
                   href={club.classroomLink}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-[var(--text-strong)] transition hover:bg-white/8"
+                  className="inline-flex items-center gap-2 rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-[var(--text-strong)] transition hover:bg-white"
                 >
                   Open Classroom
                   <ExternalLink className="size-4" />
@@ -571,7 +635,7 @@ function AboutTab({
                   href={club.defaultMeetLink ?? club.meetLink ?? ''}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-[var(--text-strong)] transition hover:bg-white/8"
+                  className="inline-flex items-center gap-2 rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-[var(--text-strong)] transition hover:bg-white"
                 >
                   Open Default Meet
                   <ExternalLink className="size-4" />
@@ -596,7 +660,7 @@ function AboutTab({
         ) : (
           <div className="grid gap-3">
             {upcomingEvents.slice(0, 3).map((event) => (
-              <div key={event.id} className="rounded-[22px] border border-white/8 bg-[rgba(8,12,23,0.24)] p-4">
+              <div key={event.id} className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-lg font-semibold text-[var(--text-strong)]">{event.title}</p>
@@ -631,13 +695,13 @@ function PostsTab({
       eyebrow="Timeline"
       title="Posts and updates"
       action={
-        <span className="rounded-full border border-white/10 bg-[rgba(8,12,23,0.24)] px-4 py-2 text-sm text-[var(--text-muted)]">
+        <span className="rounded-full border border-[color:var(--line)] bg-[color:var(--panel-2)] px-4 py-2 text-sm text-[var(--text-muted)]">
           {manageable ? 'Publish new items from the operations rail.' : 'Posts can link directly to a scheduled event.'}
         </span>
       }
     >
       {posts.length === 0 ? (
-        <div className="rounded-[22px] border border-white/8 bg-[rgba(8,12,23,0.24)] p-4 text-sm text-[var(--text-muted)]">No updates yet.</div>
+        <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-4 text-sm text-[var(--text-muted)]">No updates yet.</div>
       ) : (
         <div className="space-y-3">
           {posts.map((post) => {
@@ -645,7 +709,7 @@ function PostsTab({
             const meta = getCategoryMeta(post.category);
             const hasPrivateLinks = !canAccessPrivateContent && !!(post.classroomLink || post.meetLink || post.resourceLinks.length > 0);
             return (
-              <div key={post.id} className="rounded-[24px] border border-white/8 bg-[rgba(8,12,23,0.24)] p-5 text-[var(--text-strong)]">
+              <div key={post.id} className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel)] p-5 text-[var(--text-strong)]">
                 <div className="flex flex-wrap items-center gap-2">
                   <QuietBadge>{meta.label}</QuietBadge>
                   <QuietBadge className="text-[var(--text-faint)]">
@@ -654,13 +718,13 @@ function PostsTab({
                 </div>
                 <h3 className="mt-4 text-xl font-semibold text-[var(--text-strong)]">{post.title}</h3>
                 <p className="mt-2 text-sm leading-7 text-[var(--text-muted)]">{post.content}</p>
-                <div className="mt-4 rounded-[20px] border border-white/8 bg-[rgba(255,255,255,0.03)] p-3 text-sm text-[var(--text-muted)]">
+                <div className="mt-4 rounded-[14px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-3 text-sm text-[var(--text-muted)]">
                   <p className="font-medium text-[var(--text-strong)]">{post.postedByNameSnapshot}</p>
                   <p className="text-xs text-[var(--text-faint)]">{post.postedByEmailSnapshot}</p>
                   <p className="mt-1 text-xs text-[var(--text-faint)]">{post.postedByRoleSnapshot}</p>
                 </div>
                 {linkedEvent ? (
-                  <div className="mt-4 rounded-[20px] border border-white/8 bg-[rgba(255,255,255,0.03)] p-3 text-sm text-[var(--text-muted)]">
+                  <div className="mt-4 rounded-[14px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-3 text-sm text-[var(--text-muted)]">
                     <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-faint)]">Linked event</p>
                     <p className="mt-2 font-medium text-[var(--text-strong)]">{linkedEvent.title}</p>
                     <p className="mt-1 text-xs text-[var(--text-faint)]">{formatDateTimeRange(linkedEvent.startTime, linkedEvent.endTime)}</p>
@@ -668,19 +732,19 @@ function PostsTab({
                 ) : null}
                 <div className="mt-4 flex flex-wrap gap-2">
                   {post.classroomLink ? (
-                    <a href={post.classroomLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-[var(--text-strong)] transition hover:bg-white/8">
+                    <a href={post.classroomLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-[var(--text-strong)] transition hover:bg-[color:var(--panel-2)]">
                       Open Classroom
                       <ExternalLink className="size-4" />
                     </a>
                   ) : null}
                   {post.meetLink ? (
-                    <a href={post.meetLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-[var(--text-strong)] transition hover:bg-white/8">
+                    <a href={post.meetLink} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-[var(--text-strong)] transition hover:bg-[color:var(--panel-2)]">
                       Open Meet
                       <ExternalLink className="size-4" />
                     </a>
                   ) : null}
                   {post.resourceLinks.map((link) => (
-                    <a key={`${post.id}:${link.url}`} href={link.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-[var(--text-strong)] transition hover:bg-white/8">
+                    <a key={`${post.id}:${link.url}`} href={link.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full border border-[color:var(--line)] px-4 py-2 text-sm text-[var(--text-strong)] transition hover:bg-[color:var(--panel-2)]">
                       {link.label}
                       <ExternalLink className="size-4" />
                     </a>
@@ -716,14 +780,14 @@ function EventsTab({
       eyebrow="Events"
       title="Club calendar and activity"
       action={
-        <div className="rounded-full border border-white/10 bg-[rgba(8,12,23,0.24)] px-4 py-2 text-sm text-[var(--text-muted)]">
+        <div className="rounded-full border border-[color:var(--line)] bg-[color:var(--panel-2)] px-4 py-2 text-sm text-[var(--text-muted)]">
           {manageable ? 'Create and edit from the operations rail.' : 'Private links become readable only after approval.'}
         </div>
       }
     >
-      {error ? <div className="rounded-[22px] border border-rose-300/20 bg-rose-500/8 p-4 text-sm text-rose-100">{error}</div> : null}
+      {error ? <div className="rounded-[16px] border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error}</div> : null}
       {events.length === 0 ? (
-        <div className="rounded-[22px] border border-white/8 bg-[rgba(8,12,23,0.24)] p-4 text-sm text-[var(--text-muted)]">No club events have been created yet.</div>
+        <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-4 text-sm text-[var(--text-muted)]">No club events have been created yet.</div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {events.map((event) => (
@@ -769,19 +833,19 @@ function MembersTab({
       eyebrow="Members"
       title="Club roster"
       action={
-        <div className="rounded-full border border-white/10 bg-[rgba(8,12,23,0.24)] px-4 py-2 text-sm text-[var(--text-muted)]">
+        <div className="rounded-full border border-[color:var(--line)] bg-[color:var(--panel-2)] px-4 py-2 text-sm text-[var(--text-muted)]">
           {membershipRequests.length} pending request{membershipRequests.length === 1 ? '' : 's'}
         </div>
       }
     >
       {loading ? (
-        <div className="rounded-[22px] border border-white/8 bg-[rgba(8,12,23,0.24)] p-4 text-sm text-[var(--text-muted)]">Loading roster…</div>
+        <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-4 text-sm text-[var(--text-muted)]">Loading roster…</div>
       ) : users.length === 0 ? (
-        <div className="rounded-[22px] border border-white/8 bg-[rgba(8,12,23,0.24)] p-4 text-sm text-[var(--text-muted)]">No approved member profiles are available yet.</div>
+        <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-4 text-sm text-[var(--text-muted)]">No approved member profiles are available yet.</div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {users.map((member) => (
-            <div key={member.id} className="rounded-[22px] border border-white/8 bg-[rgba(8,12,23,0.24)] p-4">
+            <div key={member.id} className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="font-semibold text-[var(--text-strong)]">{member.name}</p>
@@ -818,15 +882,15 @@ function CertificatesTab({
       eyebrow="Certificates"
       title={manageable ? 'Club-issued certificate history' : 'Your records from this club'}
       action={
-        <div className="rounded-full border border-white/10 bg-[rgba(8,12,23,0.24)] px-4 py-2 text-sm text-[var(--text-muted)]">
+        <div className="rounded-full border border-[color:var(--line)] bg-[color:var(--panel-2)] px-4 py-2 text-sm text-[var(--text-muted)]">
           {manageable ? 'Issue new records from the operations rail.' : 'Verification links stay attached to each record.'}
         </div>
       }
     >
       {loading ? (
-        <div className="rounded-[22px] border border-white/8 bg-[rgba(8,12,23,0.24)] p-4 text-sm text-[var(--text-muted)]">Loading certificates…</div>
+        <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-4 text-sm text-[var(--text-muted)]">Loading certificates…</div>
       ) : certificates.length === 0 ? (
-        <div className="rounded-[22px] border border-white/8 bg-[rgba(8,12,23,0.24)] p-4 text-sm text-[var(--text-muted)]">
+        <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-4 text-sm text-[var(--text-muted)]">
           {manageable ? 'No certificates have been issued for this club yet.' : 'You do not have any certificates from this club yet.'}
         </div>
       ) : (

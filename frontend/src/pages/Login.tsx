@@ -1,6 +1,6 @@
 import { type ReactNode, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { ArrowRight, CalendarDays, GraduationCap, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, CalendarDays, GraduationCap, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { isGoogleAuthConfigured } from '../auth/google';
 import { firebaseRuntimeMode, isFirebaseEmulatorMode } from '../lib/firebaseEnv';
@@ -22,9 +22,9 @@ export default function Login() {
   const googleLoginEnabled = firebaseRuntimeMode === 'firebase' && isGoogleAuthConfigured();
   const environmentLabel = emulatorLoginEnabled ? 'Local development mode' : googleLoginEnabled ? 'School Google sign-in' : 'Sign-in not configured';
   const environmentCopy = emulatorLoginEnabled
-    ? 'Seeded emulator accounts are active for deterministic validation. Google access only matters when a feature explicitly asks for live Classroom recovery.'
+    ? 'Use a seeded account while Firebase emulators are running.'
     : googleLoginEnabled
-      ? 'School Google accounts can recover live calendar, classes, and certificate links for this environment.'
+      ? 'Use your school Google account to open calendar, classes, clubs, and records.'
       : 'This environment does not currently expose a supported sign-in provider.';
 
   if (user) {
@@ -32,62 +32,60 @@ export default function Login() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[var(--bg)] px-4 py-8 text-[var(--text)] sm:px-6 lg:px-8">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_16%,rgba(86,127,192,0.18),transparent_28%),radial-gradient(circle_at_84%_12%,rgba(28,119,135,0.16),transparent_24%)]" />
+    <div className="min-h-screen bg-[var(--bg)] px-4 py-8 text-[var(--text)] sm:px-6 lg:px-8">
       <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl items-center">
-        <div className="grid w-full overflow-hidden rounded-[38px] border border-white/10 bg-[linear-gradient(180deg,rgba(17,24,43,0.94),rgba(12,18,32,0.94))] shadow-[0_35px_80px_rgba(3,8,22,0.45)] lg:grid-cols-[1.08fr_0.92fr]">
-          <section className="border-b border-white/8 px-7 py-8 sm:px-10 sm:py-10 lg:border-b-0 lg:border-r">
-            <p className="text-[0.74rem] font-medium uppercase tracking-[0.38em] text-[var(--accent-2)]">Convergent</p>
-            <h1 className="mt-4 max-w-xl text-4xl font-semibold tracking-[-0.04em] text-[var(--text-strong)] sm:text-5xl">
-              Sign in to your school operations workspace
+        <div className="grid w-full gap-8 lg:grid-cols-[0.92fr_1.08fr]">
+          <section className="px-1 py-4 sm:px-2 lg:pr-8">
+            <div className="flex items-center gap-3">
+              <div className="identity-serif flex size-11 items-center justify-center rounded-[10px] border border-[color:var(--line-strong)] bg-[var(--paper-card)] text-[1.15rem] text-[var(--academic-blue)] shadow-[var(--shadow-soft)]">C</div>
+              <div>
+                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-[var(--brass)]">Convergent</p>
+                <p className="mt-0.5 text-sm font-medium text-[var(--text-muted)]">Spring Term 2026</p>
+              </div>
+            </div>
+            <h1 className="serif-display mt-6 max-w-xl text-[2.65rem] font-semibold leading-tight text-[var(--text-strong)] sm:text-[3rem]">
+              Sign in to Convergent
             </h1>
-            <p className="mt-4 max-w-xl text-[1.04rem] leading-8 text-[var(--text-muted)]">{environmentCopy}</p>
+            <p className="mt-4 max-w-xl text-[1rem] leading-7 text-[var(--text-muted)]">
+              School calendar, classes, clubs, and records in one workspace.
+            </p>
 
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            <div className="mt-7 space-y-3">
               <FeatureBlock
                 icon={<CalendarDays className="size-5" />}
-                title="Calendar-first"
-                body="Month planning, selected-day detail, and school-wide context stay in one place."
+                title="Planner"
+                body="Classes, meals, clubs, and school events."
               />
               <FeatureBlock
                 icon={<GraduationCap className="size-5" />}
                 title="Classes"
-                body="Timetable truth and Classroom recovery stay separate so the page stays honest."
+                body="Timetable records and attached Classroom context."
               />
               <FeatureBlock
                 icon={<ShieldCheck className="size-5" />}
                 title="Records"
-                body="Club certificates and verifiable student records remain available from the same shell."
+                body="Certificate ledger and verification links."
               />
             </div>
 
-            <div className="mt-8 rounded-[28px] border border-white/8 bg-[rgba(10,15,27,0.34)] p-5">
-              <div className="flex items-center gap-3">
-                <span className="flex size-10 items-center justify-center rounded-full border border-cyan-400/20 bg-cyan-400/10 text-cyan-100">
-                  <Sparkles className="size-5" />
-                </span>
-                <div>
-                  <p className="text-[0.7rem] font-medium uppercase tracking-[0.34em] text-[var(--text-faint)]">Environment</p>
-                  <p className="mt-1 text-lg font-semibold text-[var(--text-strong)]">{environmentLabel}</p>
-                </div>
-              </div>
-              <p className="mt-4 text-sm leading-7 text-[var(--text-muted)]">
-                Local sign-in and live school sign-in are intentionally explained separately here so the user understands what the app can truthfully recover in the current environment.
-              </p>
+            <div className="mt-7 rounded-[12px] border border-[color:var(--academic-blue-line)] bg-[var(--academic-blue-soft)] p-4">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[var(--brass)]">Access mode</p>
+              <p className="mt-1 text-lg font-semibold text-[var(--text-strong)]">{environmentLabel}</p>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">{environmentCopy}</p>
             </div>
           </section>
 
-          <section className="px-7 py-8 sm:px-10 sm:py-10">
+          <section className="rounded-[14px] border border-[color:var(--line)] bg-[rgba(255,253,248,0.9)] px-7 py-8 shadow-[var(--shadow-soft)] sm:px-10 sm:py-10">
             <div className="max-w-md">
-              <p className="text-[0.72rem] font-medium uppercase tracking-[0.34em] text-[var(--text-faint)]">
-                {emulatorLoginEnabled ? 'Seeded access' : googleLoginEnabled ? 'Google access' : 'Access status'}
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-[var(--brass)]">
+                {emulatorLoginEnabled ? 'Local development accounts' : googleLoginEnabled ? 'Google access' : 'Access status'}
               </p>
-              <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--text-strong)]">
-                {emulatorLoginEnabled ? 'Use a seeded school account' : googleLoginEnabled ? 'Continue with your school Google account' : 'Sign-in provider unavailable'}
+              <h2 className="serif-display mt-2 text-[2rem] font-semibold leading-tight text-[var(--text-strong)]">
+                {emulatorLoginEnabled ? 'Choose an account' : googleLoginEnabled ? 'Continue with your school Google account' : 'Sign-in provider unavailable'}
               </h2>
-              <p className="mt-3 text-sm leading-7 text-[var(--text-muted)]">
+              <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
                 {emulatorLoginEnabled
-                  ? 'Quick-select a seeded identity or edit the credentials below before signing in.'
+                  ? 'Use a seeded account while Firebase emulators are running.'
                   : googleLoginEnabled
                     ? 'Google sign-in is the only supported production-style path in this mode.'
                     : firebaseRuntimeMode === 'unconfigured'
@@ -108,7 +106,7 @@ export default function Login() {
                         setEmail(seededEmail);
                         void loginWithEmulator?.(seededEmail, password);
                       }}
-                      className="rounded-[18px] border border-white/10 bg-[rgba(13,19,34,0.5)] px-4 py-3 text-left text-sm text-[var(--text-strong)] transition hover:bg-[rgba(22,31,53,0.72)] disabled:opacity-60"
+                      className="rounded-[10px] border border-[color:var(--line)] bg-[color:var(--panel-2)] px-4 py-3 text-left text-sm text-[var(--text-strong)] transition hover:bg-white disabled:opacity-60"
                     >
                       {seededEmail}
                     </button>
@@ -121,7 +119,7 @@ export default function Login() {
                     <input
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
-                      className="w-full rounded-[18px] border border-white/10 bg-[rgba(13,19,34,0.5)] px-4 py-3 text-[var(--text-strong)]"
+                      className="w-full rounded-[10px] border border-[color:var(--line)] bg-[var(--paper-card)] px-4 py-3 text-[var(--text-strong)]"
                       placeholder="student@doonschool.com"
                     />
                   </label>
@@ -130,7 +128,7 @@ export default function Login() {
                     <input
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
-                      className="w-full rounded-[18px] border border-white/10 bg-[rgba(13,19,34,0.5)] px-4 py-3 text-[var(--text-strong)]"
+                      className="w-full rounded-[10px] border border-[color:var(--line)] bg-[var(--paper-card)] px-4 py-3 text-[var(--text-strong)]"
                       placeholder="password123"
                       type="password"
                     />
@@ -141,7 +139,7 @@ export default function Login() {
                   type="button"
                   disabled={loading}
                   onClick={() => void loginWithEmulator?.(email, password)}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--accent)] px-5 py-3.5 text-sm font-semibold text-slate-950 transition hover:brightness-105 disabled:opacity-60"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-[10px] bg-[var(--academic-blue)] px-5 py-3.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
                 >
                   {loading ? 'Signing in…' : 'Continue with local school account'}
                   {!loading ? <ArrowRight className="size-4" /> : null}
@@ -153,7 +151,7 @@ export default function Login() {
               <button
                 disabled={loading}
                 onClick={login}
-                className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--accent)] px-5 py-3.5 text-sm font-semibold text-slate-950 transition hover:brightness-105 disabled:opacity-60"
+                className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-[10px] bg-[var(--academic-blue)] px-5 py-3.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
               >
                 {loading ? 'Signing in…' : 'Continue with Google'}
                 {!loading ? <ArrowRight className="size-4" /> : null}
@@ -161,7 +159,7 @@ export default function Login() {
             ) : null}
 
             {!googleLoginEnabled && !emulatorLoginEnabled ? (
-              <div className="mt-8 rounded-[24px] border border-amber-300/20 bg-[rgba(62,45,31,0.42)] p-5 text-sm leading-7 text-amber-50">
+              <div className="mt-8 rounded-[10px] border border-[color:var(--gold-line)] bg-[var(--gold-soft)] p-5 text-sm leading-7 text-[var(--brass)]">
                 {firebaseRuntimeMode === 'unconfigured'
                   ? 'Firebase configuration is missing for this environment. In local development, run the supported emulator-backed flow before testing sign-in.'
                   : 'Google sign-in is not configured for this environment yet.'}
@@ -169,7 +167,7 @@ export default function Login() {
             ) : null}
 
             {error ? (
-              <div className="mt-5 rounded-[22px] border border-rose-300/20 bg-[rgba(78,33,43,0.48)] p-4 text-sm leading-7 text-rose-100">
+              <div className="mt-5 rounded-[10px] border border-rose-200 bg-rose-50 p-4 text-sm leading-7 text-rose-800">
                 {error}
               </div>
             ) : null}
@@ -182,12 +180,14 @@ export default function Login() {
 
 function FeatureBlock({ icon, title, body }: { icon: ReactNode; title: string; body: string }) {
   return (
-    <div className="rounded-[24px] border border-white/8 bg-[rgba(10,15,27,0.32)] p-4">
-      <span className="flex size-10 items-center justify-center rounded-full border border-white/8 bg-[rgba(21,29,48,0.74)] text-[var(--text-strong)]">
+    <div className="flex items-start gap-3 border-l-2 border-[color:var(--line-strong)] bg-[rgba(255,253,248,0.48)] px-4 py-3">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-[9px] border border-[color:var(--line)] bg-[var(--paper-card)] text-[var(--academic-blue)]">
         {icon}
       </span>
-      <p className="mt-4 text-lg font-semibold text-[var(--text-strong)]">{title}</p>
-      <p className="mt-2 text-sm leading-7 text-[var(--text-muted)]">{body}</p>
+      <div>
+        <p className="text-base font-semibold text-[var(--text-strong)]">{title}</p>
+        <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">{body}</p>
+      </div>
     </div>
   );
 }

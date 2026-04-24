@@ -7,5 +7,5 @@ export function shouldUseStudentClubPlaceholder(user?: Pick<AppUser, 'role'> | n
 export const STUDENT_CLUB_PLACEHOLDER = {
   title: 'Clubs are not live for students yet',
   body:
-    'The student club directory is intentionally held in placeholder mode until real school club data replaces the remaining development fixtures. Calendar, classes, and certificates stay live.'
+    'Club discovery will open when the school directory is published. Calendar, classes, and certificates remain available.'
 } as const;

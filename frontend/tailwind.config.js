@@ -6,23 +6,25 @@ const config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['"Instrument Sans"', '"Avenir Next"', ...defaultTheme.fontFamily.sans]
+        sans: ['"IBM Plex Sans"', '"Avenir Next"', ...defaultTheme.fontFamily.sans],
+        serif: ['"IBM Plex Serif"', ...defaultTheme.fontFamily.serif],
+        identity: ['"Libre Baskerville"', '"IBM Plex Serif"', ...defaultTheme.fontFamily.serif]
       },
       colors: {
-        glass: 'rgba(255,255,255,0.08)',
+        glass: 'rgba(255,253,248,0.72)',
         brand: {
-          DEFAULT: '#6366F1',
-          dark: '#4F46E5',
-          light: '#A5B4FC'
+          DEFAULT: '#2B4C7E',
+          dark: '#182638',
+          light: '#E8F0FA'
         },
-        accent: '#74D7FF',
-        surface: '#0F172A'
+        accent: '#C9A227',
+        surface: '#FFFDF8'
       },
       boxShadow: {
-        glass: '0 15px 45px rgba(15, 23, 42, 0.35)'
+        glass: '0 1px 1px rgba(24, 38, 56, 0.04), 0 10px 24px rgba(86, 72, 49, 0.08)'
       },
       borderRadius: {
-        glass: '28px'
+        glass: '14px'
       }
     }
   },

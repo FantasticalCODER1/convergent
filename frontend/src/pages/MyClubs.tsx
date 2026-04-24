@@ -8,7 +8,7 @@ import { getClubAccessState } from '../domain/memberships';
 import { useAuth } from '../hooks/useAuth';
 import { useClubs } from '../hooks/useClubs';
 import { useEvents } from '../hooks/useEvents';
-import { STUDENT_CLUB_PLACEHOLDER, shouldUseStudentClubPlaceholder } from '../lib/productTruth';
+import { shouldUseStudentClubPlaceholder } from '../lib/productTruth';
 
 export default function MyClubs() {
   const navigate = useNavigate();
@@ -58,33 +58,53 @@ export default function MyClubs() {
         <PageHeader
           eyebrow="Ownership"
           title="My Clubs"
-          description="Student club memberships stay in explicit placeholder mode locally until the real directory and approval data are ready to replace the seeded development fixtures."
+          description="Approved clubs, pending requests, and private workspace links."
           aside={
-            <div className="grid gap-3 sm:grid-cols-2">
-              <MetricCard label="Memberships" value="0" hint="Held back intentionally" />
-              <MetricCard label="Workspace access" value="Staged" hint="No fake club feed shown" tone="accent" />
+            <div className="grid gap-2 sm:grid-cols-2">
+              <MetricCard label="Approved" value="0" hint="No approved clubs" />
+              <MetricCard label="Pending" value="0" hint="No open requests" tone="accent" />
             </div>
           }
         />
 
-        <EmptyStateCard
-          eyebrow="Student clubs"
-          title={STUDENT_CLUB_PLACEHOLDER.title}
-          body="There are no truthful student club memberships to show yet. When the club programme is live, approved clubs will appear here automatically together with their calendar-linked workspace access."
-          actionLabel="Back to calendar"
-          onAction={() => navigate('/calendar')}
-          tone="accent"
-        />
-
         <SurfaceSection
-          eyebrow="What will appear here"
-          title="Approved memberships only"
-          description="This page is reserved for clubs you genuinely belong to or manage. Pending requests remain in discovery, and unreleased club fixtures are kept out instead of being styled as real product data."
+          eyebrow="Memberships"
+          title="Club workspace"
+          action={
+            <button
+              type="button"
+              onClick={() => navigate('/calendar')}
+              className="rounded-[10px] border border-[color:var(--line)] px-4 py-2 text-sm font-medium text-[var(--text-strong)] transition hover:bg-[var(--paper-soft)]"
+            >
+              Back to calendar
+            </button>
+          }
         >
-          <div className="space-y-3">
-            <StatRow label="Approved clubs" value="Appear automatically after approval" />
-            <StatRow label="Pending requests" value="Stay on Join Clubs" />
-            <StatRow label="Private links" value="Hidden until access is real" />
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="ledger-table">
+              <div className="ledger-header grid-cols-1">
+                <span>Approved clubs</span>
+              </div>
+              <div className="ledger-row grid-cols-1 text-sm text-[var(--text-muted)]">
+                <span>No approved clubs yet.</span>
+              </div>
+            </div>
+            <div className="ledger-table">
+              <div className="ledger-header grid-cols-1">
+                <span>Pending requests</span>
+              </div>
+              <div className="ledger-row grid-cols-1 text-sm text-[var(--text-muted)]">
+                <span>No pending requests.</span>
+              </div>
+            </div>
+            <div className="ledger-table">
+              <div className="ledger-header grid-cols-1">
+                <span>Private links</span>
+              </div>
+              <div className="ledger-row grid-cols-1 text-sm text-[var(--text-muted)]">
+                <span>Hidden until access is approved.</span>
+              </div>
+            </div>
           </div>
         </SurfaceSection>
       </div>
@@ -96,7 +116,7 @@ export default function MyClubs() {
       <PageHeader
         eyebrow="Ownership"
         title="My Clubs"
-        description="This page is reserved for approved memberships and managed groups. Anything still waiting for approval remains in Join Clubs until access is granted."
+        description="Approved memberships and managed groups."
         aside={
           <div className="grid gap-3 sm:grid-cols-2">
             <MetricCard label="Approved" value={String(mine.length)} hint="Visible in your workspace" />
@@ -109,7 +129,7 @@ export default function MyClubs() {
         <SurfaceSection eyebrow="Pending" title="Requests still waiting" tone="warning">
           <div className="flex flex-wrap gap-2">
             {pending.map((club) => (
-              <span key={club.id} className="rounded-full border border-white/10 px-3 py-2 text-sm text-[var(--text-strong)]">
+              <span key={club.id} className="rounded-full border border-[color:var(--line)] bg-[color:var(--panel)] px-3 py-2 text-sm text-[var(--text-strong)]">
                 {club.name}
               </span>
             ))}
@@ -123,7 +143,7 @@ export default function MyClubs() {
         </SurfaceSection>
       ) : error ? (
         <SurfaceSection eyebrow="Memberships" title="Membership data unavailable" tone="warning">
-          <div className="text-sm text-rose-100">{error}</div>
+          <div className="text-sm text-rose-800">{error}</div>
         </SurfaceSection>
       ) : mine.length === 0 ? (
         <EmptyStateCard
@@ -134,16 +154,15 @@ export default function MyClubs() {
           onAction={() => navigate('/join-clubs')}
         />
       ) : (
-        <SurfaceSection
-          eyebrow="Workspace access"
-          title="Approved memberships"
-          description="Club workspaces only appear here once access is real. Discovery remains separate so this page can stay focused on clubs you already operate inside."
-          action={
-            <Link
-              to="/join-clubs"
-              className="inline-flex items-center rounded-full border border-white/10 px-4 py-2 text-sm font-medium text-[var(--text-strong)] transition hover:bg-white/8"
-            >
-              Browse all groups
+          <SurfaceSection
+            eyebrow="Workspace access"
+            title="Approved memberships"
+            action={
+              <Link
+                to="/join-clubs"
+                className="inline-flex items-center rounded-[10px] border border-[color:var(--line)] px-4 py-2 text-sm font-medium text-[var(--text-strong)] transition hover:bg-[color:var(--panel-2)]"
+              >
+                Browse all groups
             </Link>
           }
         >
