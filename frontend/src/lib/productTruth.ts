@@ -5,7 +5,7 @@ export function shouldUseStudentClubPlaceholder(user?: Pick<AppUser, 'role'> | n
 }
 
 export const STUDENT_CLUB_PLACEHOLDER = {
-  title: 'Clubs are not live for students yet',
+  title: 'Club directory not published yet',
   body:
     'Club discovery will open when the school directory is published. Calendar, classes, and certificates remain available.'
 } as const;

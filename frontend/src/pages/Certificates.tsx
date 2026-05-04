@@ -42,14 +42,16 @@ export default function Certificates() {
           </div>
         ) : certificates.length === 0 ? (
           <div className="ledger-table">
-            <div className="ledger-header grid-cols-[minmax(0,1.1fr)_180px_140px_120px]">
+            <div className="ledger-header grid-cols-[minmax(0,1.1fr)_180px_140px_120px_150px]">
               <span>Certificate</span>
               <span>Club/Event</span>
               <span>Issued</span>
               <span>Status</span>
+              <span>Action</span>
             </div>
-            <div className="ledger-row grid-cols-[minmax(0,1.1fr)_180px_140px_120px] text-sm text-[var(--text-muted)]">
+            <div className="ledger-row grid-cols-[minmax(0,1.1fr)_180px_140px_120px_150px] text-sm text-[var(--text-muted)]">
               <span>No certificates issued yet.</span>
+              <span>-</span>
               <span>-</span>
               <span>-</span>
               <span>-</span>

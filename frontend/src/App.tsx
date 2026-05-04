@@ -2,7 +2,6 @@ import { Suspense, lazy, type ComponentType, useEffect, useRef, useState } from 
 import { BrowserRouter, Navigate, Outlet, Route, Routes, NavLink as RouterNavLink, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { AuthProvider } from './context/AuthContext';
-import { ProfileSetupGate } from './components/ProfileSetupGate';
 import { useAuth } from './hooks/useAuth';
 import RequireRole from './components/RequireRole';
 import RequireAuth from './components/RequireAuth';
@@ -77,9 +76,10 @@ function RouteFallback() {
 }
 
 function Shell() {
-  const { user, logout, refreshProfile } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const cohortLabel = user?.grade && user.section ? `${user.grade} / ${user.section}` : 'Cohort pending';
   const visibleNavLinks = navLinks.filter((link) => link.to !== '/admin' || user?.role === 'admin');
   const primaryMobileLinks = visibleNavLinks.filter((link) =>
     ['/calendar', '/dashboard', '/join-clubs', '/my-clubs'].includes(link.to)
@@ -127,7 +127,7 @@ function Shell() {
           </div>
           <div className="mt-auto border-t border-[color:var(--line)] pt-4">
             <p className="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[var(--brass)]">Student context</p>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">S-Form / IB · Doon School</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">{cohortLabel} · Doon School</p>
             <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">Planner, timetable, club access, records.</p>
           </div>
         </aside>
@@ -141,7 +141,6 @@ function Shell() {
         primaryLinks={primaryMobileLinks}
         moreLinks={moreLinks}
       />
-      <ProfileSetupGate user={user} onComplete={refreshProfile} />
     </div>
   );
 }

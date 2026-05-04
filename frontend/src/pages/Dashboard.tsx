@@ -1,7 +1,7 @@
 import { addDays, format, isSameDay, startOfDay, subDays } from 'date-fns';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { EmptyStateCard } from '../components/EmptyStateCard';
+import { ProfileSetupGate } from '../components/ProfileSetupGate';
 import { getClubAccessState } from '../domain/memberships';
 import { isProfileComplete } from '../domain/profile';
 import { useAuth } from '../hooks/useAuth';
@@ -48,9 +48,10 @@ function getScheduleDetail(
 }
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const { certificates } = useCertificates();
   const showStudentClubPlaceholder = shouldUseStudentClubPlaceholder(user);
+  const cohortLabel = user?.grade && user.section ? `${user.grade} / ${user.section}` : 'Cohort pending';
   const calendarWindow = useMemo(
     () => ({
       rangeStart: subDays(startOfDay(new Date()), 1),
@@ -104,12 +105,12 @@ export default function Dashboard() {
       title: nextGroupItem?.title ?? 'No approved group event',
       detail: nextGroupItem
         ? `${nextGroupItem.relatedGroup?.name ?? 'Group'} · ${formatDateTimeRange(nextGroupItem.startTime, nextGroupItem.endTime)}`
-        : 'Approved memberships automatically feed this slot.'
+        : 'No approved club meeting is scheduled.'
     },
     {
       label: 'School-wide',
       title: nextSchoolWideItem?.title ?? 'No upcoming school item',
-      detail: nextSchoolWideItem ? formatDateTimeRange(nextSchoolWideItem.startTime, nextSchoolWideItem.endTime) : 'School-wide events appear here when published.'
+      detail: nextSchoolWideItem ? formatDateTimeRange(nextSchoolWideItem.startTime, nextSchoolWideItem.endTime) : 'No school-wide event is scheduled.'
     }
   ];
 
@@ -134,12 +135,7 @@ export default function Dashboard() {
       />
 
       {!isProfileComplete(user) ? (
-          <EmptyStateCard
-            eyebrow="Profile setup"
-            title="Profile incomplete"
-            body="Needed for timetable and meal matching."
-            tone="warning"
-          />
+        <ProfileSetupGate user={user} onComplete={refreshProfile} />
       ) : null}
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.85fr)]">
@@ -160,7 +156,7 @@ export default function Dashboard() {
               <div className="notice-pin self-start rounded-[12px] border border-[color:var(--line)] p-4">
                 <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[var(--brass)]">Today</p>
                 <p className="serif-display mt-2 text-3xl font-semibold text-[var(--text-strong)]">{format(new Date(), 'd MMM')}</p>
-                <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">Spring Term 2026 · S-Form / IB</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">Spring Term 2026 · {cohortLabel}</p>
               </div>
               <div className="ledger-table">
                 {nextCards.map((card, index) => (

@@ -39,7 +39,7 @@ export function PersonalDaySheet({ date, focusedItemId, items, onClose, onFocusI
   const focusedItem = items.find((item) => item.id === focusedItemId) ?? null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex justify-end bg-[rgba(24,38,56,0.16)] text-[var(--text)]">
+    <div className="fixed inset-x-0 bottom-0 top-[76px] z-[60] flex justify-end bg-[rgba(24,38,56,0.16)] text-[var(--text)]">
       <div className="flex h-full w-full max-w-4xl flex-col border-l border-[color:var(--line)] bg-[var(--paper-card)] shadow-[0_24px_60px_rgba(86,72,49,0.22)]">
         <div className="flex items-start justify-between gap-4 border-b border-[color:var(--line)] bg-[var(--paper-soft)] px-6 py-5">
           <div>

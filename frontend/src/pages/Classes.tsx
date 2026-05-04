@@ -58,6 +58,14 @@ export default function Classes() {
   });
   const academicEntries = personalisedEntries.filter((entry) => entry.scheduleType === 'academic');
   const mealEntries = personalisedEntries.filter((entry) => entry.scheduleType === 'meal');
+  const mealBlocks = Array.from(
+    new Map(
+      mealEntries.map((entry) => [
+        `${entry.title}:${entry.startTime}:${entry.endTime}:${entry.location ?? ''}`,
+        entry
+      ])
+    ).values()
+  ).sort((left, right) => left.startTime.localeCompare(right.startTime));
   const academicDatasets = datasets.filter((dataset) => dataset.scheduleType === 'academic');
   const mealDatasets = datasets.filter((dataset) => dataset.scheduleType === 'meal');
   const hasAcademicDataset = academicDatasets.length > 0;
@@ -167,16 +175,16 @@ export default function Classes() {
             )}
           </SurfaceSection>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-6 2xl:grid-cols-2">
           <SurfaceSection eyebrow="Meal schedules" title="Meal blocks">
-            {mealEntries.length === 0 ? (
+            {mealBlocks.length === 0 ? (
                 <div className="ledger-table">
-                  <div className="ledger-header grid-cols-[minmax(0,1fr)_120px_150px]">
+                  <div className="ledger-header class-ledger-meals">
                     <span>Meal</span>
                     <span>Time</span>
                     <span>Location</span>
                   </div>
-                  <div className="ledger-row grid-cols-[minmax(0,1fr)_120px_150px] text-sm text-[var(--text-muted)]">
+                  <div className="ledger-row class-ledger-meals text-sm text-[var(--text-muted)]">
                     <span>{mealEmptyState}</span>
                     <span>-</span>
                     <span>-</span>
@@ -184,13 +192,13 @@ export default function Classes() {
                 </div>
               ) : (
                 <div className="ledger-table">
-                  <div className="ledger-header grid-cols-[minmax(0,1fr)_120px_150px]">
+                  <div className="ledger-header class-ledger-meals">
                     <span>Meal</span>
                     <span>Time</span>
                     <span>Location</span>
                   </div>
-                  {mealEntries.map((entry) => (
-                    <div key={entry.id} className="ledger-row grid-cols-[minmax(0,1fr)_120px_150px] text-sm">
+                  {mealBlocks.map((entry) => (
+                    <div key={entry.id} className="ledger-row class-ledger-meals text-sm">
                       <div className="font-semibold text-[var(--text-strong)]">{entry.title}</div>
                       <div className="text-[var(--text-muted)]">{entry.startTime} - {entry.endTime}</div>
                       <div className="text-[var(--text-muted)]">{entry.location ?? 'Dining Hall'}</div>
@@ -203,12 +211,12 @@ export default function Classes() {
             <SurfaceSection eyebrow="Datasets" title="Published records">
               {[...academicDatasets, ...mealDatasets].length === 0 ? (
                 <div className="ledger-table">
-                  <div className="ledger-header grid-cols-[minmax(0,1fr)_120px_140px]">
+                  <div className="ledger-header class-ledger-datasets">
                     <span>Record</span>
                     <span>Source</span>
                     <span>Status</span>
                   </div>
-                  <div className="ledger-row grid-cols-[minmax(0,1fr)_120px_140px] text-sm text-[var(--text-muted)]">
+                  <div className="ledger-row class-ledger-datasets text-sm text-[var(--text-muted)]">
                     <span>No timetable or meal dataset records have been published yet.</span>
                     <span>-</span>
                     <span>-</span>
@@ -216,13 +224,13 @@ export default function Classes() {
                 </div>
               ) : (
                 <div className="ledger-table">
-                  <div className="ledger-header grid-cols-[minmax(0,1fr)_120px_140px]">
+                  <div className="ledger-header class-ledger-datasets">
                     <span>Record</span>
                     <span>Source</span>
                     <span>Status</span>
                   </div>
                   {[...academicDatasets, ...mealDatasets].map((dataset) => (
-                    <div key={dataset.id} className="ledger-row grid-cols-[minmax(0,1fr)_120px_140px] text-sm">
+                    <div key={dataset.id} className="ledger-row class-ledger-datasets text-sm">
                       <span>
                         <span className="block font-semibold text-[var(--text-strong)]">{dataset.title}</span>
                         <span className="text-[var(--text-muted)]">Updated {formatTimestamp(dataset.updatedAt, 'not recorded')}</span>
@@ -302,7 +310,7 @@ export default function Classes() {
 
           <SurfaceSection
             eyebrow="Coursework"
-            title={selected && sessionStatus === 'ready' ? `${selected.name} coursework` : 'Coursework rail'}
+            title={selected && sessionStatus === 'ready' ? `${selected.name} coursework` : 'Coursework'}
           >
             {selected && sessionStatus === 'ready' ? (
               loadingWork ? (
@@ -336,16 +344,16 @@ export default function Classes() {
                 <StatRow label="Timetable source" value="Published cohort datasets" />
                 <StatRow label="Classroom source" value="Recoverable Google session only" />
                 <div className="rounded-[16px] border border-dashed border-[color:var(--line)] bg-[color:var(--panel-2)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
-                  Course links and timetable mapping stay separate.
+                  Coursework opens after a recovered Google Classroom session.
                 </div>
               </div>
             )}
           </SurfaceSection>
 
           {sessionStatus !== 'ready' && !classroomSupported ? (
-            <SurfaceSection eyebrow="Boundary" title="What stays available here" tone="accent">
+            <SurfaceSection eyebrow="Access notes" title="Classroom recovery" tone="accent">
               <div className="space-y-3">
-                <StatRow label="Timetable" value="Uses local schedule datasets" />
+                <StatRow label="Timetable" value="Published cohort datasets" />
                 <StatRow label="Classroom links" value="Stored as references only" />
                 <StatRow label="Coursework browsing" value="Requires live Google recovery" />
               </div>

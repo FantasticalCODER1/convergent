@@ -157,6 +157,27 @@ body::before {
   border-top: 0;
 }
 
+.class-ledger-meals {
+  grid-template-columns: minmax(0, 1fr) 140px 160px;
+}
+
+.class-ledger-datasets {
+  grid-template-columns: minmax(0, 1fr) 160px 120px;
+}
+
+@media (max-width: 639px) {
+  .class-ledger-meals,
+  .class-ledger-datasets {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+
+  .ledger-header.class-ledger-meals,
+  .ledger-header.class-ledger-datasets {
+    display: none;
+  }
+}
+
 .notice-pin {
   border-left: 3px solid var(--brass);
   background: rgba(255, 253, 248, 0.78);
