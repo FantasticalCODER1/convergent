@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext';
 import { useAuth } from './hooks/useAuth';
 import RequireRole from './components/RequireRole';
 import RequireAuth from './components/RequireAuth';
+import LoadingScreen from './components/LoadingScreen';
 import { CalendarDays, Home, MoreHorizontal, NotebookPen, Shield, Trophy, UserRoundCheck, UsersRound } from 'lucide-react';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -72,7 +73,7 @@ function AppRoutes() {
 }
 
 function RouteFallback() {
-  return <div className="grid min-h-screen place-items-center bg-[var(--bg)] text-[var(--text-muted)]">Loading...</div>;
+  return <LoadingScreen />;
 }
 
 function Shell() {
