@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { EmptyStateCard } from '../components/EmptyStateCard';
 import { ClubCard } from '../components/ClubCard';
+import LoadingScreen from '../components/LoadingScreen';
 import { MetricCard, PageHeader, StatRow, SurfaceSection } from '../components/ui/product';
 import { getClubAccessState } from '../domain/memberships';
 import { useAuth } from '../hooks/useAuth';
@@ -139,7 +140,7 @@ export default function MyClubs() {
 
       {loading ? (
         <SurfaceSection eyebrow="Memberships" title="Loading clubs">
-          <div className="text-sm text-[var(--text-muted)]">Loading memberships…</div>
+          <LoadingScreen compact label="Loading memberships" />
         </SurfaceSection>
       ) : error ? (
         <SurfaceSection eyebrow="Memberships" title="Membership data unavailable" tone="warning">

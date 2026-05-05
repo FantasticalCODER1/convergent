@@ -1,6 +1,7 @@
 import { addDays, format, isSameDay, startOfDay, subDays } from 'date-fns';
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import LoadingScreen from '../components/LoadingScreen';
 import { ProfileSetupGate } from '../components/ProfileSetupGate';
 import { getClubAccessState } from '../domain/memberships';
 import { isProfileComplete } from '../domain/profile';
@@ -182,9 +183,7 @@ export default function Dashboard() {
             title="Today's schedule"
           >
             {loading ? (
-              <div className="rounded-[10px] border border-[color:var(--line)] bg-[color:var(--panel-2)] px-4 py-4 text-sm text-[var(--text-muted)]">
-                Loading today's schedule...
-              </div>
+              <LoadingScreen compact label="Loading today's schedule" />
             ) : todayItems.length === 0 ? (
               <div className="ledger-table">
                 <div className="ledger-header grid-cols-[110px_minmax(0,1fr)_150px]">
@@ -224,9 +223,7 @@ export default function Dashboard() {
             title="Personal queue"
           >
             {loading ? (
-              <div className="rounded-[10px] border border-[color:var(--line)] bg-[color:var(--panel-2)] px-4 py-4 text-sm text-[var(--text-muted)]">
-                Loading your queue...
-              </div>
+              <LoadingScreen compact label="Loading your queue" />
             ) : upcomingItems.length === 0 ? (
               <div className="rounded-[10px] border border-dashed border-[color:var(--line)] bg-[color:var(--panel-2)] px-4 py-4 text-sm leading-6 text-[var(--text-muted)]">
                 {getUpcomingEmptyState(readiness.profileReady, readiness.academicStatus, readiness.mealStatus)}

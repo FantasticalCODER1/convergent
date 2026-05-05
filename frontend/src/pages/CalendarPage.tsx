@@ -14,6 +14,7 @@ import {
 } from 'date-fns';
 import clsx from 'clsx';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import LoadingScreen from '../components/LoadingScreen';
 import { PersonalDaySheet } from '../components/calendar/PersonalDaySheet';
 import { MetricCard, PageHeader, SectionButton, StatRow, SurfaceSection } from '../components/ui/product';
 import { getCategoryMeta } from '../domain/categories';
@@ -291,7 +292,7 @@ export default function CalendarPage() {
           </div>
 
           {loading ? (
-            <div className="px-6 py-8 text-sm text-[var(--text-muted)]">Loading calendar data...</div>
+            <LoadingScreen compact label="Loading calendar data" />
           ) : (
             <>
               <div className="grid grid-cols-7 border-b border-[color:var(--line)] bg-[color:var(--paper-muted)] px-2 py-2">

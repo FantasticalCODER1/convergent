@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { EmptyStateCard } from '../components/EmptyStateCard';
 import { ClubCard } from '../components/ClubCard';
+import LoadingScreen from '../components/LoadingScreen';
 import { MetricCard, PageHeader, StatRow, SurfaceSection } from '../components/ui/product';
 import { getClubAccessState } from '../domain/memberships';
 import { useAuth } from '../hooks/useAuth';
@@ -178,7 +179,7 @@ export default function Clubs() {
 
       {loading ? (
         <SurfaceSection eyebrow="Directory" title="Loading groups">
-          <div className="text-sm text-[var(--text-muted)]">Loading clubs…</div>
+          <LoadingScreen compact label="Loading clubs" />
         </SurfaceSection>
       ) : error ? (
         <SurfaceSection eyebrow="Directory" title="Discovery unavailable" tone="warning">

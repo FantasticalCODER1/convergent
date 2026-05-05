@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { isGoogleAuthConfigured } from '../auth/google';
 import { EmptyStateCard } from '../components/EmptyStateCard';
+import LoadingScreen from '../components/LoadingScreen';
 import { MetricCard, PageHeader, StatRow, SurfaceSection } from '../components/ui/product';
 import { isProfileComplete } from '../domain/profile';
 import { useAuth } from '../hooks/useAuth';
@@ -130,9 +131,7 @@ export default function Classes() {
                 tone="warning"
               />
             ) : loadingSchedules ? (
-              <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] px-5 py-5 text-sm text-[var(--text-muted)]">
-                Loading timetable structure…
-              </div>
+              <LoadingScreen compact label="Loading timetable structure" />
             ) : academicEntries.length === 0 ? (
               <div className="ledger-table">
                 <div className="ledger-header grid-cols-[minmax(0,1.1fr)_90px_110px_100px_140px]">
@@ -253,9 +252,7 @@ export default function Classes() {
             {error ? <p className="text-sm text-rose-300">{error}</p> : null}
 
             {sessionStatus === 'checking' || loadingCourses ? (
-              <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] px-5 py-5 text-sm text-[var(--text-muted)]">
-                Checking Google session and loading courses…
-              </div>
+              <LoadingScreen compact label="Checking Google session and loading courses" />
             ) : sessionStatus === 'ready' ? (
               <div className="space-y-3">
                 <div className="rounded-[10px] border border-[color:var(--academic-blue-line)] bg-[var(--academic-blue-soft)] px-5 py-5 text-sm leading-7 text-[var(--academic-blue)]">
@@ -314,9 +311,7 @@ export default function Classes() {
           >
             {selected && sessionStatus === 'ready' ? (
               loadingWork ? (
-                <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] px-5 py-5 text-sm text-[var(--text-muted)]">
-                  Fetching coursework…
-                </div>
+                <LoadingScreen compact label="Fetching coursework" />
               ) : coursework.length === 0 ? (
                 <div className="rounded-[16px] border border-dashed border-[color:var(--line)] bg-[color:var(--panel-2)] px-5 py-5 text-sm leading-7 text-[var(--text-muted)]">
                   No coursework posted yet.

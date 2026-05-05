@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import RequireRole from '../components/RequireRole';
 import { EmptyStateCard } from '../components/EmptyStateCard';
+import LoadingScreen from '../components/LoadingScreen';
 import { EventEditor } from '../components/admin/EventEditor';
 import type { AppUser, UserRole } from '../types/User';
 import { listUsers, updateUserRole } from '../services/usersService';
@@ -216,7 +217,7 @@ function AdminInner() {
           {roleStatus ? <p className="text-sm text-white/60">{roleStatus}</p> : null}
         </div>
         {loading ? (
-          <div className="rounded-2xl border border-white/5 bg-white/10 p-4 text-white/70">Loading users…</div>
+          <LoadingScreen compact label="Loading users" />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {users.map((user) => (

@@ -1,6 +1,7 @@
 import { useAuth } from '../hooks/useAuth';
 import { useCertificates } from '../hooks/useCertificates';
 import { EmptyStateCard } from '../components/EmptyStateCard';
+import LoadingScreen from '../components/LoadingScreen';
 import { MetricCard, PageHeader, SurfaceSection } from '../components/ui/product';
 import { formatTimestamp } from '../lib/formatters';
 
@@ -37,9 +38,7 @@ export default function Certificates() {
         title="Certificate ledger"
       >
         {loading ? (
-          <div className="rounded-[10px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-8 text-center text-sm text-[var(--text-muted)]">
-            Loading certificates...
-          </div>
+          <LoadingScreen compact label="Loading certificates" />
         ) : certificates.length === 0 ? (
           <div className="ledger-table">
             <div className="ledger-header grid-cols-[minmax(0,1.1fr)_180px_140px_120px_150px]">

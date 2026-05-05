@@ -4,6 +4,7 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { CalendarDays, ChevronLeft, ExternalLink, FileBadge2, Info, MessageSquareText, UsersRound } from 'lucide-react';
 import { CertificateCard } from '../components/CertificateCard';
+import LoadingScreen from '../components/LoadingScreen';
 import { ClubManagementPanel } from '../components/club/ClubManagementPanel';
 import { EventCard } from '../components/EventCard';
 import { getCategoryMeta } from '../domain/categories';
@@ -251,7 +252,7 @@ export default function ClubDetail() {
   }
 
   if (loading) {
-    return <StateCard title="Loading club" body="Pulling club details, posts, events, and membership state." />;
+    return <LoadingScreen label="Loading club workspace" />;
   }
 
   if (!club) {
@@ -839,7 +840,7 @@ function MembersTab({
       }
     >
       {loading ? (
-        <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-4 text-sm text-[var(--text-muted)]">Loading roster…</div>
+        <LoadingScreen compact label="Loading roster" />
       ) : users.length === 0 ? (
         <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-4 text-sm text-[var(--text-muted)]">No approved member profiles are available yet.</div>
       ) : (
@@ -888,7 +889,7 @@ function CertificatesTab({
       }
     >
       {loading ? (
-        <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-4 text-sm text-[var(--text-muted)]">Loading certificates…</div>
+        <LoadingScreen compact label="Loading certificates" />
       ) : certificates.length === 0 ? (
         <div className="rounded-[16px] border border-[color:var(--line)] bg-[color:var(--panel-2)] p-4 text-sm text-[var(--text-muted)]">
           {manageable ? 'No certificates have been issued for this club yet.' : 'You do not have any certificates from this club yet.'}
