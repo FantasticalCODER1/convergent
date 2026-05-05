@@ -8,6 +8,7 @@ import {
 import { normalizeCategory } from '../domain/categories';
 import type { ScheduleDataset, ScheduleEntry } from '../types/Schedule';
 import { firestore } from '../firebase/firestore';
+import { isLocalAuthMode } from '../lib/firebaseEnv';
 import { mapResourceLinks, normalizeString } from './recordMappers';
 
 const scheduleEntriesRef = collection(firestore, 'scheduleEntries');
@@ -56,12 +57,14 @@ function mapScheduleDataset(snapshot: any): ScheduleDataset {
 }
 
 export async function listScheduleEntries() {
+  if (isLocalAuthMode) return [];
   const q = query(scheduleEntriesRef, orderBy('dayOfWeek'), orderBy('startTime'));
   const snap = await getDocs(q);
   return snap.docs.map((docSnap) => mapScheduleEntry(docSnap));
 }
 
 export async function listScheduleDatasets() {
+  if (isLocalAuthMode) return [];
   const q = query(scheduleDatasetsRef, orderBy('title'));
   const snap = await getDocs(q);
   return snap.docs.map((docSnap) => mapScheduleDataset(docSnap));

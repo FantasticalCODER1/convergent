@@ -11,7 +11,7 @@ import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
 import { clearGoogleAuthCache, getGoogleAccessAndProfile, type GoogleAccessMode } from '../auth/google';
 import { buildScheduleAudienceKey } from '../domain/profile';
 import { getFirebaseApp } from '../firebase/app';
-import { isFirebaseEmulatorMode } from '../lib/firebaseEnv';
+import { firebaseRuntimeMode, isFirebaseEmulatorMode, isLocalAuthMode } from '../lib/firebaseEnv';
 import { isAllowedSchoolEmail, normalizeUserRole } from '../lib/policy';
 import type { AppUser } from '../types/User';
 import { fetchUser, upsertUserProfile } from '../services/usersService';
@@ -21,6 +21,7 @@ type AuthState = {
   accessToken?: string;
   login: () => Promise<void>;
   loginWithEmulator?: (email: string, password: string) => Promise<void>;
+  loginWithLocal?: (email: string, password: string) => Promise<void>;
   ensureGoogleAccessToken?: (mode?: GoogleAccessMode) => Promise<string | null>;
   logout: () => Promise<void>;
   loading: boolean;
@@ -28,15 +29,56 @@ type AuthState = {
   refreshProfile?: () => Promise<void>;
 };
 
-const auth = getAuth(getFirebaseApp());
+const shouldUseFirebaseAuth = firebaseRuntimeMode === 'firebase' || isFirebaseEmulatorMode;
+const auth = shouldUseFirebaseAuth ? getAuth(getFirebaseApp()) : null;
 const shouldUseEmulator = isFirebaseEmulatorMode;
 const shouldUseEmulatorLogin = shouldUseEmulator;
 const AUTH_EMULATOR_KEY = '__convergent_auth_emulator__';
 const emulatorFlags = globalThis as typeof globalThis & Record<string, boolean | undefined>;
-if (shouldUseEmulator && !emulatorFlags[AUTH_EMULATOR_KEY]) {
+if (auth && shouldUseEmulator && !emulatorFlags[AUTH_EMULATOR_KEY]) {
   const url = import.meta.env.VITE_AUTH_EMULATOR_URL ?? 'http://127.0.0.1:9099';
   connectAuthEmulator(auth, url, { disableWarnings: true });
   emulatorFlags[AUTH_EMULATOR_KEY] = true;
+}
+
+const LOCAL_AUTH_STORAGE_KEY = 'convergent.localAuthUser';
+const LOCAL_AUTH_PASSWORD = 'password123';
+const localUsers: AppUser[] = [
+  { id: 'admin-user', email: 'admin@doonschool.com', name: 'Admin User', role: 'admin', clubsJoined: [], authProvider: 'local' },
+  { id: 'master-user', email: 'master@doonschool.com', name: 'Master User', role: 'master', clubsJoined: [], authProvider: 'local' },
+  { id: 'manager-user', email: 'manager@doonschool.com', name: 'Manager User', role: 'manager', clubsJoined: [], authProvider: 'local' },
+  {
+    id: 'student-user',
+    email: 'student@doonschool.com',
+    name: 'Sumer Singh Gill',
+    role: 'student',
+    clubsJoined: [],
+    grade: 'S-Form',
+    section: 'IB',
+    scheduleAudienceKey: buildScheduleAudienceKey({ grade: 'S-Form', section: 'IB' }),
+    authProvider: 'local'
+  }
+];
+
+function readLocalAuthUser() {
+  if (!isLocalAuthMode) return null;
+  try {
+    const raw = window.localStorage.getItem(LOCAL_AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as AppUser;
+  } catch {
+    window.localStorage.removeItem(LOCAL_AUTH_STORAGE_KEY);
+    return null;
+  }
+}
+
+function writeLocalAuthUser(user: AppUser | null) {
+  if (!isLocalAuthMode) return;
+  if (user) {
+    window.localStorage.setItem(LOCAL_AUTH_STORAGE_KEY, JSON.stringify(user));
+    return;
+  }
+  window.localStorage.removeItem(LOCAL_AUTH_STORAGE_KEY);
 }
 
 export const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -57,6 +99,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async () => {
+    if (!auth) {
+      setError('Google sign-in is not configured for this local environment.');
+      return;
+    }
     setLoading(true);
     setError(undefined);
     try {
@@ -96,7 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loginWithEmulator = useCallback(async (email: string, password: string) => {
-    if (!shouldUseEmulatorLogin) {
+    if (!shouldUseEmulatorLogin || !auth) {
       throw new Error('Emulator login is not enabled.');
     }
     setLoading(true);
@@ -116,8 +162,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const loginWithLocal = useCallback(async (email: string, password: string) => {
+    if (!isLocalAuthMode) {
+      throw new Error('Local sign-in is not enabled.');
+    }
+    setLoading(true);
+    setError(undefined);
+    setAccessToken(undefined);
+    try {
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!isAllowedSchoolEmail(normalizedEmail)) {
+        throw new Error('Only @doonschool.com accounts are allowed');
+      }
+      if (password !== LOCAL_AUTH_PASSWORD) {
+        throw new Error('Invalid local account password.');
+      }
+      const localUser = localUsers.find((record) => record.email === normalizedEmail);
+      if (!localUser) {
+        throw new Error('Unknown local development account.');
+      }
+      const now = new Date().toISOString();
+      const record = { ...localUser, lastLoginAt: now, updatedAt: now };
+      writeLocalAuthUser(record);
+      setUser(record);
+    } catch (err: any) {
+      setError(err?.message ?? 'Local authentication failed');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const logout = useCallback(async () => {
-    await signOut(auth);
+    if (auth) {
+      await signOut(auth);
+    }
+    writeLocalAuthUser(null);
     setUser(null);
     setAccessToken(undefined);
     setError(undefined);
@@ -137,11 +217,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = useCallback(async () => {
     if (!user) return;
+    if (isLocalAuthMode) {
+      const fresh = readLocalAuthUser();
+      if (fresh) setUser(fresh);
+      return;
+    }
     const fresh = await hydrateUser(user.id);
     if (fresh) setUser(fresh);
   }, [hydrateUser, user]);
 
   useEffect(() => {
+    if (isLocalAuthMode) {
+      setUser(readLocalAuthUser());
+      setLoading(false);
+      return undefined;
+    }
+    if (!auth) {
+      setLoading(false);
+      return undefined;
+    }
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
       if (!fbUser) {
         setUser(null);
@@ -181,13 +275,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       accessToken,
       login,
       loginWithEmulator: shouldUseEmulatorLogin ? loginWithEmulator : undefined,
+      loginWithLocal: isLocalAuthMode ? loginWithLocal : undefined,
       ensureGoogleAccessToken,
       logout,
       loading,
       error,
       refreshProfile
     }),
-    [user, accessToken, login, loginWithEmulator, ensureGoogleAccessToken, logout, loading, error, refreshProfile]
+    [user, accessToken, login, loginWithEmulator, loginWithLocal, ensureGoogleAccessToken, logout, loading, error, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

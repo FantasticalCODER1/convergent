@@ -13,6 +13,7 @@ import type { Club } from '../types/Club';
 import type { AppUser } from '../types/User';
 import { callFunction } from '../firebase/functions';
 import { firestore } from '../firebase/firestore';
+import { isLocalAuthMode } from '../lib/firebaseEnv';
 import {
   mapClubData,
   mapMembershipData
@@ -29,6 +30,7 @@ export async function listClubs(): Promise<Club[]> {
 }
 
 export async function getClub(id: string): Promise<Club | null> {
+  if (isLocalAuthMode) return null;
   const snap = await getDoc(doc(clubsRef, id));
   if (!snap.exists()) return null;
   return mapClub(snap);
@@ -128,6 +130,7 @@ export async function addClubPost(clubId: string, input: ClubPostInput, _author:
 }
 
 export async function listMembershipsForUser(userId: string): Promise<MembershipRecord[]> {
+  if (isLocalAuthMode) return [];
   const memberships = collectionGroup(firestore, 'memberships');
   const [byUserId, legacyMemberships] = await Promise.all([
     getDocs(query(memberships, where('userId', '==', userId))),

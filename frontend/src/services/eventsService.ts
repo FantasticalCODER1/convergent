@@ -14,6 +14,7 @@ import type { EventRecord, EventScope } from '../types/Event';
 import type { AppUser } from '../types/User';
 import { callFunction } from '../firebase/functions';
 import { firestore } from '../firebase/firestore';
+import { isLocalAuthMode } from '../lib/firebaseEnv';
 import { mapEventData, normalizeString } from './recordMappers';
 
 const rsvpsRef = collection(firestore, 'eventRsvps');
@@ -74,6 +75,9 @@ function buildLegacyEventType(input: EventInput) {
 }
 
 export async function saveEvent(input: EventInput, author?: AppUser) {
+  if (isLocalAuthMode) {
+    throw new Error('Event editing is unavailable in local data mode.');
+  }
   const relatedGroupId = normalizeString(input.relatedGroupId);
   const payload = {
     title: input.title,
@@ -173,6 +177,7 @@ export async function listEventAttendance(eventId: string) {
 }
 
 export async function listRsvpsForUser(userId: string) {
+  if (isLocalAuthMode) return {};
   const q = query(rsvpsRef, where('userId', '==', userId));
   const snap = await getDocs(q);
   const records: Record<string, boolean> = {};

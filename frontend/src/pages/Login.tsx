@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { ArrowRight, CalendarDays, GraduationCap, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { isGoogleAuthConfigured } from '../auth/google';
-import { firebaseRuntimeMode, isFirebaseEmulatorMode } from '../lib/firebaseEnv';
+import { firebaseRuntimeMode, isFirebaseEmulatorMode, isLocalAuthMode } from '../lib/firebaseEnv';
 
 const emulatorUsers = [
   'admin@doonschool.com',
@@ -13,19 +13,24 @@ const emulatorUsers = [
 ];
 
 export default function Login() {
-  const { login, loginWithEmulator, loading, error, user } = useAuth();
+  const { login, loginWithEmulator, loginWithLocal, loading, error, user } = useAuth();
   const location = useLocation();
   const [email, setEmail] = useState('student@doonschool.com');
   const [password, setPassword] = useState('password123');
   const from = (location.state as any)?.from?.pathname || '/';
   const emulatorLoginEnabled = isFirebaseEmulatorMode && !!loginWithEmulator;
+  const localLoginEnabled = isLocalAuthMode && !!loginWithLocal;
+  const localAccountLoginEnabled = emulatorLoginEnabled || localLoginEnabled;
   const googleLoginEnabled = firebaseRuntimeMode === 'firebase' && isGoogleAuthConfigured();
-  const environmentLabel = emulatorLoginEnabled ? 'Local development mode' : googleLoginEnabled ? 'School Google sign-in' : 'Sign-in not configured';
-  const environmentCopy = emulatorLoginEnabled
-    ? 'Use a seeded account while Firebase emulators are running.'
-    : googleLoginEnabled
-      ? 'Use your school Google account to open calendar, classes, clubs, and records.'
-      : 'This environment does not currently expose a supported sign-in provider.';
+  const signInWithLocalAccount = localLoginEnabled ? loginWithLocal : loginWithEmulator;
+  const environmentLabel = localAccountLoginEnabled ? 'Local development mode' : googleLoginEnabled ? 'School Google sign-in' : 'Sign-in not configured';
+  const environmentCopy = localLoginEnabled
+    ? 'Use a local school account without Firebase services.'
+    : emulatorLoginEnabled
+      ? 'Use a seeded account while Firebase emulators are running.'
+      : googleLoginEnabled
+        ? 'Use your school Google account to open calendar, classes, clubs, and records.'
+        : 'This environment does not currently expose a supported sign-in provider.';
 
   if (user) {
     return <Navigate to={from} replace />;
@@ -78,23 +83,25 @@ export default function Login() {
           <section className="rounded-[14px] border border-[color:var(--line)] bg-[rgba(255,253,248,0.9)] px-7 py-8 shadow-[var(--shadow-soft)] sm:px-10 sm:py-10">
             <div className="max-w-md">
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-[var(--brass)]">
-                {emulatorLoginEnabled ? 'Local development accounts' : googleLoginEnabled ? 'Google access' : 'Access status'}
+                {localAccountLoginEnabled ? 'Local development accounts' : googleLoginEnabled ? 'Google access' : 'Access status'}
               </p>
               <h2 className="serif-display mt-2 text-[2rem] font-semibold leading-tight text-[var(--text-strong)]">
-                {emulatorLoginEnabled ? 'Choose an account' : googleLoginEnabled ? 'Continue with your school Google account' : 'Sign-in provider unavailable'}
+                {localAccountLoginEnabled ? 'Choose an account' : googleLoginEnabled ? 'Continue with your school Google account' : 'Sign-in provider unavailable'}
               </h2>
               <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
-                {emulatorLoginEnabled
-                  ? 'Use a seeded account while Firebase emulators are running.'
-                  : googleLoginEnabled
-                    ? 'Google sign-in is the only supported production-style path in this mode.'
-                    : firebaseRuntimeMode === 'unconfigured'
-                      ? 'Firebase configuration is missing. In local work, start the supported emulator-backed flow instead.'
-                      : 'Google sign-in is not configured for this environment yet.'}
+                {localLoginEnabled
+                  ? 'This local mode signs in without contacting Firebase Auth. Data-backed Firebase features still need configured Firebase or running emulators.'
+                  : emulatorLoginEnabled
+                    ? 'Use a seeded account while Firebase emulators are running.'
+                    : googleLoginEnabled
+                      ? 'Google sign-in is the only supported production-style path in this mode.'
+                      : firebaseRuntimeMode === 'unconfigured'
+                        ? 'Firebase configuration is missing. In local work, start the supported emulator-backed flow instead.'
+                        : 'Google sign-in is not configured for this environment yet.'}
               </p>
             </div>
 
-            {emulatorLoginEnabled ? (
+            {localAccountLoginEnabled ? (
               <div className="mt-8 space-y-5">
                 <div className="grid gap-2 sm:grid-cols-2">
                   {emulatorUsers.map((seededEmail) => (
@@ -104,7 +111,7 @@ export default function Login() {
                       disabled={loading}
                       onClick={() => {
                         setEmail(seededEmail);
-                        void loginWithEmulator?.(seededEmail, password);
+                        void signInWithLocalAccount?.(seededEmail, password);
                       }}
                       className="rounded-[10px] border border-[color:var(--line)] bg-[color:var(--panel-2)] px-4 py-3 text-left text-sm text-[var(--text-strong)] transition hover:bg-white disabled:opacity-60"
                     >
@@ -138,7 +145,7 @@ export default function Login() {
                 <button
                   type="button"
                   disabled={loading}
-                  onClick={() => void loginWithEmulator?.(email, password)}
+                  onClick={() => void signInWithLocalAccount?.(email, password)}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-[10px] bg-[var(--academic-blue)] px-5 py-3.5 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
                 >
                   {loading ? 'Signing in…' : 'Continue with local school account'}
@@ -158,7 +165,7 @@ export default function Login() {
               </button>
             ) : null}
 
-            {!googleLoginEnabled && !emulatorLoginEnabled ? (
+            {!googleLoginEnabled && !localAccountLoginEnabled ? (
               <div className="mt-8 rounded-[10px] border border-[color:var(--gold-line)] bg-[var(--gold-soft)] p-5 text-sm leading-7 text-[var(--brass)]">
                 {firebaseRuntimeMode === 'unconfigured'
                   ? 'Firebase configuration is missing for this environment. In local development, run the supported emulator-backed flow before testing sign-in.'

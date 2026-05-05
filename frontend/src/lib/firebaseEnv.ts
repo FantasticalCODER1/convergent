@@ -12,7 +12,7 @@ function normalizeFlag(value?: string) {
 
 const explicitEmulatorFlag = normalizeFlag(import.meta.env.VITE_USE_FIREBASE_EMULATORS);
 const hasExplicitEmulatorEnable = explicitEmulatorFlag === 'true' || explicitEmulatorFlag === '1';
-const hasExplicitEmulatorDisable = explicitEmulatorFlag === 'false' || explicitEmulatorFlag === '0';
+const dataMode = normalizeFlag(import.meta.env.VITE_DATA_MODE || 'local');
 
 export const isDevMode = import.meta.env.DEV;
 export const hasFirebaseConfiguration = REQUIRED_FIREBASE_KEYS.every((key) => {
@@ -20,11 +20,14 @@ export const hasFirebaseConfiguration = REQUIRED_FIREBASE_KEYS.every((key) => {
   return typeof value === 'string' && value.trim().length > 0;
 });
 
-export const isFirebaseEmulatorMode =
-  isDevMode && (hasExplicitEmulatorEnable || (!hasExplicitEmulatorDisable && !hasFirebaseConfiguration));
+export const isFirebaseEmulatorMode = isDevMode && hasExplicitEmulatorEnable;
+export const isLocalAuthMode =
+  isDevMode && dataMode === 'local' && !hasFirebaseConfiguration && !hasExplicitEmulatorEnable;
 
 export const firebaseRuntimeMode = isFirebaseEmulatorMode
   ? 'emulator'
+  : isLocalAuthMode
+    ? 'local'
   : hasFirebaseConfiguration
     ? 'firebase'
     : 'unconfigured';
